@@ -1,0 +1,6 @@
+*~
+*.py[cdo]
+test_environment/bin
+test_environment/include
+test_environment/lib
+test_environment/sqlite.db
