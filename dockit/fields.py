@@ -42,12 +42,16 @@ class ListField(BaseField):
     
     def to_primitive(self, val):
         ret = list()
+        if val is None:
+            return ret
         for item in val:
             ret.append(self.schema.to_primitive(item))
         return ret
     
     def to_python(self, val):
         ret = list()
+        if val is None:
+            return ret
         for item in val:
             ret.append(self.schema.to_python(item))
         return ret

@@ -7,6 +7,21 @@ class DocumentStore(models.Model):
     collection = models.CharField(max_length=128)
     data = models.TextField()
 
+class BaseIndex(models.Model):
+    key = models.CharField(max_length=255)
+    collection = models.CharField(max_length=128, db_index=True)
+    document = models.ForeignKey(DocumentStore)
+    value = None #you are to define this
+    
+    class Meta:
+        abstract = True
+
+class CharIndex(BaseIndex):
+    value = models.CharField(max_length=255, db_index=True)
+
+class IntegerIndex(BaseIndex):
+    value = models.IntegerField()
+
 class ModelDocumentStorage(object):
     def store(self, collection, data):
         doc_id = self.get_id(data)
@@ -31,3 +46,18 @@ class ModelDocumentStorage(object):
     
     def get_id(self, data):
         return data.get('_pk')
+    
+    def root_index(self, doc_class, collection):
+        qs = DocumentStore.objects.filter(collection=collection)
+        
+        def entry_to_document(entry):
+            data = simplejson.loads(entry.data)
+            data['_pk'] = entry.pk
+            return doc_class.to_python(data)
+        
+        def result_set():
+            for entry in qs:
+                yield entry_to_document(entry)
+        
+        return result_set()
+
