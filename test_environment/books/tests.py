@@ -35,3 +35,6 @@ class BookTestCase(unittest.TestCase):
         publisher = Publisher.load(publisher.get_id())
         
         assert publisher.address.street_2 == 'Apt 1'
+    
+    def test_admin(self):
+        import admin
