@@ -1,4 +1,4 @@
-from backends import get_document_backend
+from dockit.backends import get_document_backend
 
 import re
 import sys
