@@ -6,6 +6,7 @@ from django.contrib.admin import widgets, helpers
 
 from base import AdminViewMixin
 from dockit import views
+from dockit.forms import DocumentForm
 
 class DocumentViewMixin(AdminViewMixin):
     template_suffix = None
@@ -60,7 +61,6 @@ class DocumentViewMixin(AdminViewMixin):
         """
         Returns the form class to use in this view
         """
-        from couchdbkit.ext.django.forms import DocumentForm
         if self.form_class:
             return self.form_class
         else:

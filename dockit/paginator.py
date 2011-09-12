@@ -1,5 +1,2 @@
-#TODO
-
-class Paginator(object):
-    pass
+from django.core.paginator import Paginator
 

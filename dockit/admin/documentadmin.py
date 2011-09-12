@@ -205,7 +205,7 @@ class BaseAdmin(object):
         return ChangeList
     
     def queryset(self, request):
-        return lambda **kwargs: self.model.view('_all_docs', include_docs=True, **kwargs)
+        return self.model.root_index()
     
     def get_paginator(self, request, query_set, paginate_by):
         return self.paginator(query_set, paginate_by)
@@ -216,7 +216,11 @@ class BaseAdmin(object):
             return self.declared_fieldsets
         #form = self.get_form(request, obj)
         #fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
-        return [(None, {'fields': self.model._properties.keys()})]
+        fields = list()
+        for key, field in self.model._meta.fields.iteritems():
+            if not field.meta_field:
+                fields.append(key)
+        return [(None, {'fields': fields})]
     
     def get_readonly_fields(self, request):
         return []

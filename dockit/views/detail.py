@@ -15,7 +15,7 @@ class SingleObjectMixin(detailview.SingleObjectMixin):
         if queryset is None:
             queryset = self.get_queryset()
         try:
-            return queryset.get(self.kwargs['pk'])
+            return queryset.load(self.kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404(_(u"No %(verbose_name)s found matching the query") %
                           {'verbose_name': self.model._meta.verbose_name})

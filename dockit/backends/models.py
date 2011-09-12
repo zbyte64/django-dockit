@@ -59,5 +59,5 @@ class ModelDocumentStorage(object):
             for entry in qs:
                 yield entry_to_document(entry)
         
-        return result_set()
+        return list(result_set())
 

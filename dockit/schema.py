@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db.models.options import get_verbose_name
 from django.utils.translation import activate, deactivate_all, get_language, string_concat
 from django.utils.encoding import smart_str, force_unicode
+from django.db.models import FieldDoesNotExist
 
 DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
                  'app_label')
@@ -77,14 +78,12 @@ class Options(object):
     
     def get_field(self, name):
         if name not in self.fields:
-            from django.db import models
-            raise models.FieldDoesNotExist
+            raise FieldDoesNotExist
         return self.fields[name]
     
     def get_field_by_name(self, name):
         if name not in self.fields:
-            from django.db import models
-            raise models.FieldDoesNotExist
+            raise FieldDoesNotExist
         return self.fields[name]
     
     def get_ordered_objects(self):
@@ -96,7 +95,7 @@ class Options(object):
             def __init__(self, **kwargs):
                 for key, value in kwargs.iteritems():
                     setattr(self, key, value)
-        return DummyField(attname='get_id')
+        return DummyField(attname='pk')
 
 class SchemaBase(type):
     """
@@ -187,9 +186,23 @@ class Document(Schema):
         backend = get_document_backend()
         return backend.get_id(self._primitive_data)
     
+    pk = property(get_id)
+    
     def save(self):
         backend = get_document_backend()
         backend.store(self.collection, type(self).to_primitive(self))
+    
+    def serializable_value(self, field_name):
+        try:
+            field = self._meta.get_field_by_name(field_name)[0]
+        except FieldDoesNotExist:
+            return getattr(self, field_name)
+        return getattr(self, field.attname)
+    
+    def __str__(self):
+        if hasattr(self, '__unicode__'):
+            return force_unicode(self).encode('utf-8')
+        return '%s object' % self.__class__.__name__
     
     @classmethod
     def load(cls, doc_id):

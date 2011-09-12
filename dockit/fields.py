@@ -1,5 +1,6 @@
 from django.utils.encoding import smart_unicode, force_unicode, smart_str
 from django.utils.text import capfirst
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields import BLANK_CHOICE_DASH
 from django import forms
 
@@ -7,6 +8,8 @@ class NOT_PROVIDED:
     pass
 
 class BaseField(object):
+    meta_field = False
+    
     def __init__(self, verbose_name=None, name=None, blank=False, null=False,
                  default=NOT_PROVIDED, editable=True,
                  serialize=True, choices=None, help_text='',
@@ -113,18 +116,27 @@ class IntegerField(BaseTypedField):
     coerce_function = int
 
 class SchemaField(BaseField):
-    def __init__(self, schema):
+    meta_field = True
+    
+    def __init__(self, schema, *args, **kwargs):
         self.schema = schema
+        super(SchemaField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
         return self.schema.to_primitive(val)
     
     def to_python(self, val):
         return self.schema.to_python(val)
+    
+    def formfield(self, form_class=forms.CharField, **kwargs):
+        return None #TODO
 
 class ListField(BaseField):
-    def __init__(self, schema):
+    meta_field = True
+    
+    def __init__(self, schema, *args, **kwargs):
         self.schema = schema
+        super(ListField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
         ret = list()
@@ -141,11 +153,17 @@ class ListField(BaseField):
         for item in val:
             ret.append(self.schema.to_python(item))
         return ret
+    
+    def formfield(self, form_class=forms.CharField, **kwargs):
+        return None #TODO
 
 class DictField(BaseField):
-    def __init__(self, key_schema=None, value_schema=None):
+    meta_field = True
+    
+    def __init__(self, key_schema=None, value_schema=None, **kwargs):
         self.key_schema = key_schema
         self.value_schema = value_schema
+        super(DictField, self).__init__(**kwargs)
     
     def to_primitive(self, val):
         ret = dict()
@@ -170,22 +188,32 @@ class DictField(BaseField):
                 key = self.key_schema.to_python(key)
             ret[key] = value
         return ret
+    
+    def formfield(self, form_class=forms.CharField, **kwargs):
+        return None #TODO
 
 class ReferenceField(BaseField):
-    def __init__(self, document):
+    def __init__(self, document, *args, **kwargs):
         assert hasattr(document, 'load')
         assert hasattr(document, 'get_id')
         self.document = document
+        super(ReferenceField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
+        if isinstance(val, basestring): #CONSIDER, should this happen?
+            return val
         return val.get_id()
     
     def to_python(self, val):
-        return self.document.load(val)
+        try:
+            return self.document.load(val)
+        except ObjectDoesNotExist:
+            return None
 
 class ModelReferenceField(BaseField):
-    def __init__(self, model):
+    def __init__(self, model, *args, **kwargs):
         self.model = model
+        super(ModelReferenceField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
         return val.pk
