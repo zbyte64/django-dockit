@@ -1,5 +1,103 @@
 from backends import get_document_backend
 
+import re
+import sys
+
+from django.conf import settings
+from django.db.models.options import get_verbose_name
+from django.utils.translation import activate, deactivate_all, get_language, string_concat
+from django.utils.encoding import smart_str, force_unicode
+
+DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
+                 'app_label')
+
+class Options(object):
+    """ class based on django.db.models.options. We only keep
+    useful bits."""
+    
+    abstract = False
+    ordering = ['_id']
+    
+    def __init__(self, meta, app_label=None):
+        self.module_name, self.verbose_name = None, None
+        self.verbose_name_plural = None
+        self.object_name, self.app_label = None, app_label
+        self.meta = meta
+        self.fields = dict() #TODO ordered dictionary
+    
+    def contribute_to_class(self, cls, name):
+        cls._meta = self
+        self.installed = re.sub('\.models$', '', cls.__module__) in settings.INSTALLED_APPS
+        # First, construct the default values for these options.
+        self.object_name = cls.__name__
+        self.module_name = self.object_name.lower()
+        self.verbose_name = get_verbose_name(self.object_name)
+
+        # Next, apply any overridden values from 'class Meta'.
+        if self.meta:
+            meta_attrs = self.meta.__dict__.copy()
+            for name in self.meta.__dict__:
+                # Ignore any private attributes that Django doesn't care about.
+                # NOTE: We can't modify a dictionary's contents while looping
+                # over it, so we loop over the *original* dictionary instead.
+                if name.startswith('_'):
+                    del meta_attrs[name]
+            for attr_name in DEFAULT_NAMES:
+                if attr_name in meta_attrs:
+                    setattr(self, attr_name, meta_attrs.pop(attr_name))
+                elif hasattr(self.meta, attr_name):
+                    setattr(self, attr_name, getattr(self.meta, attr_name))
+
+            # verbose_name_plural is a special case because it uses a 's'
+            # by default.
+            setattr(self, 'verbose_name_plural', meta_attrs.pop('verbose_name_plural', string_concat(self.verbose_name, 's')))
+
+            # Any leftover attributes must be invalid.
+            if meta_attrs != {}:
+                raise TypeError("'class Meta' got invalid attribute(s): %s" % ','.join(meta_attrs.keys()))
+        else:
+            self.verbose_name_plural = string_concat(self.verbose_name, 's')
+        del self.meta
+        
+    def __str__(self):
+        return "%s.%s" % (smart_str(self.app_label), smart_str(self.module_name))
+
+    def verbose_name_raw(self):
+        """
+        There are a few places where the untranslated verbose name is needed
+        (so that we get the same value regardless of currently active
+        locale).
+        """
+        lang = get_language()
+        deactivate_all()
+        raw = force_unicode(self.verbose_name)
+        activate(lang)
+        return raw
+    verbose_name_raw = property(verbose_name_raw)
+    
+    def get_field(self, name):
+        if name not in self.fields:
+            from django.db import models
+            raise models.FieldDoesNotExist
+        return self.fields[name]
+    
+    def get_field_by_name(self, name):
+        if name not in self.fields:
+            from django.db import models
+            raise models.FieldDoesNotExist
+        return self.fields[name]
+    
+    def get_ordered_objects(self):
+        return []
+    
+    @property
+    def pk(self):
+        class DummyField(object):
+            def __init__(self, **kwargs):
+                for key, value in kwargs.iteritems():
+                    setattr(self, key, value)
+        return DummyField(attname='get_id')
+
 class SchemaBase(type):
     """
     Metaclass for all schemas.
@@ -9,10 +107,26 @@ class SchemaBase(type):
         
         module = attrs.pop('__module__')
         new_class = super_new(cls, name, bases, {'__module__': module})
-        new_class._fields = dict()
+        
+        attr_meta = attrs.pop('Meta', None)
+        if not attr_meta:
+            meta = getattr(new_class, 'Meta', None)
+        else:
+            meta = attr_meta
+        
+        if getattr(meta, 'app_label', None) is None:
+            document_module = sys.modules[new_class.__module__]
+            app_label = document_module.__name__.split('.')[-2]
+        else:
+            app_label = getattr(meta, 'app_label')
+        
+        new_class.add_to_class('_meta', Options(meta, app_label=app_label))
         
         for obj_name, obj in attrs.items():
             new_class.add_to_class(obj_name, obj)
+        
+        #register_schema(app_label, new_class)
+        
         return new_class
     
     def add_to_class(cls, name, value):
@@ -35,10 +149,10 @@ class Schema(object):
     @classmethod
     def to_primitive(cls, val):
         #CONSIDER shouldn't val be a schema?
-        if hasattr(val, '_primitive_data') and hasattr(val, '_python_data'):
+        if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
             #we've cached python values on access, we need to pump these back to the primitive dictionary
             for name, entry in val._python_data.iteritems():
-                val._primitive_data[name] = val._fields[name].to_primitive(entry)
+                val._primitive_data[name] = val._meta.fields[name].to_primitive(entry)
             return val._primitive_data
         assert False
         return val
@@ -48,7 +162,7 @@ class Schema(object):
         return cls(_primitive_data=val)
     
     def __getattribute__(self, name):
-        fields = object.__getattribute__(self, '_fields')
+        fields = object.__getattribute__(self, '_meta').fields
         if name in fields:
             python_data = object.__getattribute__(self, '_python_data')
             if name not in python_data:
@@ -58,7 +172,7 @@ class Schema(object):
         return object.__getattribute__(self, name)
     
     def __setattr__(self, name, val):
-        if name in self._fields:
+        if name in self._meta.fields:
             self._python_data[name] = val
             #field = self._fields[name]
             #store_val = field.to_primitive(val)

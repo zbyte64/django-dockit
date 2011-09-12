@@ -19,7 +19,7 @@ class Publisher(dockit.Document):
     collection = 'publisher'
     
     name = dockit.TextField()
-    address = dockit.ObjectField(Address)
+    address = dockit.SchemaField(Address)
 
 class Book(dockit.Document):
     collection = 'book'
