@@ -117,8 +117,8 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'dockit.backends',
     'dockit',
+    'dockit.backends.djangodocument',
     'books',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',

@@ -1,5 +1,5 @@
 def get_document_backend():
     #TODO
-    from models import ModelDocumentStorage
+    from djangodocument.backend import ModelDocumentStorage
     return ModelDocumentStorage()
 
