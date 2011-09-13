@@ -220,4 +220,6 @@ class ModelReferenceField(BaseField):
     
     def to_python(self, val):
         return self.model.objects.get(pk=val)
+    
+    #TODO formfield returns ModelChoieField
 
