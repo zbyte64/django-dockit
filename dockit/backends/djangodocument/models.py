@@ -10,6 +10,10 @@ class DocumentStore(models.Model):
     data = models.TextField()
     
     objects = DocumentManager()
+    
+    def clear_indexes(self):
+        for index in type(self).objects.index_models.itervalues():
+            index['model'].objects.clear_db_index(self)
 
 class BaseIndex(models.Model):
     document = models.ForeignKey(DocumentStore)
@@ -33,9 +37,9 @@ class StringIndex(BaseIndex):
     value = models.CharField(max_length=512)
 DocumentStore.objects.register_index_model('char', StringIndex, basestring)
 
-#class TextIndex(BaseIndex):
-#    value = models.TextField()
-#DocumentStore.objects.register_index_model('text', TextIndex, basestring)
+class TextIndex(BaseIndex):
+    value = models.TextField()
+DocumentStore.objects.register_index_model('text', TextIndex, basestring)
 
 class DateTimeIndex(BaseIndex):
     value = models.DateTimeField(null=True)

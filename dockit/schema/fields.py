@@ -14,6 +14,7 @@ class BaseField(object):
                  default=NOT_PROVIDED, editable=True,
                  serialize=True, choices=None, help_text='',
                  validators=[],
+                 db_index=False,
                 #db_index=False,  db_column=None, primary_key=False, max_length=None, unique=False, 
                 #db_tablespace=None, auto_created=False, 
                 #unique_for_date=None, unique_for_month=None, unique_for_year=None, 
@@ -102,6 +103,9 @@ class BaseField(object):
                     del kwargs[k]
         defaults.update(kwargs)
         return form_class(**defaults)
+    
+    def generate_index(self, lang, name):
+        return None
 
 class BaseTypedField(BaseField):
     coerce_function = None
@@ -194,7 +198,7 @@ class DictField(BaseField):
 
 class ReferenceField(BaseField):
     def __init__(self, document, *args, **kwargs):
-        assert hasattr(document, 'load')
+        assert hasattr(document, 'objects')
         assert hasattr(document, 'get_id')
         self.document = document
         super(ReferenceField, self).__init__(*args, **kwargs)
@@ -206,7 +210,7 @@ class ReferenceField(BaseField):
     
     def to_python(self, val):
         try:
-            return self.document.load(val)
+            return self.document.objects.get(val)
         except ObjectDoesNotExist:
             return None
 

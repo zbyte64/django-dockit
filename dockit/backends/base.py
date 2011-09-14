@@ -1,9 +1,12 @@
 
 class BaseDocumentStorage(object):
-    def store(self, collection, data):
+    def save(self, collection, data):
         raise NotImplementedError
     
-    def fetch(self, collection, doc_id):
+    def get(self, collection, doc_id):
+        raise NotImplementedError
+    
+    def generate_index(self, collection, field):
         raise NotImplementedError
     
     def define_index(self, collection, name, index):
@@ -12,7 +15,10 @@ class BaseDocumentStorage(object):
     def call_index(self, doc_class, collection, name, **kwargs):
         raise NotImplementedError
     
-    def root_index(self, doc_class, collection):
+    def all(self, doc_class, collection):
+        raise NotImplementedError
+    
+    def filter(self, doc_class, collection, params):
         raise NotImplementedError
     
     def get_id(self, data):

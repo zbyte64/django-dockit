@@ -27,6 +27,6 @@ class Book(dockit.Document):
     title = dockit.TextField()
     year = dockit.IntegerField()
     publisher = dockit.ReferenceField(Publisher)
-    authors = dockit.ListField(dockit.ReferenceField(Author))
-    tags = dockit.ListField(dockit.TextField())
+    authors = dockit.ListField(dockit.ReferenceField(Author), db_index=True)
+    tags = dockit.ListField(dockit.TextField(), db_index=True)
 

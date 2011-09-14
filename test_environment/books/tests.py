@@ -21,7 +21,7 @@ class BookTestCase(unittest.TestCase):
         book.tags.append('historical')
         book.save()
 
-        book = Book.load(book.get_id())
+        book = Book.objects.get(book.get_id())
         assert 'historical' in book.tags
         assert book.title == 'Of Mice and Men'
         assert book.publisher.name == 'Books etc'
@@ -32,7 +32,7 @@ class BookTestCase(unittest.TestCase):
         publisher.address.street_2 = 'Apt 1'
         publisher.save()
         
-        publisher = Publisher.load(publisher.get_id())
+        publisher = Publisher.objects.get(publisher.get_id())
         
         assert publisher.address.street_2 == 'Apt 1'
     

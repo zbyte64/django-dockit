@@ -44,4 +44,11 @@ class BaseIndexManager(models.Manager):
         else:
             filter_kwargs['%s__value' % prefix] = value
         return filter_kwargs
+    
+    def clear_db_index(self, documentstore):
+        self.filter(document=documentstore).delete()
+    
+    def db_index(self, documentstore, name, value):
+        self.filter(document=documentstore, index=name).delete()
+        self.create(document=documentstore, index=name, value=value)
 

@@ -9,6 +9,8 @@ from django.utils.translation import activate, deactivate_all, get_language, str
 from django.utils.encoding import smart_str, force_unicode
 from django.db.models import FieldDoesNotExist
 
+from manager import Manager
+
 DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
                  'app_label')
 
@@ -35,7 +37,7 @@ class Options(object):
         self.verbose_name = get_verbose_name(self.object_name)
 
         # Next, apply any overridden values from 'class Meta'.
-        if self.meta:
+        if getattr(self, 'meta', None):
             meta_attrs = self.meta.__dict__.copy()
             for name in self.meta.__dict__:
                 # Ignore any private attributes that Django doesn't care about.
@@ -56,9 +58,10 @@ class Options(object):
             # Any leftover attributes must be invalid.
             if meta_attrs != {}:
                 raise TypeError("'class Meta' got invalid attribute(s): %s" % ','.join(meta_attrs.keys()))
+            del self.meta
         else:
             self.verbose_name_plural = string_concat(self.verbose_name, 's')
-        del self.meta
+        
         
     def __str__(self):
         return "%s.%s" % (smart_str(self.app_label), smart_str(self.module_name))
@@ -179,7 +182,16 @@ class Schema(object):
         else:
             super(Schema, self).__setattr__(name, val)
 
+class DocumentBase(SchemaBase):
+    def __new__(cls, name, bases, attrs):
+        new_class = SchemaBase.__new__(cls, name, bases, attrs)
+        if 'objects' not in attrs:
+            objects = Manager()
+            objects.contribute_to_class(new_class, 'objects')
+        return new_class
+
 class Document(Schema):
+    __metaclass__ = DocumentBase
     collection = None
     
     def get_id(self):
@@ -190,7 +202,7 @@ class Document(Schema):
     
     def save(self):
         backend = get_document_backend()
-        backend.store(self.collection, type(self).to_primitive(self))
+        backend.save(self.collection, type(self).to_primitive(self))
     
     def serializable_value(self, field_name):
         try:
@@ -203,15 +215,4 @@ class Document(Schema):
         if hasattr(self, '__unicode__'):
             return force_unicode(self).encode('utf-8')
         return '%s object' % self.__class__.__name__
-    
-    @classmethod
-    def load(cls, doc_id):
-        backend = get_document_backend()
-        data = backend.fetch(cls.collection, doc_id)
-        return cls.to_python(data)
-    
-    @classmethod
-    def root_index(cls):
-        backend = get_document_backend()
-        return backend.root_index(cls, cls.collection)
 
