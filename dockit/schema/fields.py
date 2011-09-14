@@ -30,6 +30,7 @@ class BaseField(object):
         self.choices = choices
         self.help_text = help_text
         self.validators = validators
+        self.db_index = db_index
     
     def contribute_to_class(self, cls, name):
         self.name = name

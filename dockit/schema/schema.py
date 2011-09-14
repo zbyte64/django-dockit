@@ -188,6 +188,8 @@ class DocumentBase(SchemaBase):
         if 'objects' not in attrs:
             objects = Manager()
             objects.contribute_to_class(new_class, 'objects')
+        backend = get_document_backend()
+        backend.register_document(new_class)
         return new_class
 
 class Document(Schema):

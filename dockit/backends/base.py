@@ -1,5 +1,10 @@
 
 class BaseDocumentStorage(object):
+    def register_document(self, document):
+        for key, field in document._meta.fields.iteritems():
+            if getattr(field, 'db_index', False):
+                self.generate_index(document.collection, field)
+    
     def save(self, collection, data):
         raise NotImplementedError
     

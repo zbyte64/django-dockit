@@ -1,5 +1,10 @@
+backend = None
+
 def get_document_backend():
     #TODO
-    from djangodocument.backend import ModelDocumentStorage
-    return ModelDocumentStorage()
+    global backend
+    if not backend:
+        from djangodocument.backend import ModelDocumentStorage
+        backend = ModelDocumentStorage()
+    return backend
 

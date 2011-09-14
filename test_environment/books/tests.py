@@ -35,6 +35,11 @@ class BookTestCase(unittest.TestCase):
         publisher = Publisher.objects.get(publisher.get_id())
         
         assert publisher.address.street_2 == 'Apt 1'
+        
+        book = Book.objects.filter(tags='historical')[0]
+        assert book.title == 'Of Mice and Men'
+        
+        self.assertEqual(Book.objects.filter(tags='fiction').count(), 0)
     
     def test_admin(self):
         import admin
