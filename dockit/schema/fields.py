@@ -4,6 +4,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields import BLANK_CHOICE_DASH
 from django import forms
 
+from decimal import Decimal
+import datetime
+
 class NOT_PROVIDED:
     pass
 
@@ -105,8 +108,8 @@ class BaseField(object):
         defaults.update(kwargs)
         return form_class(**defaults)
     
-    def generate_index(self, lang, name):
-        return None
+    def dot_notation_to_field(self, notation):
+        return self
 
 class BaseTypedField(BaseField):
     coerce_function = None
@@ -119,6 +122,59 @@ class TextField(BaseTypedField):
 
 class IntegerField(BaseTypedField):
     coerce_function = int
+
+class BigIntegerField(BaseTypedField):
+    coerce_function = long
+
+class BooleanField(BaseTypedField):
+    coerce_function = bool
+
+class DateField(BaseTypedField):
+    coerce_function = datetime.date
+
+class DateTimeField(BaseTypedField):
+    coerce_function = datetime.datetime
+
+class DecimalField(BaseField):
+    def to_primitive(self, val):
+        return str(val)
+    
+    def to_python(self, val):
+        return Decimal(val)
+
+class EmailField(TextField):
+    pass #TODO validate
+
+#TODO filefield? this will be passed off to the backend
+
+class FloatField(BaseTypedField):
+    coerce_function = float
+
+#TODO imagefield
+
+class IPAddressField(TextField):
+    pass #TODO validate
+
+class GenericIPAddressField(TextField):
+    pass #TODO validate
+
+#TODO NullBooleanField
+
+class PositiveIntegerField(IntegerField):
+    pass #TODO validate
+
+#TODO PositiveSmallIntegerField
+
+class SlugField(TextField):
+    pass #TODO form field
+
+#TODO SmallIntegerField
+
+class TimeField(BaseTypedField):
+    coerce_function = datetime.time
+
+#TODO URLField
+#TODO XMLField
 
 class SchemaField(BaseField):
     meta_field = True
@@ -135,6 +191,12 @@ class SchemaField(BaseField):
     
     def formfield(self, form_class=forms.CharField, **kwargs):
         return None #TODO
+    
+    def dot_notation_to_field(self, notation):
+        if '.' not in notation:
+            return self
+        name, notation = notation.split('.', 1)
+        return self.schema._meta.fields[name].dot_notation_to_field(notation)
 
 class ListField(BaseField):
     meta_field = True
