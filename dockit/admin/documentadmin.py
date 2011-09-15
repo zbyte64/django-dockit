@@ -43,6 +43,8 @@ class BaseAdmin(object):
     formfield_overrides = {}
     readonly_fields = ()
     ordering = None
+    declared_fieldsets = None
+    form_class = None #can't use form because of Django Admin
     
     
     list_display = ('__str__',)
@@ -76,7 +78,6 @@ class BaseAdmin(object):
     def __init__(self, model, admin_site):
         self.model = model
         self.admin_site = admin_site
-        self.declared_fieldsets = None
         self.app_name = model._meta.app_label
         overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
         overrides.update(self.formfield_overrides)
@@ -91,7 +92,8 @@ class BaseAdmin(object):
         init = {'admin':self, 'admin_site':self.admin_site}
         
         # Admin-site-wide views.
-        urlpatterns = patterns('',
+        urlpatterns = self.get_extra_urls()
+        urlpatterns += patterns('',
             url(r'^$',
                 wrap(self.index.as_view(**init)),
                 name='index'),
@@ -113,6 +115,9 @@ class BaseAdmin(object):
     def urls(self):
         return self.get_urls(), self.app_name, None
     urls = property(urls)
+    
+    def get_extra_urls(self):
+        return patterns('',)
     
     def _media(self):
         from django.conf import settings
@@ -205,7 +210,7 @@ class BaseAdmin(object):
         return ChangeList
     
     def queryset(self, request):
-        return self.model.root_index()
+        return self.model.objects.all()
     
     def get_paginator(self, request, query_set, paginate_by):
         return self.paginator(query_set, paginate_by)
@@ -219,6 +224,8 @@ class BaseAdmin(object):
         fields = list()
         for key, field in self.model._meta.fields.iteritems():
             if not field.meta_field:
+                fields.append(key)
+            elif key in self.formfield_overrides:
                 fields.append(key)
         return [(None, {'fields': fields})]
     

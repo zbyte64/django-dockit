@@ -15,7 +15,7 @@ class SingleObjectMixin(detailview.SingleObjectMixin):
         if queryset is None:
             queryset = self.get_queryset()
         try:
-            return queryset.load(self.kwargs['pk'])
+            return queryset.get(self.kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404(_(u"No %(verbose_name)s found matching the query") %
                           {'verbose_name': self.model._meta.verbose_name})
@@ -30,7 +30,7 @@ class SingleObjectMixin(detailview.SingleObjectMixin):
             if hasattr(queryset, '_clone'):
                 queryset = queryset._clone()
         elif self.model is not None:
-            queryset = self.model
+            queryset = self.model.objects
         else:
             raise ImproperlyConfigured(u"'%s' must define 'queryset' or 'model'"
                                        % self.__class__.__name__)

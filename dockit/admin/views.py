@@ -5,8 +5,11 @@ from django.utils.translation import ugettext as _
 from django.contrib.admin import widgets, helpers
 
 from base import AdminViewMixin
+from fields import EmbededSchemaField
+
 from dockit import views
 from dockit.forms import DocumentForm
+
 
 class DocumentViewMixin(AdminViewMixin):
     template_suffix = None
@@ -63,6 +66,8 @@ class DocumentViewMixin(AdminViewMixin):
         """
         if self.form_class:
             return self.form_class
+        if self.admin.form_class:
+            return self.admin.form_class
         else:
             if self.model is not None:
                 # If a model has been explicitly provided, use it
@@ -190,4 +195,16 @@ class DeleteView(DocumentViewMixin, views.DetailView):
 
 class HistoryView(DocumentViewMixin, views.ListView):
     pass
+
+from django.views.generic import TemplateView
+
+class SchemaFieldView(DocumentViewMixin, TemplateView):
+    template_suffix = 'schema_form'
+    
+    def form_valid(self, form):
+        return HttpResponse(simplejson.dumps(form.cleaned_data))
+    
+    @classmethod
+    def get_field(cls):
+        return EmbededSchemaField(model=cls.model, uri=cls.uri)
 
