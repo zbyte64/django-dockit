@@ -203,6 +203,7 @@ class HistoryView(DocumentViewMixin, views.ListView):
 from django.views.generic import TemplateView
 from dockit.models import TemporarySchemaStorage
 from django.utils import simplejson
+from django.http import HttpResponse
 
 class SchemaFieldView(DocumentViewMixin, TemplateView):
     template_suffix = 'schema_form'
@@ -221,6 +222,8 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
     
     def get_form_kwargs(self):
         kwargs = dict()
+        if 'fragment' in self.kwargs:
+            kwargs['initial'] = self.get_schema_store().data
         if self.request.POST:
             kwargs.update({'files':self.request.FILES,
                            'data': self.request.POST,})
@@ -249,7 +252,10 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
         return '%s.%s' % (cls.__module__, cls.__name__)
     
     def get_schema_store(self):
-        storage = TemporarySchemaStorage(identifier=self.get_identifier())
+        if 'fragment' in self.kwargs:
+            storage = TemporarySchemaStorag.objects.get(self.kwargs['fragment'])
+        else:
+            storage = TemporarySchemaStorage(identifier=self.get_identifier())
         return storage
     
     def form_valid(self, form):
@@ -257,6 +263,13 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
         storage.data = form.cleaned_data
         storage.save()
         return HttpResponse(simplejson.dumps(storage.pk))
+    
+    def post(self, request, *args, **kwargs):
+        form = self.get_form(self.get_form_class())
+        if form.is_valid():
+            return self.form_valid(form)
+        context = self.get_context_data(**kwargs)
+        return self.render_to_response(context)
     
     @classmethod
     def get_field(cls):

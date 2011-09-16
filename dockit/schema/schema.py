@@ -190,6 +190,8 @@ class DocumentBase(SchemaBase):
             objects.contribute_to_class(new_class, 'objects')
         backend = get_document_backend()
         backend.register_document(new_class)
+        if new_class.collection is None:
+            new_class.collection = '%s.%s' % (new_class.__module__, new_class.__name__)
         return new_class
 
 class Document(Schema):

@@ -237,9 +237,9 @@ class DictField(BaseField):
         if val is None:
             return ret
         for key, value in val.iteritems():
-            if value.hasattr('to_primitive'):
+            if hasattr(value, 'to_primitive'):
                 value = type(value).to_primitive(value)
-            if key.hasattr('to_primitive'):
+            if hasattr(key, 'to_primitive'):
                 key = type(key).to_primitive(key)
             ret[key] = value
         return ret

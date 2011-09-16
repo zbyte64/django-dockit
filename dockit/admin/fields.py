@@ -20,9 +20,10 @@ class LinkedJSONWidget(widgets.Input):
         final_attrs = self.build_attrs(attrs, type=self.input_type, name=name)
         if value != '':
             # Only add the 'value' attribute if a value is non-empty.
+            #TODO store fragment, fragment id is part of the url
             final_attrs['value'] = force_unicode(self._format_value(value))
         #TODO how do we configure the display?
-        return mark_safe(u'<input%s /><a href="%s"/>Edit</a>' % (flatatt(final_attrs), reverse(self.uri)))
+        return mark_safe(u'<input%s /><a href="%s?_popup=1"/>Edit</a>' % (flatatt(final_attrs), reverse(self.uri)))
 
 class EmbededSchemaField(fields.CharField):
     widget = LinkedJSONWidget
