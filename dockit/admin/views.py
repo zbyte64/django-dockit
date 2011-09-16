@@ -254,6 +254,8 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
         return kwargs
     
     def get_form_class(self):
+        if self.form_class:
+            return self.form_class
         return self._generate_form_class()
     
     def get_form(self, form_class):

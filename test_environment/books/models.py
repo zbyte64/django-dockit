@@ -30,7 +30,18 @@ class Book(dockit.Document):
     authors = dockit.ListField(dockit.ReferenceField(Author), db_index=True)
     tags = dockit.ListField(dockit.TextField(), db_index=True)
 
-class ComplexObject(dockit.Document):
+class SubComplexTwo(dockit.Schema):
+    field2 = dockit.TextField()
+
+class SubComplexOne(dockit.Schema):
     field1 = dockit.TextField()
-    addresses = dockit.ListField(dockit.SchemaField(Address))
+    nested = dockit.SchemaField(SubComplexTwo)
+
+class ComplexObject(dockit.Document):
+    collection = 'complex_object'
+    
+    field1 = dockit.TextField()
+    addresses = dockit.ListField(dockit.SchemaField(Address), blank=True)
     main_address = dockit.SchemaField(Address)
+    
+    nested = dockit.SchemaField(SubComplexOne)
