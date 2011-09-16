@@ -10,7 +10,7 @@ class BookAdmin(DocumentAdmin):
     pass
 
 class AddressFieldView(SchemaFieldView):
-    model = Address
+    document = Address
     
     uri = 'admin:admin_books_publisher_address'
 
@@ -21,7 +21,7 @@ class PublisherForm(DocumentForm):
     address = AddressFieldView.get_field()
     
     class Meta:
-        model = Publisher
+        document = Publisher
 
 class PublisherAdmin(DocumentAdmin):
     form_class = PublisherForm #we can't use form, thanks Django Admin

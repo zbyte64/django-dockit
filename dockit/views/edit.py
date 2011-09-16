@@ -13,21 +13,21 @@ class DocumentFormMixin(editview.FormMixin, SingleObjectMixin):
         if self.form_class:
             return self.form_class
         else:
-            if self.model is not None:
-                # If a model has been explicitly provided, use it
-                model = self.model
+            if self.document is not None:
+                # If a document has been explicitly provided, use it
+                document = self.document
             elif hasattr(self, 'object') and self.object is not None:
                 # If this view is operating on a single object, use
                 # the class of that object
-                model = self.object.__class__
+                document = self.object.__class__
             else:
-                # Try to get a queryset and extract the model class
+                # Try to get a queryset and extract the document class
                 # from that
-                model = self.get_queryset().model
-            #fields = fields_for_document(model)
+                document = self.get_queryset().document
+            #fields = fields_for_document(document)
             class CustomDocumentForm(DocumentForm):
                 class Meta:
-                    document = model
+                    document = document
             #CustomDocumentForm.base_fields.update(fields)
             return CustomDocumentForm
 
@@ -48,7 +48,7 @@ class DocumentFormMixin(editview.FormMixin, SingleObjectMixin):
             except AttributeError:
                 raise ImproperlyConfigured(
                     "No URL to redirect to.  Either provide a url or define"
-                    " a get_absolute_url method on the Model.")
+                    " a get_absolute_url method on the document.")
         return url
 
     def form_valid(self, form):
@@ -57,7 +57,7 @@ class DocumentFormMixin(editview.FormMixin, SingleObjectMixin):
 
     def get_context_data(self, **kwargs):
         context = kwargs
-        if self.object:
+        if getattr(self, 'object', None):
             context['object'] = self.object
             context_object_name = self.get_context_object_name(self.object)
             if context_object_name:

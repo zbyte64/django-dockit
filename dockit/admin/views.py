@@ -13,13 +13,14 @@ from dockit.forms import DocumentForm
 
 class DocumentViewMixin(AdminViewMixin):
     template_suffix = None
+    form_class = None
     
     @property
-    def model(self):
+    def document(self):
         return self.admin.model
     
     def get_template_names(self):
-        opts = self.model._meta
+        opts = self.document._meta
         app_label = opts.app_label
         object_name = opts.object_name.lower()
         return ['admin/%s/%s/%s.html' % (app_label, object_name, self.template_suffix),
@@ -30,7 +31,7 @@ class DocumentViewMixin(AdminViewMixin):
     #    return self.model.objects.all()
     
     def get_context_data(self, **kwargs):
-        opts = self.model._meta
+        opts = self.document._meta
         obj = None
         if hasattr(self, 'object'):
             obj = self.object
@@ -44,7 +45,7 @@ class DocumentViewMixin(AdminViewMixin):
                         'has_change_permission': self.admin.has_change_permission(self.request, obj),
                         'has_delete_permission': self.admin.has_delete_permission(self.request, obj),
                         'has_file_field': True, # FIXME - this should check if form or formsets have a FileField,
-                        'has_absolute_url': hasattr(self.model, 'get_absolute_url'),
+                        'has_absolute_url': hasattr(self.document, 'get_absolute_url'),
                         #'content_type_id': ContentType.objects.get_for_model(self.model).id,
                         'save_as': self.admin.save_as,
                         'save_on_top': self.admin.save_on_top,})
@@ -69,24 +70,27 @@ class DocumentViewMixin(AdminViewMixin):
         if self.admin.form_class:
             return self.admin.form_class
         else:
-            if self.model is not None:
-                # If a model has been explicitly provided, use it
-                model = self.model
-            elif hasattr(self, 'object') and self.object is not None:
-                # If this view is operating on a single object, use
-                # the class of that object
-                model = self.object.__class__
-            else:
-                # Try to get a queryset and extract the model class
-                # from that
-                model = self.get_queryset().model
-            #fields = fields_for_document(model)
-            class CustomDocumentForm(DocumentForm):
-                class Meta:
-                    document = model
-                    form_field_callback = self.admin.formfield_for_field
-            #CustomDocumentForm.base_fields.update(fields)
-            return CustomDocumentForm
+            return self._generate_form_class()
+    
+    def _generate_form_class(self):
+        if self.document is not None:
+            # If a document has been explicitly provided, use it
+            the_document = self.document
+        elif hasattr(self, 'object') and self.object is not None:
+            # If this view is operating on a single object, use
+            # the class of that object
+            the_document = self.object.__class__
+        else:
+            # Try to get a queryset and extract the document class
+            # from that
+            the_document = self.get_queryset().document
+        #fields = fields_for_document(document)
+        class CustomDocumentForm(DocumentForm):
+            class Meta:
+                document = the_document
+                form_field_callback = self.admin.formfield_for_field
+        #CustomDocumentForm.base_fields.update(fields)
+        return CustomDocumentForm
 
 class IndexView(DocumentViewMixin, views.ListView):
     template_suffix = 'change_list'
@@ -95,7 +99,7 @@ class IndexView(DocumentViewMixin, views.ListView):
         if not hasattr(self, 'changelist'):
             changelist_cls = self.admin.get_changelist(self.request)
             self.changelist = changelist_cls(request=self.request,
-                                        model=self.model,
+                                        model=self.document,
                                         list_display=self.admin.list_display,
                                         list_display_links=self.admin.list_display_links,
                                         list_filter=self.admin.list_filter,
@@ -127,7 +131,7 @@ class CreateView(DocumentViewMixin, views.CreateView):
     def get_context_data(self, **kwargs):
         context = views.CreateView.get_context_data(self, **kwargs)
         context.update(DocumentViewMixin.get_context_data(self, **kwargs))
-        opts = self.model._meta
+        opts = self.document._meta
         context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
                         'show_delete': False,
                         'add': True,
@@ -158,7 +162,7 @@ class UpdateView(DocumentViewMixin, views.UpdateView):
         context.update(DocumentViewMixin.get_context_data(self, **kwargs))
         
         obj = self.get_object()
-        opts = self.model._meta
+        opts = self.document._meta
         context.update({'title':_('Change %s') % force_unicode(opts.verbose_name),
                         'object_id': obj.get_id,
                         'original': obj,
@@ -198,28 +202,63 @@ class HistoryView(DocumentViewMixin, views.ListView):
 
 from django.views.generic import TemplateView
 from dockit.models import TemporarySchemaStorage
+from django.utils import simplejson
 
 class SchemaFieldView(DocumentViewMixin, TemplateView):
     template_suffix = 'schema_form'
-    #kwargs = {'storage_key':''}
+    uri = None
+    document = None
     
-    def get_schema_identifier(self):
+    def create_admin_form(self):
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        admin_form = helpers.AdminForm(form,
+                                       [(None, {'fields': form.fields.keys()})],
+                                       {},#self.admin.prepopulated_fields, 
+                                       [],#self.admin.get_readonly_fields(self.request),
+                                       model_admin=self.admin)
+        return admin_form
+    
+    def get_form_kwargs(self):
+        kwargs = dict()
+        if self.request.POST:
+            kwargs.update({'files':self.request.FILES,
+                           'data': self.request.POST,})
+        return kwargs
+    
+    def get_form_class(self):
+        return self._generate_form_class()
+    
+    def get_form(self, form_class):
+        return form_class(**self.get_form_kwargs())
+    
+    def get_context_data(self, **kwargs):
+        context = DocumentViewMixin.get_context_data(self, **kwargs)
+        context.update(DocumentViewMixin.get_context_data(self, **kwargs))
+        opts = self.document._meta
+        context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
+                        'show_delete': False,
+                        'add': True,
+                        'change': False,
+                        'delete': False,
+                        'adminform':self.create_admin_form(),})
+        return context
+    
+    def get_identifier(self):
         cls = type(self)
         return '%s.%s' % (cls.__module__, cls.__name__)
     
     def get_schema_store(self):
-        storage = TemporarySchemaStorage.objects.get(self.kwargs['storage_key'])
-        if storage.schema_identifier != self.get_schema_identifier():
-            assert False, 'Wrong schema selected'
+        storage = TemporarySchemaStorage(identifier=self.get_identifier())
         return storage
     
     def form_valid(self, form):
         storage = self.get_schema_store()
         storage.data = form.cleaned_data
         storage.save()
-        return HttpResponse(simplejson.dumps(form.cleaned_data))
+        return HttpResponse(simplejson.dumps(storage.pk))
     
     @classmethod
     def get_field(cls):
-        return EmbededSchemaField(model=cls.model, uri=cls.uri)
+        return EmbededSchemaField(view=cls())
 

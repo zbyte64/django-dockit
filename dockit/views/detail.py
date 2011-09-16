@@ -29,10 +29,10 @@ class SingleObjectMixin(detailview.SingleObjectMixin):
             queryset = self.queryset
             if hasattr(queryset, '_clone'):
                 queryset = queryset._clone()
-        elif self.model is not None:
-            queryset = self.model.objects
+        elif self.document is not None:
+            queryset = self.document.objects
         else:
-            raise ImproperlyConfigured(u"'%s' must define 'queryset' or 'model'"
+            raise ImproperlyConfigured(u"'%s' must define 'queryset' or 'document'"
                                        % self.__class__.__name__)
         return queryset
 
