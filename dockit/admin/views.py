@@ -1,7 +1,7 @@
 from django.http import HttpResponseRedirect
 from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext as _
-
+from django.utils.html import escape, escapejs
 from django.contrib.admin import widgets, helpers
 
 from base import AdminViewMixin
@@ -138,11 +138,16 @@ class CreateView(DocumentViewMixin, views.CreateView):
                         'change': False,
                         'delete': False,
                         'adminform':self.create_admin_form(),})
+        context['media'] += context['adminform'].form.media
         return context
     
     def form_valid(self, form):
         self.object = form.save()
         self.admin.log_addition(self.request, self.object)
+        if "_popup" in self.request.POST:
+            return HttpResponse('<script type="text/javascript">opener.dismissFragmentPopup(window, "%s", "%s");</script>' % \
+                # escape() calls force_unicode.
+                (escape(self.object.get_id()), escapejs(self.object)))
         if '_continue' in self.request.POST:
             return HttpResponseRedirect(self.admin.reverse('change', self.object.get_id()))
         if '_addanother' in self.request.POST:
@@ -170,6 +175,7 @@ class UpdateView(DocumentViewMixin, views.UpdateView):
                         'add': False,
                         'delete': False,
                         'adminform':self.create_admin_form(),})
+        context['media'] += context['adminform'].form.media
         return context
     
     def form_valid(self, form):
@@ -282,6 +288,10 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
         storage = self.get_fragment_store()
         storage.data = form.cleaned_data
         storage.save()
+        if "_popup" in self.request.POST or True:
+            return HttpResponse('<script type="text/javascript">opener.dismissFragmentPopup(window, "%s", "%s");</script>' % \
+                # escape() calls force_unicode.
+                (escape(storage.get_id()), escapejs(self.document._meta.verbose_name)))
         return HttpResponse(simplejson.dumps(storage.pk))
     
     def post(self, request, *args, **kwargs):

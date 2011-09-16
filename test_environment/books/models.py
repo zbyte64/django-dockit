@@ -30,3 +30,7 @@ class Book(dockit.Document):
     authors = dockit.ListField(dockit.ReferenceField(Author), db_index=True)
     tags = dockit.ListField(dockit.TextField(), db_index=True)
 
+class ComplexObject(dockit.Document):
+    field1 = dockit.TextField()
+    addresses = dockit.ListField(dockit.SchemaField(Address))
+    main_address = dockit.SchemaField(Address)

@@ -8,6 +8,9 @@ from django.utils.safestring import mark_safe
 from dockit.models import SchemaFragment
 
 class LinkedJSONWidget(widgets.Input):
+    class Media:
+        js = ['js/admin/SchemaFragment.js']
+    
     input_type = 'hidden'
     
     def __init__(self, uri, identifier):
@@ -19,16 +22,18 @@ class LinkedJSONWidget(widgets.Input):
         if value is None:
             value = ''
         final_attrs = self.build_attrs(attrs, type=self.input_type, name=name)
+        print final_attrs
         if value != '':
             # Only add the 'value' attribute if a value is non-empty.
             #TODO create the fragment on request, requires us to know the path though
             fragment = SchemaFragment(identifier=self.identifier, data=type(value).to_primitive(value))
             fragment.save()
             final_attrs['value'] = force_unicode(fragment.get_id())
-            return mark_safe(u'<input%s /><a href="%s?_popup=1&fragment=%s"/>Edit</a>' % (flatatt(final_attrs), reverse(self.uri), fragment.get_id()))
+            #class="add-another" id="add_id_%s" onclick="return showAddAnotherPopup(this);"
+            return mark_safe(u'<input%s /><a href="%s?_popup=1&fragment=%s" onclick="return showFragmentPopup(this);" class="related-lookup" id="lookup_id_%s"/>Edit</a>' % (flatatt(final_attrs), reverse(self.uri), fragment.get_id(), name))
         #TODO how do we configure the display?
         else:
-            return mark_safe(u'<input%s /><a href="%s?_popup=1"/>Edit</a>' % (flatatt(final_attrs), reverse(self.uri)))
+            return mark_safe(u'<input%s /><a href="%s?_popup=1" onclick="return showFragmentPopup(this);" class="related-lookup" id="lookup_id_%s"/>Add</a>' % (flatatt(final_attrs), reverse(self.uri), name))
 
 class EmbededSchemaField(fields.CharField):
     widget = LinkedJSONWidget
