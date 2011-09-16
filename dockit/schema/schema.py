@@ -156,7 +156,7 @@ class Schema(object):
             for name, entry in val._python_data.iteritems():
                 val._primitive_data[name] = val._meta.fields[name].to_primitive(entry)
             return val._primitive_data
-        assert False
+        assert isinstance(val, dict)
         return val
     
     @classmethod

@@ -1,5 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
 from django.views.generic import detail as detailview
+from django.utils.translation import ugettext as _
 from django.http import Http404
 
 class SingleObjectMixin(detailview.SingleObjectMixin):
@@ -18,7 +19,7 @@ class SingleObjectMixin(detailview.SingleObjectMixin):
             return queryset.get(self.kwargs['pk'])
         except ObjectDoesNotExist:
             raise Http404(_(u"No %(verbose_name)s found matching the query") %
-                          {'verbose_name': self.model._meta.verbose_name})
+                          {'verbose_name': self.document._meta.verbose_name})
     
     def get_queryset(self):
         """

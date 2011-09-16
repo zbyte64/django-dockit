@@ -144,7 +144,7 @@ class CreateView(DocumentViewMixin, views.CreateView):
         self.object = form.save()
         self.admin.log_addition(self.request, self.object)
         if '_continue' in self.request.POST:
-            return HttpResponseRedirect(self.admin.reverse('change', self.object.get_id))
+            return HttpResponseRedirect(self.admin.reverse('change', self.object.get_id()))
         if '_addanother' in self.request.POST:
             return HttpResponseRedirect(self.admin.reverse('add'))
         return HttpResponseRedirect(self.admin.reverse('index'))
@@ -176,7 +176,7 @@ class UpdateView(DocumentViewMixin, views.UpdateView):
         self.object = form.save()
         self.admin.log_change(self.request, self.object, '')
         if '_continue' in self.request.POST:
-            return HttpResponseRedirect(self.admin.reverse('change', self.object.get_id))
+            return HttpResponseRedirect(self.admin.reverse('change', self.object.get_id()))
         if '_addanother' in self.request.POST:
             return HttpResponseRedirect(self.admin.reverse('add'))
         return HttpResponseRedirect(self.admin.reverse('index'))
@@ -200,15 +200,32 @@ class DeleteView(DocumentViewMixin, views.DetailView):
 class HistoryView(DocumentViewMixin, views.ListView):
     pass
 
-from django.views.generic import TemplateView
-from dockit.models import TemporarySchemaStorage
 from django.utils import simplejson
 from django.http import HttpResponse
+from django.views.generic import TemplateView
+
+from dockit.models import SchemaFragment
+from dockit.backends import get_document_backend
+
 
 class SchemaFieldView(DocumentViewMixin, TemplateView):
+    """
+    Get params:
+    None - creates a new fragment
+    ?fragment=<fragment_id> - edits a fragment that already exists
+    ?collection=<collection>&docid=<docid>&dotpath=<dotpath> - loads an existing portion of a document into a fragment
+    
+    Always returns the fragment id associated to the edit
+    """
     template_suffix = 'schema_form'
     uri = None
     document = None
+    
+    def load_fragment_data(self):
+        backend = get_document_backend()
+        doc = backend.get(self.request.GET['collection'], self.request.GET['docid'])
+        data = doc.dotpath(self.request.GET['dotpath'])
+        return data
     
     def create_admin_form(self):
         form_class = self.get_form_class()
@@ -222,8 +239,9 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
     
     def get_form_kwargs(self):
         kwargs = dict()
-        if 'fragment' in self.kwargs:
-            kwargs['initial'] = self.get_schema_store().data
+        storage = self.get_fragment_store()
+        if storage.data:
+            kwargs['initial'] = storage.data
         if self.request.POST:
             kwargs.update({'files':self.request.FILES,
                            'data': self.request.POST,})
@@ -251,15 +269,17 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
         cls = type(self)
         return '%s.%s' % (cls.__module__, cls.__name__)
     
-    def get_schema_store(self):
-        if 'fragment' in self.kwargs:
-            storage = TemporarySchemaStorag.objects.get(self.kwargs['fragment'])
+    def get_fragment_store(self):
+        if 'fragment' in self.request.GET:
+            storage = SchemaFragment.objects.get(self.request.GET['fragment'])
         else:
-            storage = TemporarySchemaStorage(identifier=self.get_identifier())
+            storage = SchemaFragment(identifier=self.get_identifier())
+        if 'docid' in self.request.GET and 'collection' in self.request.GET and 'dotpath' in self.request.GET:
+            storage.data = self.load_fragment_data()
         return storage
     
     def form_valid(self, form):
-        storage = self.get_schema_store()
+        storage = self.get_fragment_store()
         storage.data = form.cleaned_data
         storage.save()
         return HttpResponse(simplejson.dumps(storage.pk))
