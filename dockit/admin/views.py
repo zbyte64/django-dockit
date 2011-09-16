@@ -197,11 +197,26 @@ class HistoryView(DocumentViewMixin, views.ListView):
     pass
 
 from django.views.generic import TemplateView
+from dockit.models import TemporarySchemaStorage
 
 class SchemaFieldView(DocumentViewMixin, TemplateView):
     template_suffix = 'schema_form'
+    #kwargs = {'storage_key':''}
+    
+    def get_schema_identifier(self):
+        cls = type(self)
+        return '%s.%s' % (cls.__module__, cls.__name__)
+    
+    def get_schema_store(self):
+        storage = TemporarySchemaStorage.objects.get(self.kwargs['storage_key'])
+        if storage.schema_identifier != self.get_schema_identifier():
+            assert False, 'Wrong schema selected'
+        return storage
     
     def form_valid(self, form):
+        storage = self.get_schema_store()
+        storage.data = form.cleaned_data
+        storage.save()
         return HttpResponse(simplejson.dumps(form.cleaned_data))
     
     @classmethod
