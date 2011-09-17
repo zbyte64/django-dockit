@@ -133,9 +133,9 @@ def fields_for_document(document, properties=None, exclude=None, form_field_call
             continue
         
         field = prop.formfield()
-            
-        #if form_field_callback:
-        #    field = form_field_callback(fields_properties_mapping[property_class_name], **defaults)
+        
+        if field and form_field_callback:
+            field = form_field_callback(type(field))#, **defaults)
         if field:
             field_list.append((prop.name, field))
     return SortedDict(field_list)
@@ -205,7 +205,8 @@ class BaseDocumentForm(BaseForm):
         super(BaseDocumentForm, self).__init__(data, files, auto_id, prefix, 
                                             object_data, error_class, 
                                             label_suffix, empty_permitted)
-                                            
+        #print self.data, self.initial, self.instance._primitive_data, self.instance._python_data
+    
     def save(self, commit=True, dynamic=True):
         """
         Saves this ``form``'s cleaned_data into document instance
@@ -242,4 +243,5 @@ class BaseDocumentForm(BaseForm):
             
 class DocumentForm(BaseDocumentForm):
     """ The document form object """
-    __metaclass__ = DocumentFormMetaClass          
+    __metaclass__ = DocumentFormMetaClass
+

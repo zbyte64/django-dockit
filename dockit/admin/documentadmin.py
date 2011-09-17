@@ -159,7 +159,7 @@ class BaseAdmin(object):
             user_id         = request.user.pk,
             #content_type_id = ContentType.objects.get_for_model(object).pk,
             content_type_id = None,
-            object_id       = object.get_id,
+            object_id       = object.get_id(),
             object_repr     = force_unicode(object),
             action_flag     = ADDITION
         )
@@ -175,7 +175,7 @@ class BaseAdmin(object):
             user_id         = request.user.pk,
             #content_type_id = ContentType.objects.get_for_model(object).pk,
             content_type_id = None,
-            object_id       = object.get_id,
+            object_id       = object.get_id(),
             object_repr     = force_unicode(object),
             action_flag     = CHANGE,
             change_message  = message
@@ -190,10 +190,10 @@ class BaseAdmin(object):
         """
         from django.contrib.admin.models import LogEntry, DELETION
         LogEntry.objects.log_action(
-            user_id         = request.user.id,
+            user_id         = request.user.pk,
             #content_type_id = ContentType.objects.get_for_model(self.model).pk,
             content_type_id = None,
-            object_id       = object.get_id,
+            object_id       = object.get_id(),
             object_repr     = object_repr,
             action_flag     = DELETION
         )

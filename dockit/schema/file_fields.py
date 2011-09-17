@@ -30,29 +30,9 @@ class FileField(Field):
     def get_internal_type(self):
         return "FileField"
 
-    def get_prep_lookup(self, lookup_type, value):
-        if hasattr(value, 'name'):
-            value = value.name
-        return super(FileField, self).get_prep_lookup(lookup_type, value)
-
-    def get_prep_value(self, value):
-        "Returns field's value prepared for saving into a database."
-        # Need to convert File objects provided via a form to unicode for database insertion
-        if value is None:
-            return None
-        return unicode(value)
-
-    def pre_save(self, model_instance, add):
-        "Returns field's value just before saving."
-        file = super(FileField, self).pre_save(model_instance, add)
-        if file and not file._committed:
-            # Commit the file to storage prior to saving the model
-            file.save(file.name, file, save=False)
-        return file
-
-    def contribute_to_class(self, cls, name):
-        super(FileField, self).contribute_to_class(cls, name)
-        setattr(cls, self.name, self.descriptor_class(self))
+    #def contribute_to_class(self, cls, name):
+    #    super(FileField, self).contribute_to_class(cls, name)
+    #    setattr(cls, self.name, self.descriptor_class(self))
 
     def get_directory_name(self):
         return os.path.normpath(force_unicode(datetime.datetime.now().strftime(smart_str(self.upload_to))))
@@ -62,18 +42,6 @@ class FileField(Field):
 
     def generate_filename(self, filename):
         return os.path.join(self.get_directory_name(), self.get_filename(filename))
-
-    def save_form_data(self, instance, data):
-        # Important: None means "no change", other false value means "clear"
-        # This subtle distinction (rather than a more explicit marker) is
-        # needed because we need to consume values that are also sane for a
-        # regular (non Model-) Form to find in its cleaned_data dictionary.
-        if data is not None:
-            # This value will be converted to unicode and stored in the
-            # database, so leaving False as-is is not acceptable.
-            if not data:
-                data = ''
-            setattr(instance, self.name, data)
 
     def formfield(self, **kwargs):
         defaults = {'form_class': forms.FileField}
@@ -101,5 +69,6 @@ class FileField(Field):
         return name
     
     def to_python(self, val):
-        return self.storage.load(val)
+        ret = self.storage.open(val)
+        return ret
 
