@@ -25,6 +25,7 @@ class Book(dockit.Document):
     collection = 'book'
     
     title = dockit.TextField()
+    cover_image = dockit.FileField(upload_to='book-images')
     year = dockit.IntegerField()
     publisher = dockit.ReferenceField(Publisher)
     authors = dockit.ListField(dockit.ReferenceField(Author), db_index=True)
@@ -41,6 +42,7 @@ class ComplexObject(dockit.Document):
     collection = 'complex_object'
     
     field1 = dockit.TextField()
+    image = dockit.FileField(upload_to='complex-images')
     addresses = dockit.ListField(dockit.SchemaField(Address), blank=True)
     main_address = dockit.SchemaField(Address)
     

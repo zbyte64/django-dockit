@@ -64,7 +64,7 @@ class ComplexObjectForm(DocumentForm):
 
 class ComplexObjectAdmin(DocumentAdmin):
     form_class = ComplexObjectForm
-    declared_fieldsets = [(None, {'fields': ['field1', 'nested']})]
+    declared_fieldsets = [(None, {'fields': ['field1', 'image', 'nested']})]
     
     def get_extra_urls(self):
         from django.conf.urls.defaults import patterns, url
