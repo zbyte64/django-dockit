@@ -22,12 +22,17 @@ class LinkedJSONWidget(widgets.Input):
         if value is None:
             value = ''
         final_attrs = self.build_attrs(attrs, type=self.input_type, name=name)
-        print final_attrs
         if value != '':
             # Only add the 'value' attribute if a value is non-empty.
             #TODO create the fragment on request, requires us to know the path though
-            fragment = SchemaFragment(identifier=self.identifier, data=type(value).to_primitive(value))
-            fragment.save()
+            if hasattr(value, 'to_primitive'):
+                value = type(value).to_primitive(value)
+            if isinstance(value, basestring):
+                fragment = SchemaFragment.objects.get(value)
+                assert fragment.identifier == self.identifier
+            else:
+                fragment = SchemaFragment(identifier=self.identifier, data=value)
+                fragment.save()
             final_attrs['value'] = force_unicode(fragment.get_id())
             #class="add-another" id="add_id_%s" onclick="return showAddAnotherPopup(this);"
             return mark_safe(u'<input%s /><a href="%s?_popup=1&fragment=%s" onclick="return showFragmentPopup(this);" class="related-lookup" id="lookup_id_%s"/>Edit</a>' % (flatatt(final_attrs), reverse(self.uri), fragment.get_id(), name))

@@ -20,6 +20,9 @@ class Publisher(dockit.Document):
     
     name = dockit.TextField()
     address = dockit.SchemaField(Address)
+    
+    def __unicode__(self):
+        return self.name
 
 class Book(dockit.Document):
     collection = 'book'

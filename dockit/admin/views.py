@@ -125,6 +125,13 @@ class IndexView(DocumentViewMixin, views.ListView):
         cl = self.get_changelist()
         return cl.get_query_set()
 
+#the big and ugly callback
+CALL_BACK = '''
+<script type="text/javascript">
+parent.dismissFragmentPopup(window, "%(value)s", "%(name)s");
+</script>
+'''
+
 class CreateView(DocumentViewMixin, views.CreateView):
     template_suffix = 'change_form'
     
@@ -145,14 +152,15 @@ class CreateView(DocumentViewMixin, views.CreateView):
         self.object = form.save()
         self.admin.log_addition(self.request, self.object)
         if "_popup" in self.request.POST:
-            return HttpResponse('<script type="text/javascript">opener.dismissFragmentPopup(window, "%s", "%s");</script>' % \
+            return HttpResponse(CALL_BACK % \
                 # escape() calls force_unicode.
-                (escape(self.object.get_id()), escapejs(self.object)))
+                {'value': escape(storage.get_id()), 
+                 'name': escapejs(self.document._meta.verbose_name)})
         if '_continue' in self.request.POST:
-            return HttpResponseRedirect(self.admin.reverse('change', self.object.get_id()))
+            return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_change', self.object.get_id()))
         if '_addanother' in self.request.POST:
-            return HttpResponseRedirect(self.admin.reverse('add'))
-        return HttpResponseRedirect(self.admin.reverse('index'))
+            return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
+        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
     
 class UpdateView(DocumentViewMixin, views.UpdateView):
     template_suffix = 'change_form'
@@ -182,10 +190,10 @@ class UpdateView(DocumentViewMixin, views.UpdateView):
         self.object = form.save()
         self.admin.log_change(self.request, self.object, '')
         if '_continue' in self.request.POST:
-            return HttpResponseRedirect(self.admin.reverse('change', self.object.get_id()))
+            return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_change', self.object.get_id()))
         if '_addanother' in self.request.POST:
-            return HttpResponseRedirect(self.admin.reverse('add'))
-        return HttpResponseRedirect(self.admin.reverse('index'))
+            return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
+        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
 
 class DeleteView(DocumentViewMixin, views.DetailView):
     template_suffix = 'delete_selected_confirmation'
@@ -271,6 +279,7 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
                         'change': False,
                         'delete': False,
                         'adminform':self.create_admin_form(),})
+        context['media'] += context['adminform'].form.media
         return context
     
     def get_identifier(self):
@@ -291,9 +300,10 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
         storage.data = form.cleaned_data
         storage.save()
         if "_popup" in self.request.POST or True:
-            return HttpResponse('<script type="text/javascript">opener.dismissFragmentPopup(window, "%s", "%s");</script>' % \
+            return HttpResponse(CALL_BACK % \
                 # escape() calls force_unicode.
-                (escape(storage.get_id()), escapejs(self.document._meta.verbose_name)))
+                {'value': escape(storage.get_id()), 
+                 'name': escapejs(self.document._meta.verbose_name)})
         return HttpResponse(simplejson.dumps(storage.pk))
     
     def post(self, request, *args, **kwargs):

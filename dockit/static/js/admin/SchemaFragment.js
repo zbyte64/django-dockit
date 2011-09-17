@@ -7,8 +7,14 @@ function showFragmentPopup(triggeringLink) {
     } else {
         href  += '&_popup=1';
     }
-    var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
-    win.focus();
+    try {
+    django.jQuery('#fragment_'+name).remove();
+    django.jQuery(triggeringLink).after('<iframe id="fragment_'+name+'" src="'+href+'" height="50%" width="100%" style="border:none;"><p>Please Enable iframes</p></iframe>');
+    } catch (exception) {
+    console.log(exception)
+    }
+    //var win = window.open(href, name, 'height=500,width=800,resizable=yes,scrollbars=yes');
+    //win.focus();
     return false;
 }
 
@@ -17,7 +23,7 @@ function dismissFragmentPopup(win, newId, newRepr) {
     // django.utils.html.escape.
     newId = html_unescape(newId);
     newRepr = html_unescape(newRepr);
-    var name = windowname_to_id(win.name);
+    var name = windowname_to_id(win.name).split('fragment_')[1];
     var elem = document.getElementById(name);
     if (elem) {
         if (elem.nodeName == 'SELECT') {
@@ -39,8 +45,9 @@ function dismissFragmentPopup(win, newId, newRepr) {
         //update href, &fragment=newId
         if (link.href.search('fragment=') < 0) {
             link.href += '&fragment='+newId;
+            django.jQuery(link).text('Edit');
             //TODO change text from add to edit
         }
     }
-    win.close();
+    django.jQuery('#fragment_'+name).remove();
 }

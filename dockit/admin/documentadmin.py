@@ -78,7 +78,7 @@ class BaseAdmin(object):
     def __init__(self, model, admin_site):
         self.model = model
         self.admin_site = admin_site
-        self.app_name = model._meta.app_label
+        self.app_name = (model._meta.app_label +'-'+ model._meta.object_name).lower()
         overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
         overrides.update(self.formfield_overrides)
         self.formfield_overrides = overrides
@@ -96,19 +96,19 @@ class BaseAdmin(object):
         urlpatterns += patterns('',
             url(r'^$',
                 wrap(self.index.as_view(**init)),
-                name='index'),
+                name=self.app_name+'_index'),
             url(r'^add/$',
                 wrap(self.create.as_view(**init)),
-                name='add'),
+                name=self.app_name+'_add'),
             url(r'^(?P<pk>.+)/history/$',
                 wrap(self.history.as_view(**init)),
-                name='history'),
+                name=self.app_name+'_history'),
             url(r'^(?P<pk>.+)/delete/$',
                 wrap(self.delete.as_view(**init)),
-                name='delete'),
+                name=self.app_name+'_delete'),
             url(r'^(?P<pk>.+)/$',
                 wrap(self.update.as_view(**init)),
-                name='change'),
+                name=self.app_name+'_change'),
         )
         return urlpatterns
     
@@ -233,6 +233,11 @@ class BaseAdmin(object):
         return []
     
     def reverse(self, name, *args, **kwargs):
+        print self.app_name
+        from django.core.urlresolvers import get_urlconf, get_resolver
+        urlconf = get_urlconf()
+        resolver = get_resolver(urlconf)
+        app_list = resolver.app_dict['admin']
         return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
     
     def formfield_for_field(self, field, **kwargs):
