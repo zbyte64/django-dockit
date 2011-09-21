@@ -63,6 +63,8 @@ class FileField(Field):
             return None
         if isinstance(val, basestring):
             return val
+        if getattr(val, 'storage_path', False):
+            return val.storage_path
         name = self.generate_filename(val.name)
         name = self.storage.save(name, val)
         assert name
@@ -70,5 +72,6 @@ class FileField(Field):
     
     def to_python(self, val):
         ret = self.storage.open(val)
+        ret.storage_path = val
         return ret
 
