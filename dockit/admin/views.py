@@ -154,7 +154,7 @@ class CreateView(DocumentViewMixin, views.CreateView):
         if "_popup" in self.request.POST:
             return HttpResponse(CALL_BACK % \
                 # escape() calls force_unicode.
-                {'value': escape(storage.get_id()), 
+                {'value': escape(self.object.get_id()), 
                  'name': escapejs(self.document._meta.verbose_name)})
         if '_continue' in self.request.POST:
             return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_change', self.object.get_id()))
@@ -316,4 +316,118 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
     @classmethod
     def get_field(cls):
         return EmbededSchemaField(view=cls())
+
+
+class FragmentViewMixin(AdminViewMixin):
+    template_suffix = 'change_form'
+    
+    form_class = None
+    schema = None
+    document = None
+    
+    def get_template_names(self):
+        opts = self.document._meta
+        app_label = opts.app_label
+        object_name = opts.object_name.lower()
+        return ['admin/%s/%s/%s.html' % (app_label, object_name, self.template_suffix),
+                'admin/%s/%s.html' % (app_label, self.template_suffix),
+                'admin/%s.html' % self.template_suffix]
+    
+    #def get_queryset(self):
+    #    return self.model.objects.all()
+    
+    def create_admin_form(self):
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        admin_form = helpers.AdminForm(form,
+                                       list(self.admin.get_fieldsets(self.request)),
+                                       self.admin.prepopulated_fields, 
+                                       self.admin.get_readonly_fields(self.request),
+                                       model_admin=self.admin)
+        return admin_form
+    
+    def get_context_data(self, **kwargs):
+        context = AdminViewMixin.get_context_data(self, **kwargs)
+        opts = self.document._meta
+        context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
+                        'show_delete': False,
+                        'add': True,
+                        'change': False,
+                        'delete': False,
+                        'adminform':self.create_admin_form(),})
+        context['media'] += context['adminform'].form.media
+        
+        obj = None
+        if hasattr(self, 'object'):
+            obj = self.object
+        
+        context.update({'root_path': self.admin_site.root_path,
+                        'app_label': opts.app_label,
+                        'opts': opts,
+                        'module_name': force_unicode(opts.verbose_name_plural),
+                        
+                        'has_add_permission': self.admin.has_add_permission(self.request),
+                        'has_change_permission': self.admin.has_change_permission(self.request, obj),
+                        'has_delete_permission': self.admin.has_delete_permission(self.request, obj),
+                        'has_file_field': True, # FIXME - this should check if form or formsets have a FileField,
+                        'has_absolute_url': hasattr(self.document, 'get_absolute_url'),
+                        #'content_type_id': ContentType.objects.get_for_model(self.model).id,
+                        'save_as': self.admin.save_as,
+                        'save_on_top': self.admin.save_on_top,})
+        
+        return context
+    
+    def get_form_class(self):
+        """
+        Returns the form class to use in this view
+        """
+        if self.form_class:
+            return self.form_class
+        else:
+            return self._generate_form_class()
+    
+    def _generate_form_class(self):
+        class CustomDocumentForm(DocumentForm):
+            class Meta:
+                document = self.schema
+                form_field_callback = self.admin.formfield_for_field
+        #CustomDocumentForm.base_fields.update(fields)
+        return CustomDocumentForm
+    
+    def post(self, request, *args, **kwargs):
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        for key in request.POST.iterkeys():
+            if key.startswith('fragment[') and key.endswith(']'): #submitted, but wants to drill into a fragment
+                fieldname = key.split('[', 1)[1].rsplit(']', 1)[0]
+                # type(self).as_view(document=schema).get_form...
+                #TODO store fragment, redirect view that handles this view
+                #?dotpath=<dotpathsofar>.<fieldname>&parent_fragment=storage.get_id(),
+                #TODO schemaforms should take a dotpath argument, saves and loads relative to the dotpath
+        if form.is_valid():
+            #CONSIDER: if parent_fragment, merge with parent fragment, redirect to view of parent
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+    
+    def form_valid(self, form):
+        form.cleaned_data
+        #TODO merge cleaned_data with parent_fragment
+        if "_popup" in self.request.POST:
+            return HttpResponse(CALL_BACK % \
+                # escape() calls force_unicode.
+                {'value': escape(self.object.get_id()), 
+                 'name': escapejs(self.document._meta.verbose_name)})
+        if '_continue' in self.request.POST:
+            return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_change', self.object.get_id()))
+        if '_addanother' in self.request.POST:
+            return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
+        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
+
+def store_fragment(form):
+    document = form._meta.document
+    for fieldname in form._meta.fields.iterkeys():
+        val = form._raw_value(fieldname)
+        if fieldname in document._meta.fields:
+            val = document._meta.fields[fieldname].to_primitive(val)
 
