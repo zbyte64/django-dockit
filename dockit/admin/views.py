@@ -3,6 +3,7 @@ from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext as _
 from django.utils.html import escape, escapejs
 from django.contrib.admin import widgets, helpers
+from django.conf.urls.defaults import url
 
 from base import AdminViewMixin
 from fields import EmbededSchemaField
@@ -197,6 +198,8 @@ class UpdateView(DocumentViewMixin, views.UpdateView):
 
 class DeleteView(DocumentViewMixin, views.DetailView):
     template_suffix = 'delete_selected_confirmation'
+    title = _('Delete')
+    key = 'delete'
     
     def get_context_data(self, **kwargs):
         context = views.DetailView.get_context_data(self, **kwargs)
@@ -212,7 +215,8 @@ class DeleteView(DocumentViewMixin, views.DetailView):
         return HttpResponseRedirect(self.admin.reverse('index'))
 
 class HistoryView(DocumentViewMixin, views.ListView):
-    pass
+    title = _('History')
+    key = 'history'
 
 from django.utils import simplejson
 from django.http import HttpResponse
@@ -316,7 +320,15 @@ class SchemaFieldView(DocumentViewMixin, TemplateView):
     @classmethod
     def get_field(cls):
         return EmbededSchemaField(view=cls())
+    
+    @classmethod
+    def get_url_line(cls, admin):
+        name = cls.uri.rsplit(':', 1)[-1]
+        key = name.rsplit('_', 1)[-1]
+        return url(key+'/$', cls.as_view(**{'admin':admin, 'admin_site':admin.admin_site}), name=name)
 
+class SchemaListFieldView(SchemaFieldView):
+    pass #TODO
 
 class FragmentViewMixin(AdminViewMixin):
     template_suffix = 'change_form'
@@ -394,21 +406,37 @@ class FragmentViewMixin(AdminViewMixin):
         #CustomDocumentForm.base_fields.update(fields)
         return CustomDocumentForm
     
+    def load_fragment_data(self):
+        doc = self.document.objects.get(self.kwargs['pk']) #TODO get_object instead
+        data = doc.dotpath(self.request.GET['dotpath'])
+        return data
+    
+    def get_fragment_store(self):
+        if 'fragment' in self.request.GET:
+            storage = SchemaFragment.objects.get(self.request.GET['fragment'])
+        else:
+            storage = SchemaFragment()
+        if 'pk' in self.kwargs and 'dotpath' in self.request.GET:
+            storage.data = self.load_fragment_data()
+        return storage
+    
     def post(self, request, *args, **kwargs):
         form_class = self.get_form_class()
         form = self.get_form(form_class)
+        if not self.form.is_valid():
+            return self.form_invalid(form)
         for key in request.POST.iterkeys():
             if key.startswith('fragment[') and key.endswith(']'): #submitted, but wants to drill into a fragment
                 fieldname = key.split('[', 1)[1].rsplit(']', 1)[0]
+                fragment = self.get_fragment_store()
+                fragment.data = form.cleaned_data
+                fragment.save()
                 # type(self).as_view(document=schema).get_form...
                 #TODO store fragment, redirect view that handles this view
                 #?dotpath=<dotpathsofar>.<fieldname>&parent_fragment=storage.get_id(),
                 #TODO schemaforms should take a dotpath argument, saves and loads relative to the dotpath
-        if form.is_valid():
-            #CONSIDER: if parent_fragment, merge with parent fragment, redirect to view of parent
-            return self.form_valid(form)
-        else:
-            return self.form_invalid(form)
+        #CONSIDER: if parent_fragment, merge with parent fragment, redirect to view of parent
+        return self.form_valid(form)
     
     def form_valid(self, form):
         form.cleaned_data

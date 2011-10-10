@@ -108,7 +108,12 @@ class BaseField(object):
         defaults.update(kwargs)
         return form_class(**defaults)
     
+    def dot_notation_to_value(self, notation, value):
+        assert notation is None
+        return value
+    
     def dot_notation_to_field(self, notation):
+        assert notation is None
         return self
 
 class BaseTypedField(BaseField):
@@ -176,9 +181,15 @@ class TimeField(BaseTypedField):
 #TODO URLField
 #TODO XMLField
 
-class SchemaField(BaseField):
+class BaseComplexField(BaseField):
     meta_field = True
     
+    def formfield(self, **kwargs):
+        from dockit.forms.fields import HiddenJSONField
+        kwargs.setdefault('form_class', HiddenJSONField)
+        return BaseField.formfield(self, **kwargs)
+
+class SchemaField(BaseComplexField):
     def __init__(self, schema, *args, **kwargs):
         self.schema = schema
         super(SchemaField, self).__init__(*args, **kwargs)
@@ -189,18 +200,27 @@ class SchemaField(BaseField):
     def to_python(self, val):
         return self.schema.to_python(val)
     
-    def formfield(self, form_class=forms.CharField, **kwargs):
-        return None #TODO
+    def dot_notation_to_value(self, notation, value):
+        if notation is None:
+            return value
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        value = getattr(value, name, None)
+        return self.schema._meta.fields[name].dot_notation_to_value(notation, value)
     
     def dot_notation_to_field(self, notation):
-        if '.' not in notation:
+        if notation is None:
             return self
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
         name, notation = notation.split('.', 1)
         return self.schema._meta.fields[name].dot_notation_to_field(notation)
 
-class ListField(BaseField):
-    meta_field = True
-    
+class ListField(BaseComplexField):
     def __init__(self, schema, *args, **kwargs):
         self.schema = schema
         super(ListField, self).__init__(*args, **kwargs)
@@ -221,12 +241,29 @@ class ListField(BaseField):
             ret.append(self.schema.to_python(item))
         return ret
     
-    def formfield(self, form_class=forms.CharField, **kwargs):
-        return None #TODO
-
-class DictField(BaseField):
-    meta_field = True
+    def dot_notation_to_value(self, notation, value):
+        if notation is None:
+            return value
+        if '.' in notation:
+            index, notation = notation.split('.', 1)
+        else:
+            index, notation = notation, None
+        if index == '*':
+            pass #TODO support star
+        value = value[index]
+        return self.schema.dot_notation_to_value(notation, value)
     
+    def dot_notation_to_field(self, notation):
+        if notation is None:
+            return self;
+        if '.' in notation:
+            index, notation = notation.split('.', 1)
+        else:
+            index, notation = notation, None
+        index, notation = notation.split('.', 1)
+        return self.schema.dot_notation_to_field(notation)
+
+class DictField(BaseComplexField):
     def __init__(self, key_schema=None, value_schema=None, **kwargs):
         self.key_schema = key_schema
         self.value_schema = value_schema
@@ -256,8 +293,27 @@ class DictField(BaseField):
             ret[key] = value
         return ret
     
-    def formfield(self, form_class=forms.CharField, **kwargs):
-        return None #TODO
+    def dot_notation_to_value(self, notation, value):
+        if notation is None:
+            return value
+        if '.' in notation:
+            key, notation = notation.split('.', 1)
+        else:
+            key, notation = notation, None
+        if key == '*':
+            pass #TODO support star??
+        value = value[key]
+        return self.value_schema.dot_notation_to_value(notation, value)
+    
+    def dot_notation_to_field(self, notation):
+        if notation is None:
+            return self
+        if '.' in notation:
+            key, notation = notation.split('.', 1)
+        else:
+            key, notation = notation, None
+        key, notation = notation.split('.', 1)
+        return self.value_schema.dot_notation_to_field(notation)
 
 class ReferenceField(BaseField):
     def __init__(self, document, *args, **kwargs):

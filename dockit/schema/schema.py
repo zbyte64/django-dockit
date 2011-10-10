@@ -181,6 +181,30 @@ class Schema(object):
             #self._primtive_data[name] = store_val
         else:
             super(Schema, self).__setattr__(name, val)
+    
+    def dot_notation(self, notation):
+        return self.dot_notation_to_value(notation, self)
+    
+    def dot_notation_to_value(self, notation, value):
+        if notation is None:
+            return value
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        if name == '*':
+            pass #TODO support star??
+        value = getattr(value, name, None)
+        return self._meta.fields[name].dot_notation_to_value(notation, value)
+    
+    def dot_notation_to_field(self, notation):
+        if notation is None:
+            return self
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        return self._meta.fields[name].dot_notation_to_field(notation)
 
 class DocumentBase(SchemaBase):
     def __new__(cls, name, bases, attrs):

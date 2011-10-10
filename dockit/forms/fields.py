@@ -1,3 +1,30 @@
+from django.forms.fields import ChoiceField, Field
+from django.forms.widgets import HiddenInput
+from django.forms import ValidationError
+from django.utils.translation import ugettext as _
+from django.utils.encoding import force_unicode, smart_unicode
+
+from django.utils import simplejson as json
+
+class HiddenJSONField(Field):
+    widget = HiddenInput
+    
+    def to_python(self, value):
+        if isinstance(value, basestring):
+            try:
+                return json.loads(value)
+            except ValueError:
+                raise ValidationError("Invalid JSON")#TODO more descriptive error?
+        return value
+
+    def validate(self, value):
+        return Field.validate(self, value)
+    
+    def prepare_value(self, value):
+        if hasattr(value, 'to_primitive'):
+            return json.dumps(type(value).to_primitive(value))
+        return Field.prepare_value(self, value)
+
 class SchemaChoiceIterator(object):
     def __init__(self, field):
         self.field = field

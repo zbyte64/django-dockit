@@ -75,6 +75,8 @@ class BaseAdmin(object):
     actions_on_bottom = False
     actions_selection_counter = True
     
+    detail_views = []
+    
     def __init__(self, model, admin_site):
         self.model = model
         self.admin_site = admin_site
@@ -100,12 +102,19 @@ class BaseAdmin(object):
             url(r'^add/$',
                 wrap(self.create.as_view(**init)),
                 name=self.app_name+'_add'),
-            url(r'^(?P<pk>.+)/history/$',
-                wrap(self.history.as_view(**init)),
-                name=self.app_name+'_history'),
-            url(r'^(?P<pk>.+)/delete/$',
-                wrap(self.delete.as_view(**init)),
-                name=self.app_name+'_delete'),
+        )
+        
+        for key, view in self.get_detail_views().iteritems():
+            url_p = r'^(?P<pk>.+)/%s/$' % key
+            if hasattr(view, 'get_url_pattern'):
+                url_p = view.get_url_pattern(self)
+            urlpatterns += patterns('',
+                url(url_p,
+                    wrap(view.as_view(**init)),
+                    name='%s_%s' % (self.app_name, key)),
+            )
+        
+        urlpatterns += patterns('', #we shouldn't put anything after this url
             url(r'^(?P<pk>.+)/$',
                 wrap(self.update.as_view(**init)),
                 name=self.app_name+'_change'),
@@ -147,6 +156,12 @@ class BaseAdmin(object):
     
     def as_view(self, view, cacheable=False):
         return self.admin_site.admin_view(view, cacheable)
+    
+    def get_detail_views(self):
+        ret = dict()
+        for detail_view in self.detail_views:
+            ret[detail_view.key] = detail_view
+        return ret
     
     def log_addition(self, request, object):
         """
@@ -223,17 +238,13 @@ class BaseAdmin(object):
         #fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
         fields = list()
         for key, field in self.model._meta.fields.iteritems():
-            if not field.meta_field:
-                fields.append(key)
-            elif key in self.formfield_overrides:
-                fields.append(key)
+            fields.append(key) #TODO handle exclude
         return [(None, {'fields': fields})]
     
     def get_readonly_fields(self, request):
         return []
     
     def reverse(self, name, *args, **kwargs):
-        print self.app_name
         from django.core.urlresolvers import get_urlconf, get_resolver
         urlconf = get_urlconf()
         resolver = get_resolver(urlconf)
@@ -255,6 +266,7 @@ class DocumentAdmin(BaseAdmin):
     delete = views.DeleteView
     index = views.IndexView
     history = views.HistoryView
+    detail_views = [views.HistoryView, views.DeleteView]
 
 """
 #TO register a schema in the admin:

@@ -40,6 +40,10 @@ class BookTestCase(unittest.TestCase):
         assert book.title == 'Of Mice and Men'
         
         self.assertEqual(Book.objects.filter(tags='fiction').count(), 0)
+        
+        self.assertEqual(publisher.dot_notation('address.country'), 'US')
+        
+        publisher.dot_notation_to_field('address')
     
     def test_admin(self):
         import admin
