@@ -185,6 +185,9 @@ class Schema(object):
     def dot_notation(self, notation):
         return self.dot_notation_to_value(notation, self)
     
+    def dot_notation_set_value(self, notation, value):
+        pass #TODO
+    
     def dot_notation_to_value(self, notation, value):
         if notation is None:
             return value

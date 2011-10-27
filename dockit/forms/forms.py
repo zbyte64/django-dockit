@@ -83,7 +83,7 @@ from django.forms.forms import BaseForm, get_declared_fields
 from django.forms.widgets import media_property
 
 
-def document_to_dict(instance, properties=None, exclude=None):
+def document_to_dict(instance, properties=None, exclude=None, dotpath=None):
     """
     Returns a dict containing the data in ``instance`` suitable for passing as
     a Form's ``initial`` keyword argument.
@@ -97,15 +97,25 @@ def document_to_dict(instance, properties=None, exclude=None):
     """
     # avoid a circular import
     data = {}
-    for prop_name in instance._meta.fields.iterkeys():
+    if dotpath:
+        field = instance.dot_notation_to_field(dotpath)
+        fields = field._meta.fields
+    else:
+        fields = instance._meta.fields
+    for prop_name in fields.iterkeys():
         if properties and not prop_name in properties:
             continue
         if exclude and prop_name in exclude:
             continue
-        data[prop_name] = getattr(instance, prop_name, None)
+        
+        if dotpath:
+            c_dotpath = '%s.%s' % (dotpath, prop_name)
+        else:
+            c_dotpath = prop_name
+        data[prop_name] = instance.dot_notation(c_dotpath)
     return data
 
-def fields_for_document(document, properties=None, exclude=None, form_field_callback=None):
+def fields_for_document(document, properties=None, exclude=None, form_field_callback=None, dotpath=None):
     """
     Returns a ``SortedDict`` containing form fields for the given document.
 
@@ -116,14 +126,20 @@ def fields_for_document(document, properties=None, exclude=None, form_field_call
     properties will be excluded from the returned properties, even if 
     they are listed in the ``properties`` argument.
     """
+    if dotpath:
+        field = document.dot_notation_to_field(dotpath)
+        fields = field._meta.fields
+    else:
+        fields = document._meta.fields
+    
     field_list = []
     
     values = []
     if properties:
-        values = [document._meta.fields[prop] for prop in properties if \
-                                                prop in document._meta.fields]
+        values = [fields[prop] for prop in properties if \
+                                                prop in fields]
     else:
-        values = document._meta.fields.values()
+        values = fields.values()
         #values.sort(lambda a, b: cmp(a.creation_counter, b.creation_counter))
     
     for prop in values: 
@@ -146,6 +162,7 @@ class DocumentFormOptions(object):
         self.properties = getattr(options, 'properties', None)
         self.exclude = getattr(options, 'exclude', None)
         self.form_field_callback = getattr(options, 'form_field_callback', None)
+        self.dotpath = getattr(options, 'dotpath', None)
 
 class DocumentFormMetaClass(type):
     def __new__(cls, name, bases, attrs):
@@ -171,9 +188,11 @@ class DocumentFormMetaClass(type):
         if opts.document:
             # If a document is defined, extract form fields from it.
             fields = fields_for_document(opts.document, opts.properties,
-                                         opts.exclude, form_field_callback=opts.form_field_callback)
+                                         opts.exclude, form_field_callback=opts.form_field_callback,
+                                         dotpath=dotpath)
             # Override default docuemnt fields with any custom declared ones
             # (plus, include all the other declared fields).
+            new_class.serialized_fields = fields.keys()
             fields.update(declared_fields)
         else:
             fields = declared_fields
@@ -197,7 +216,7 @@ class BaseDocumentForm(BaseForm):
         else:
             self.instance = instance
             object_data = document_to_dict(instance, opts.properties, 
-                                        opts.exclude) 
+                                        opts.exclude, dotpath=opts.dotpath) 
     
         if initial is not None:
             object_data.update(initial)
@@ -218,15 +237,16 @@ class BaseDocumentForm(BaseForm):
         
         opts = self._meta
         cleaned_data = self.cleaned_data.copy()
-        for prop_name in self.instance._meta.fields.iterkeys():
-            if opts.properties and prop_name not in opts.properties:
-                continue
-            if opts.exclude and prop_name in opts.exclude:
-                continue
+        
+        for prop_name in self.serialized_fields:
             if prop_name in cleaned_data:
                 value = cleaned_data.pop(prop_name)
                 if value is not None:
-                    setattr(self.instance, prop_name, value)
+                    if opts.dotpath:
+                        dotpath = '%s.%s' % (opts.dotpath, prop_name)
+                    else:
+                        dotpath = prop_name
+                    self.instance.dot_notation_set_value(dotpath, value)
         
         if dynamic:
             for attr_name in cleaned_data.keys():
@@ -234,7 +254,11 @@ class BaseDocumentForm(BaseForm):
                     continue
                 value = cleaned_data[attr_name]
                 if value is not None:
-                    setattr(self.instance, attr_name, value)
+                    if opts.dotpath:
+                        dotpath = '%s.%s' % (opts.dotpath, attr_name)
+                    else:
+                        dotpath = attr_name
+                    self.instance.dot_notation_set_value(dotpath, value)
         
         if commit:
             self.instance.save()

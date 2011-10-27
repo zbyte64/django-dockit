@@ -222,119 +222,15 @@ from django.utils import simplejson
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 
-from dockit.models import SchemaFragment
+from dockit.models import TemporaryDocument
 from dockit.backends import get_document_backend
 
-
-class SchemaFieldView(DocumentViewMixin, TemplateView):
-    """
-    Get params:
-    None - creates a new fragment
-    ?fragment=<fragment_id> - edits a fragment that already exists
-    ?collection=<collection>&docid=<docid>&dotpath=<dotpath> - loads an existing portion of a document into a fragment
-    
-    Always returns the fragment id associated to the edit
-    """
-    template_suffix = 'schema_form'
-    uri = None
-    document = None
-    
-    def load_fragment_data(self):
-        backend = get_document_backend()
-        doc = backend.get(self.request.GET['collection'], self.request.GET['docid'])
-        data = doc.dotpath(self.request.GET['dotpath'])
-        return data
-    
-    def create_admin_form(self):
-        form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        admin_form = helpers.AdminForm(form,
-                                       [(None, {'fields': form.fields.keys()})],
-                                       {},#self.admin.prepopulated_fields, 
-                                       [],#self.admin.get_readonly_fields(self.request),
-                                       model_admin=self.admin)
-        return admin_form
-    
-    def get_form_kwargs(self):
-        kwargs = dict()
-        storage = self.get_fragment_store()
-        if storage.data:
-            kwargs['initial'] = storage.data
-        if self.request.POST:
-            kwargs.update({'files':self.request.FILES,
-                           'data': self.request.POST,})
-        return kwargs
-    
-    def get_form_class(self):
-        if self.form_class:
-            return self.form_class
-        return self._generate_form_class()
-    
-    def get_form(self, form_class):
-        return form_class(**self.get_form_kwargs())
-    
-    def get_context_data(self, **kwargs):
-        context = DocumentViewMixin.get_context_data(self, **kwargs)
-        context.update(DocumentViewMixin.get_context_data(self, **kwargs))
-        opts = self.document._meta
-        context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
-                        'show_delete': False,
-                        'add': True,
-                        'change': False,
-                        'delete': False,
-                        'adminform':self.create_admin_form(),})
-        context['media'] += context['adminform'].form.media
-        return context
-    
-    def get_identifier(self):
-        cls = type(self)
-        return '%s.%s' % (cls.__module__, cls.__name__)
-    
-    def get_fragment_store(self):
-        if 'fragment' in self.request.GET:
-            storage = SchemaFragment.objects.get(self.request.GET['fragment'])
-        else:
-            storage = SchemaFragment(identifier=self.get_identifier())
-        if 'docid' in self.request.GET and 'collection' in self.request.GET and 'dotpath' in self.request.GET:
-            storage.data = self.load_fragment_data()
-        return storage
-    
-    def form_valid(self, form):
-        storage = self.get_fragment_store()
-        storage.data = form.cleaned_data
-        storage.save()
-        if "_popup" in self.request.POST or True:
-            return HttpResponse(CALL_BACK % \
-                # escape() calls force_unicode.
-                {'value': escape(storage.get_id()), 
-                 'name': escapejs(self.document._meta.verbose_name)})
-        return HttpResponse(simplejson.dumps(storage.pk))
-    
-    def post(self, request, *args, **kwargs):
-        form = self.get_form(self.get_form_class())
-        if form.is_valid():
-            return self.form_valid(form)
-        context = self.get_context_data(**kwargs)
-        return self.render_to_response(context)
-    
-    @classmethod
-    def get_field(cls):
-        return EmbededSchemaField(view=cls())
-    
-    @classmethod
-    def get_url_line(cls, admin):
-        name = cls.uri.rsplit(':', 1)[-1]
-        key = name.rsplit('_', 1)[-1]
-        return url(key+'/$', cls.as_view(**{'admin':admin, 'admin_site':admin.admin_site}), name=name)
-
-class SchemaListFieldView(SchemaFieldView):
-    pass #TODO
+from urllib import urlencode
 
 class FragmentViewMixin(AdminViewMixin):
     template_suffix = 'change_form'
     
     form_class = None
-    schema = None
     document = None
     
     def get_template_names(self):
@@ -389,35 +285,39 @@ class FragmentViewMixin(AdminViewMixin):
         
         return context
     
+    def dotpath(self):
+        return self.request.GET.get('dotpath', None)
+    
     def get_form_class(self):
         """
         Returns the form class to use in this view
         """
-        if self.form_class:
+        if self.form_class and not self.dotpath():
             return self.form_class
         else:
-            return self._generate_form_class()
+            return self._generate_form_class(self.document)
     
-    def _generate_form_class(self):
+    def _generate_form_class(self, schema):
         class CustomDocumentForm(DocumentForm):
             class Meta:
-                document = self.schema
+                document = schema
                 form_field_callback = self.admin.formfield_for_field
-        #CustomDocumentForm.base_fields.update(fields)
+                dotpath = self.dothpath() or None
         return CustomDocumentForm
     
     def load_fragment_data(self):
-        doc = self.document.objects.get(self.kwargs['pk']) #TODO get_object instead
-        data = doc.dotpath(self.request.GET['dotpath'])
+        doc = self.get_object()
+        data = doc.dot_notation(self.dotpath())
         return data
     
     def get_fragment_store(self):
+        #TODO cache this
         if 'fragment' in self.request.GET:
-            storage = SchemaFragment.objects.get(self.request.GET['fragment'])
+            storage = TemporaryDocument.objects.get(self.request.GET['fragment'])
         else:
-            storage = SchemaFragment()
-        if 'pk' in self.kwargs and 'dotpath' in self.request.GET:
-            storage.data = self.load_fragment_data()
+            storage = TemporaryDocument()
+            if 'pk' in self.kwargs:
+                storage.data = self.get_object()
         return storage
     
     def post(self, request, *args, **kwargs):
@@ -425,22 +325,29 @@ class FragmentViewMixin(AdminViewMixin):
         form = self.get_form(form_class)
         if not self.form.is_valid():
             return self.form_invalid(form)
+        
+        obj = form.save() #CONSIDER this would normally be done in form_valid
+        if not self.dotpath():
+            self.object = obj
+        
         for key in request.POST.iterkeys():
             if key.startswith('fragment[') and key.endswith(']'): #submitted, but wants to drill into a fragment
                 fieldname = key.split('[', 1)[1].rsplit(']', 1)[0]
                 fragment = self.get_fragment_store()
-                fragment.data = form.cleaned_data
-                fragment.save()
-                # type(self).as_view(document=schema).get_form...
-                #TODO store fragment, redirect view that handles this view
-                #?dotpath=<dotpathsofar>.<fieldname>&parent_fragment=storage.get_id(),
-                #TODO schemaforms should take a dotpath argument, saves and loads relative to the dotpath
-        #CONSIDER: if parent_fragment, merge with parent fragment, redirect to view of parent
+                params = {'dotpath':'%s.%s' % (self.dotpath(), fieldname),
+                          'fragment':fragment.get_id(),}
+                return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
+        if self.dotpath():
+            fragment = self.get_fragment_store()
+            params = {'fragment':fragment.get_id(),}
+            dotpath = self.dotpath()
+            dotpath = dotpath[:dopath.rfind('.')]
+            if dotpath:
+                params['dotpath'] = dotpath
+            return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
         return self.form_valid(form)
     
     def form_valid(self, form):
-        form.cleaned_data
-        #TODO merge cleaned_data with parent_fragment
         if "_popup" in self.request.POST:
             return HttpResponse(CALL_BACK % \
                 # escape() calls force_unicode.
