@@ -10,13 +10,13 @@ class Author(dockit.Document):
 
 class Address(dockit.Schema):
     street_1 = dockit.TextField()
-    street_2 = dockit.TextField()
+    street_2 = dockit.TextField(blank=True)
     city = dockit.TextField()
     postal_code = dockit.TextField()
     region = dockit.TextField()
     country = dockit.TextField()
     
-    extra_data = dockit.DictField()
+    extra_data = dockit.DictField(blank=True)
 
 class Publisher(dockit.Document):
     collection = 'publisher'
@@ -48,8 +48,8 @@ class ComplexObject(dockit.Document):
     collection = 'complex_object'
     
     field1 = dockit.TextField()
-    image = dockit.FileField(upload_to='complex-images')
+    image = dockit.FileField(upload_to='complex-images', blank=True)
     addresses = dockit.ListField(dockit.SchemaField(Address), blank=True)
-    main_address = dockit.SchemaField(Address)
+    main_address = dockit.SchemaField(Address, blank=True)
     
-    nested = dockit.SchemaField(SubComplexOne)
+    nested = dockit.SchemaField(SubComplexOne, blank=True)

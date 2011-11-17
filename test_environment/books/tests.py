@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 
 from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOne, SubComplexTwo
 
+from dockit.forms import DocumentForm
+
 class BookTestCase(unittest.TestCase):
 
     def test_monolithic(self):
@@ -90,4 +92,33 @@ class DotNotationTestCase(unittest.TestCase):
         
         co = ComplexObject.objects.get(co.get_id())
         self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0].internal_id, '1')
+
+class FormTestCase(unittest.TestCase):
+    def test_form(self):
+        class CustomDocumentForm(DocumentForm):
+            class Meta:
+                document = ComplexObject
+        
+        form = CustomDocumentForm(data={'field1':'hello'})
+        self.assertTrue(form.is_valid(), str(form.errors))
+        instance = form.save()
+        self.assertEqual(instance.field1, 'hello')
+    
+    def test_dotnotation_form(self):
+        class CustomDocumentForm(DocumentForm):
+            class Meta:
+                document = ComplexObject
+                dotpath = 'main_address'
+        
+        instance = ComplexObject(field1='field1')
+        instance.save()
+        data = {'street_1': '10533 Mesane Rd',
+                'city': 'San Diego',
+                'postal_code': '92126',
+                'country': 'US',
+                'region': 'CA',}
+        form = CustomDocumentForm(data=data, instance=instance)
+        self.assertTrue(form.is_valid(), str(form.errors))
+        instance = form.save()
+        self.assertEqual(instance.main_address.region, 'CA')
 

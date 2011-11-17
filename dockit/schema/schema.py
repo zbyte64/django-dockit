@@ -151,6 +151,8 @@ class Schema(object):
         for key, value in kwargs.iteritems():
             #TODO check that key is a field or _data
             setattr(self, key, value)
+        assert self._primitive_data is not None
+        assert self._python_data is not None
     
     @classmethod
     def to_primitive(cls, val):
@@ -164,16 +166,14 @@ class Schema(object):
                     print name, val._meta.fields[name], entry
                     raise
             return val._primitive_data
-        if isinstance(val, dict):
-            pass
-        if isinstance(val, list):
-            pass
         assert False
         #assert isinstance(val, (dict, list)), str(type(val))
         return val
     
     @classmethod
     def to_python(cls, val):
+        if val is None:
+            val = dict()
         return cls(_primitive_data=val)
     
     def __getattribute__(self, name):
@@ -221,6 +221,7 @@ class Schema(object):
         value = getattr(value, name, None)
         return self._meta.fields[name].dot_notation_to_value(notation, value)
     
+    @classmethod
     def dot_notation_to_field(self, notation):
         if notation is None:
             return self

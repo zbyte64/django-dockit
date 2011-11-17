@@ -99,7 +99,7 @@ def document_to_dict(instance, properties=None, exclude=None, dotpath=None):
     data = {}
     if dotpath:
         field = instance.dot_notation_to_field(dotpath)
-        fields = field._meta.fields
+        fields = field.schema._meta.fields
     else:
         fields = instance._meta.fields
     for prop_name in fields.iterkeys():
@@ -128,7 +128,7 @@ def fields_for_document(document, properties=None, exclude=None, form_field_call
     """
     if dotpath:
         field = document.dot_notation_to_field(dotpath)
-        fields = field._meta.fields
+        fields = field.schema._meta.fields
     else:
         fields = document._meta.fields
     
@@ -189,7 +189,7 @@ class DocumentFormMetaClass(type):
             # If a document is defined, extract form fields from it.
             fields = fields_for_document(opts.document, opts.properties,
                                          opts.exclude, form_field_callback=opts.form_field_callback,
-                                         dotpath=dotpath)
+                                         dotpath=opts.dotpath)
             # Override default docuemnt fields with any custom declared ones
             # (plus, include all the other declared fields).
             new_class.serialized_fields = fields.keys()
