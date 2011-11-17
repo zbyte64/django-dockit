@@ -6,6 +6,7 @@ class Author(dockit.Document):
     collection = 'author'
     
     user = dockit.ModelReferenceField(User)
+    internal_id = dockit.TextField()
 
 class Address(dockit.Schema):
     street_1 = dockit.TextField()

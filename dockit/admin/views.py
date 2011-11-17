@@ -6,7 +6,7 @@ from django.contrib.admin import widgets, helpers
 from django.conf.urls.defaults import url
 
 from base import AdminViewMixin
-from fields import EmbededSchemaField
+from fields import DotPathField
 
 from dockit import views
 from dockit.forms import DocumentForm

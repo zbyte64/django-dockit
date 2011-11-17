@@ -115,6 +115,10 @@ class BaseField(object):
     def dot_notation_to_field(self, notation):
         assert notation is None
         return self
+    
+    def dot_notation_set_value(self, notation, value, parent):
+        assert notation is None
+        setattr(parent, self.name, value)
 
 class BaseTypedField(BaseField):
     coerce_function = None
@@ -189,7 +193,32 @@ class BaseComplexField(BaseField):
         kwargs.setdefault('form_class', HiddenJSONField)
         return BaseField.formfield(self, **kwargs)
 
-class SchemaField(BaseComplexField):
+class ComplexDotNotationMixin(object):
+    def dot_notation_set_value(self, notation, value, parent):
+        print self, notation, value, parent
+        if notation is None:
+            return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        if notation is None:
+            if isinstance(parent, list):
+                parent[int(name)] = value
+            elif isinstance(parent, dict):
+                parent[name] = value
+            else:
+                setattr(parent, name, value)
+        else:
+            if isinstance(parent, list):
+                parent = parent[int(name)]
+            elif isinstance(parent, dict):
+                parent = parent[name]
+            else:
+                parent = getattr(parent, name)
+            return self.schema._meta.fields[name].dot_notation_set_value(notation, value, parent)
+
+class SchemaField(ComplexDotNotationMixin, BaseComplexField):
     def __init__(self, schema, *args, **kwargs):
         self.schema = schema
         super(SchemaField, self).__init__(*args, **kwargs)
@@ -219,8 +248,8 @@ class SchemaField(BaseComplexField):
             name, notation = notation, None
         name, notation = notation.split('.', 1)
         return self.schema._meta.fields[name].dot_notation_to_field(notation)
-
-class ListField(BaseComplexField):
+    
+class ListField(ComplexDotNotationMixin, BaseComplexField):
     def __init__(self, schema, *args, **kwargs):
         self.schema = schema
         super(ListField, self).__init__(*args, **kwargs)
@@ -263,7 +292,7 @@ class ListField(BaseComplexField):
         index, notation = notation.split('.', 1)
         return self.schema.dot_notation_to_field(notation)
 
-class DictField(BaseComplexField):
+class DictField(ComplexDotNotationMixin, BaseComplexField):
     def __init__(self, key_schema=None, value_schema=None, **kwargs):
         self.key_schema = key_schema
         self.value_schema = value_schema
@@ -315,12 +344,16 @@ class DictField(BaseComplexField):
         key, notation = notation.split('.', 1)
         return self.value_schema.dot_notation_to_field(notation)
 
-class ReferenceField(BaseField):
+class ReferenceField(ComplexDotNotationMixin, BaseField):
     def __init__(self, document, *args, **kwargs):
         assert hasattr(document, 'objects')
         assert hasattr(document, 'get_id')
         self.document = document
         super(ReferenceField, self).__init__(*args, **kwargs)
+    
+    @property
+    def _meta(self):
+        return self.document._meta
     
     def to_primitive(self, val):
         if isinstance(val, basestring): #CONSIDER, should this happen?

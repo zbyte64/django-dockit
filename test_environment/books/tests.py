@@ -23,9 +23,9 @@ class BookTestCase(unittest.TestCase):
 
         book = Book.objects.get(book.get_id())
         assert 'historical' in book.tags
-        assert book.title == 'Of Mice and Men'
-        assert book.publisher.name == 'Books etc'
-        assert book.publisher.address.city == 'San Diego'
+        self.assertEqual(book.title, 'Of Mice and Men')
+        self.assertEqual(book.publisher.name, 'Books etc')
+        self.assertEqual(book.publisher.address.city, 'San Diego')
         assert book.authors[0].user
         
         #test that modifying a nested schema is preserved
@@ -34,16 +34,22 @@ class BookTestCase(unittest.TestCase):
         
         publisher = Publisher.objects.get(publisher.get_id())
         
-        assert publisher.address.street_2 == 'Apt 1'
+        self.assertEqual(publisher.address.street_2, 'Apt 1')
         
         book = Book.objects.filter(tags='historical')[0]
-        assert book.title == 'Of Mice and Men'
+        self.assertEqual(book.title, 'Of Mice and Men')
         
         self.assertEqual(Book.objects.filter(tags='fiction').count(), 0)
         
         self.assertEqual(publisher.dot_notation('address.country'), 'US')
         
         publisher.dot_notation_to_field('address')
+        
+        publisher.dot_notation_set_value('address.street_2', '# 1')
+        self.assertEqual(publisher.address.street_2, '# 1')
+        
+        book.dot_notation_set_value('authors.0.internal_id', 'foo')
+        self.assertEqual(book.authors[0].internal_id, 'foo')
     
     def test_admin(self):
         import admin

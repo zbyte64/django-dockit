@@ -186,7 +186,15 @@ class Schema(object):
         return self.dot_notation_to_value(notation, self)
     
     def dot_notation_set_value(self, notation, value):
-        pass #TODO
+        #name = notation.split('.', 1)[0]
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        if notation is None:
+            setattr(self, name, value)
+        else:
+            self._meta.fields[name].dot_notation_set_value(notation, value, parent=getattr(self, name))
     
     def dot_notation_to_value(self, notation, value):
         if notation is None:
