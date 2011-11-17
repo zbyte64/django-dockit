@@ -1,7 +1,7 @@
 from django.utils import unittest
 from django.contrib.auth.models import User
 
-from models import Author, Book, Publisher, Address
+from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOne, SubComplexTwo
 
 class BookTestCase(unittest.TestCase):
 
@@ -53,3 +53,41 @@ class BookTestCase(unittest.TestCase):
     
     def test_admin(self):
         import admin
+
+class DotNotationTestCase(unittest.TestCase):
+    def test_dot_notation_set_value(self):
+        addr1 = Address(street_1='10533 Reagan Rd', city='San Diego', postal_code='92126', country='US', region='CA')
+        addr2 = Address(street_1='10533 Mesane Rd', city='San Diego', postal_code='92126', country='US', region='CA')
+        co = ComplexObject(field1='field1', addresses=[addr1], main_address=addr1)
+        co.save()
+        co.dot_notation_set_value('addresses.1', addr2)
+        self.assertEqual(co.addresses[1].street_1, addr2.street_1)
+        
+        co.dot_notation_set_value('addresses.1.region', 'CO')
+        self.assertEqual(co.addresses[1].region, 'CO')
+        co.save()
+        
+        co.dot_notation_set_value('addresses.1.extra_data.thirdpartyid', 'ABCDEF')
+        self.assertEqual(co.addresses[1].extra_data['thirdpartyid'], 'ABCDEF')
+        co.save()
+        
+        co.dot_notation_set_value('addresses.1.extra_data.complexdict', {'foo':'bar'})
+        co.dot_notation_set_value('addresses.1.extra_data.complexdict.bar', 'foo')
+        self.assertTrue('bar' in co.addresses[1].extra_data['complexdict'])
+        self.assertEqual(co.addresses[1].extra_data['complexdict']['bar'], 'foo')
+        co.save()
+        
+        co.dot_notation_set_value('addresses.1.extra_data.complexdict.inception', {'level2':{}})
+        co.dot_notation_set_value('addresses.1.extra_data.complexdict.inception.level2.level3', True)
+        self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['level2']['level3'], True)
+        co.save()
+        
+        co.dot_notation_set_value('addresses.1.extra_data.complexdict.inception.partners', [])
+        co.dot_notation_set_value('addresses.1.extra_data.complexdict.inception.partners.0', Author(internal_id='1'))
+        co.dot_notation_set_value('addresses.1.extra_data.complexdict.inception.partners.1', Author(internal_id='2'))
+        self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0].internal_id, '1')
+        co.save()
+        
+        co = ComplexObject.objects.get(co.get_id())
+        self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0].internal_id, '1')
+

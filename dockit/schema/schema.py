@@ -10,6 +10,7 @@ from django.utils.encoding import smart_str, force_unicode
 from django.db.models import FieldDoesNotExist
 
 from manager import Manager
+from common import register_schema
 
 DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
                  'app_label')
@@ -61,10 +62,13 @@ class Options(object):
             del self.meta
         else:
             self.verbose_name_plural = string_concat(self.verbose_name, 's')
-        
-        
-    def __str__(self):
+    
+    @property
+    def schema_key(self):
         return "%s.%s" % (smart_str(self.app_label), smart_str(self.module_name))
+    
+    def __str__(self):
+        return self.schema_key
 
     def verbose_name_raw(self):
         """
@@ -127,7 +131,7 @@ class SchemaBase(type):
         for obj_name, obj in attrs.items():
             new_class.add_to_class(obj_name, obj)
         
-        #register_schema(app_label, new_class)
+        register_schema(new_class._meta.schema_key, new_class)
         
         return new_class
     
@@ -154,9 +158,18 @@ class Schema(object):
         if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
             #we've cached python values on access, we need to pump these back to the primitive dictionary
             for name, entry in val._python_data.iteritems():
-                val._primitive_data[name] = val._meta.fields[name].to_primitive(entry)
+                try:
+                    val._primitive_data[name] = val._meta.fields[name].to_primitive(entry)
+                except:
+                    print name, val._meta.fields[name], entry
+                    raise
             return val._primitive_data
-        assert isinstance(val, dict)
+        if isinstance(val, dict):
+            pass
+        if isinstance(val, list):
+            pass
+        assert False
+        #assert isinstance(val, (dict, list)), str(type(val))
         return val
     
     @classmethod
@@ -185,7 +198,7 @@ class Schema(object):
     def dot_notation(self, notation):
         return self.dot_notation_to_value(notation, self)
     
-    def dot_notation_set_value(self, notation, value):
+    def dot_notation_set_value(self, notation, value, parent=None):
         #name = notation.split('.', 1)[0]
         if '.' in notation:
             name, notation = notation.split('.', 1)
@@ -241,7 +254,8 @@ class Document(Schema):
     
     def save(self):
         backend = get_document_backend()
-        backend.save(self.collection, type(self).to_primitive(self))
+        data = type(self).to_primitive(self)
+        backend.save(self.collection, data)
     
     def serializable_value(self, field_name):
         try:

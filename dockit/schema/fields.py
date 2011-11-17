@@ -7,6 +7,8 @@ from django import forms
 from decimal import Decimal
 import datetime
 
+from serializer import PRIMITIVE_PROCESSOR
+
 class NOT_PROVIDED:
     pass
 
@@ -195,7 +197,6 @@ class BaseComplexField(BaseField):
 
 class ComplexDotNotationMixin(object):
     def dot_notation_set_value(self, notation, value, parent):
-        print self, notation, value, parent
         if notation is None:
             return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
         if '.' in notation:
@@ -204,19 +205,31 @@ class ComplexDotNotationMixin(object):
             name, notation = notation, None
         if notation is None:
             if isinstance(parent, list):
-                parent[int(name)] = value
+                index = int(name)
+                if (len(parent) == index):
+                    parent.append(value)
+                else:
+                    parent[index] = value
             elif isinstance(parent, dict):
                 parent[name] = value
             else:
                 setattr(parent, name, value)
         else:
             if isinstance(parent, list):
-                parent = parent[int(name)]
+                child = parent[int(name)]
+                if hasattr(child, 'dot_notation_set_value'):
+                    return child.dot_notation_set_value(notation, value, parent)
+                else:
+                    return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
             elif isinstance(parent, dict):
-                parent = parent[name]
+                child = parent[name]
+                if hasattr(child, 'dot_notation_set_value'):
+                    return child.dot_notation_set_value(notation, value, parent)
+                else:
+                    return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
             else:
                 parent = getattr(parent, name)
-            return self.schema._meta.fields[name].dot_notation_set_value(notation, value, parent)
+                return self.schema._meta.fields[name].dot_notation_set_value(notation, value, parent)
 
 class SchemaField(ComplexDotNotationMixin, BaseComplexField):
     def __init__(self, schema, *args, **kwargs):
@@ -260,6 +273,8 @@ class ListField(ComplexDotNotationMixin, BaseComplexField):
             return ret
         for item in val:
             ret.append(self.schema.to_primitive(item))
+        #TODO run data through the primitive processor
+        ret = PRIMITIVE_PROCESSOR.to_primitive(ret)
         return ret
     
     def to_python(self, val):
@@ -268,6 +283,8 @@ class ListField(ComplexDotNotationMixin, BaseComplexField):
             return ret
         for item in val:
             ret.append(self.schema.to_python(item))
+        #TODO run data through the primitive processor
+        ret = PRIMITIVE_PROCESSOR.to_python(ret)
         return ret
     
     def dot_notation_to_value(self, notation, value):
@@ -308,6 +325,8 @@ class DictField(ComplexDotNotationMixin, BaseComplexField):
             if hasattr(key, 'to_primitive'):
                 key = type(key).to_primitive(key)
             ret[key] = value
+        #TODO run data through the primitive processor
+        ret = PRIMITIVE_PROCESSOR.to_primitive(ret)
         return ret
     
     def to_python(self, val):
@@ -320,6 +339,8 @@ class DictField(ComplexDotNotationMixin, BaseComplexField):
             if self.key_schema:
                 key = self.key_schema.to_python(key)
             ret[key] = value
+        #TODO run data through the primitive processor
+        ret = PRIMITIVE_PROCESSOR.to_python(ret)
         return ret
     
     def dot_notation_to_value(self, notation, value):

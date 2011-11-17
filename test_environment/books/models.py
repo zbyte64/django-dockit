@@ -15,6 +15,8 @@ class Address(dockit.Schema):
     postal_code = dockit.TextField()
     region = dockit.TextField()
     country = dockit.TextField()
+    
+    extra_data = dockit.DictField()
 
 class Publisher(dockit.Document):
     collection = 'publisher'
