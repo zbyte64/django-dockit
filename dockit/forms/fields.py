@@ -10,12 +10,12 @@ class HiddenJSONField(Field):
     widget = HiddenInput
     
     def to_python(self, value):
-        if isinstance(value, basestring):
+        if value and isinstance(value, basestring):
             try:
                 return json.loads(value)
             except ValueError:
                 raise ValidationError("Invalid JSON")#TODO more descriptive error?
-        return value
+        return None
 
     def validate(self, value):
         return Field.validate(self, value)

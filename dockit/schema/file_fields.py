@@ -71,6 +71,8 @@ class FileField(Field):
         return name
     
     def to_python(self, val):
+        if not val:
+            return None
         ret = self.storage.open(val)
         ret.storage_path = val
         return ret

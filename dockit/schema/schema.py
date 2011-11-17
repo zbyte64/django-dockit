@@ -166,8 +166,7 @@ class Schema(object):
                     print name, val._meta.fields[name], entry
                     raise
             return val._primitive_data
-        assert False
-        #assert isinstance(val, (dict, list)), str(type(val))
+        assert isinstance(val, (dict, list, None)), str(type(val))
         return val
     
     @classmethod

@@ -8,6 +8,7 @@ from decimal import Decimal
 import datetime
 
 from serializer import PRIMITIVE_PROCESSOR
+from dockit.forms.fields import HiddenJSONField
 
 class NOT_PROVIDED:
     pass
@@ -84,6 +85,10 @@ class BaseField(object):
     
     def formfield(self, form_class=forms.CharField, **kwargs):
         "Returns a django.forms.Field instance for this database Field."
+        defaults = self.formfield_kwargs(**kwargs)
+        return form_class(**defaults)
+    
+    def formfield_kwargs(self, **kwargs):
         defaults = {'required': not self.blank, 'label': capfirst(self.verbose_name), 'help_text': self.help_text}
         if self.has_default():
             if callable(self.default):
@@ -108,7 +113,7 @@ class BaseField(object):
                              'error_messages', 'show_hidden_initial'):
                     del kwargs[k]
         defaults.update(kwargs)
-        return form_class(**defaults)
+        return defaults
     
     def dot_notation_to_value(self, notation, value):
         assert notation is None
@@ -190,10 +195,9 @@ class TimeField(BaseTypedField):
 class BaseComplexField(BaseField):
     meta_field = True
     
-    def formfield(self, **kwargs):
-        from dockit.forms.fields import HiddenJSONField
-        kwargs.setdefault('form_class', HiddenJSONField)
-        return BaseField.formfield(self, **kwargs)
+    def formfield(self, form_class=HiddenJSONField, **kwargs):
+        defaults = self.formfield_kwargs(**kwargs)
+        return form_class(**defaults)
 
 class ComplexDotNotationMixin(object):
     def dot_notation_set_value(self, notation, value, parent):

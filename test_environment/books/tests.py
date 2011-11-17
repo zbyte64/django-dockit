@@ -103,6 +103,8 @@ class FormTestCase(unittest.TestCase):
         self.assertTrue(form.is_valid(), str(form.errors))
         instance = form.save()
         self.assertEqual(instance.field1, 'hello')
+        
+        #TODO test file field
     
     def test_dotnotation_form(self):
         class CustomDocumentForm(DocumentForm):
