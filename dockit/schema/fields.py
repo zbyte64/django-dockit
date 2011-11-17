@@ -263,7 +263,7 @@ class SchemaField(ComplexDotNotationMixin, BaseComplexField):
             name, notation = notation.split('.', 1)
         else:
             name, notation = notation, None
-        name, notation = notation.split('.', 1)
+        #name, notation = notation.split('.', 1)
         return self.schema._meta.fields[name].dot_notation_to_field(notation)
     
 class ListField(ComplexDotNotationMixin, BaseComplexField):

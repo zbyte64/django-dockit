@@ -5,7 +5,7 @@ from django.utils.encoding import force_unicode
 from django.forms.util import flatatt
 from django.utils.safestring import mark_safe
 
-from dockit.models import SchemaFragment
+from dockit.forms.fields import HiddenJSONField
 
 class DotPathWidget(widgets.Input):
     input_type = 'submit'
@@ -17,25 +17,21 @@ class DotPathWidget(widgets.Input):
     def render(self, name, value, attrs=None):
         if value is None:
             value = ''
-        final_attrs = self.build_attrs(attrs, type=self.input_type, name=name)
-        return mark_safe(u'<input%s />' % flatatt(final_attrs))
+        path_parts = list()
+        if self.dotpath:
+            path_parts.append(self.dotpath)
+        path_parts.append(name) #TODO consider this will break if there is a prefix!
+        dotpath = '.'.join(path_parts)
+        submit_attrs = self.build_attrs({}, type=self.input_type, name='_next_dotpath', value=dotpath)
+        data_attrs = self.build_attrs(attrs, type='hidden', name=name, value=value)
+        return mark_safe(u'<input%s /><input%s />' % (flatatt(submit_attrs), flatatt(data_attrs)))
 
-class DotPathField(fields.CharField):
+class DotPathField(HiddenJSONField):
     widget = DotPathWidget
     
     def __init__(self, *args, **kwargs):
-        self.view = kwargs.pop('view')
+        self.dotpath = kwargs.pop('dotpath')
         if 'widget' not in kwargs:
-            kwargs['widget'] = self.widget(self.view.uri, identifier=self.view.get_identifier())
+            kwargs['widget'] = self.widget(dotpath=self.dotpath)
         super(DotPathField, self).__init__(*args, **kwargs)
-    
-    def to_python(self, value):
-        if not value:
-            return None
-        storage = SchemaFragment.objects.get(value)
-        if storage.identifier != self.view.get_identifier():
-            raise ValidationError('This object does not match the field type.')
-        return storage.data
-        
-
 
