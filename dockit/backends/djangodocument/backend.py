@@ -72,6 +72,9 @@ class ModelDocumentStorage(BaseDocumentStorage):
         data['_pk'] = document.pk
         return data
     
+    def delete(self, collection, doc_id):
+        return DocumentStore.objects.filter(collection=collection, pk=doc_id).delete()
+    
     def define_index(self, collection, index):
         raise NotImplementedError
     

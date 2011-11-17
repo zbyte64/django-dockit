@@ -257,6 +257,10 @@ class Document(Schema):
         data = type(self).to_primitive(self)
         backend.save(self.collection, data)
     
+    def delete(self):
+        backend = get_document_backend()
+        backend.delete(self.collection, self.get_id())
+    
     def serializable_value(self, field_name):
         try:
             field = self._meta.get_field_by_name(field_name)[0]

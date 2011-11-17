@@ -11,6 +11,9 @@ class BaseDocumentStorage(object):
     def get(self, collection, doc_id):
         raise NotImplementedError
     
+    def delete(self, collection, doc_id):
+        raise NotImplementedError
+    
     def generate_index(self, collection, field):
         raise NotImplementedError
     

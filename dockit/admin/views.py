@@ -17,9 +17,8 @@ from urllib import urlencode
 
 CALL_BACK = "" #TODO
 
-class FragmentViewMixin(AdminViewMixin):
-    template_suffix = 'change_form'
-    
+class DocumentViewMixin(AdminViewMixin):
+    template_suffix = None
     form_class = None
     
     @property
@@ -37,11 +36,74 @@ class FragmentViewMixin(AdminViewMixin):
     #def get_queryset(self):
     #    return self.model.objects.all()
     
+    def get_context_data(self, **kwargs):
+        opts = self.document._meta
+        obj = None
+        if hasattr(self, 'object'):
+            obj = self.object
+        context = AdminViewMixin.get_context_data(self, **kwargs)
+        context.update({'root_path': self.admin_site.root_path,
+                        'app_label': opts.app_label,
+                        'opts': opts,
+                        'module_name': force_unicode(opts.verbose_name_plural),
+                        
+                        'has_add_permission': self.admin.has_add_permission(self.request),
+                        'has_change_permission': self.admin.has_change_permission(self.request, obj),
+                        'has_delete_permission': self.admin.has_delete_permission(self.request, obj),
+                        'has_file_field': True, # FIXME - this should check if form or formsets have a FileField,
+                        'has_absolute_url': hasattr(self.document, 'get_absolute_url'),
+                        #'content_type_id': ContentType.objects.get_for_model(self.model).id,
+                        'save_as': self.admin.save_as,
+                        'save_on_top': self.admin.save_on_top,})
+        return context
+    
     def create_admin_form(self):
         form_class = self.get_form_class()
         form = self.get_form(form_class)
         admin_form = helpers.AdminForm(form, **self.get_admin_form_kwargs())
         return admin_form
+    
+    def get_admin_form_kwargs(self):
+        return {
+            'fieldsets': list(self.admin.get_fieldsets(self.request)),
+            'prepopulated_fields': self.admin.prepopulated_fields,
+            'readonly_fields': self.admin.get_readonly_fields(self.request),
+            'model_admin': self.admin,
+        }
+    
+    def get_form_class(self):
+        """
+        Returns the form class to use in this view
+        """
+        if self.form_class:
+            return self.form_class
+        if self.admin.form_class:
+            return self.admin.form_class
+        else:
+            return self._generate_form_class()
+    
+    def _generate_form_class(self):
+        if self.document is not None:
+            # If a document has been explicitly provided, use it
+            the_document = self.document
+        elif hasattr(self, 'object') and self.object is not None:
+            # If this view is operating on a single object, use
+            # the class of that object
+            the_document = self.object.__class__
+        else:
+            # Try to get a queryset and extract the document class
+            # from that
+            the_document = self.get_queryset().document
+        #fields = fields_for_document(document)
+        class CustomDocumentForm(DocumentForm):
+            class Meta:
+                document = the_document
+                form_field_callback = self.admin.formfield_for_field
+        #CustomDocumentForm.base_fields.update(fields)
+        return CustomDocumentForm
+
+class FragmentViewMixin(DocumentViewMixin):
+    template_suffix = 'change_form'
     
     def get_admin_form_kwargs(self):
         if self.dotpath():
@@ -88,6 +150,8 @@ class FragmentViewMixin(AdminViewMixin):
         context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
                         'show_delete': False,
                         'add': True,
+                        'add_another': True,
+                        'cancel': False,
                         'change': False,
                         'delete': False,
                         'adminform':self.create_admin_form(),})
@@ -150,17 +214,18 @@ class FragmentViewMixin(AdminViewMixin):
         return CustomDocumentForm
     
     def get_temporary_store(self):
-        #TODO cache this
-        temp_doc_id = self.temporary_document_id()
-        if temp_doc_id:
-            storage = TemporaryDocument.objects.get(temp_doc_id)
-        else:
-            storage = TemporaryDocument()
-            if 'pk' in self.kwargs:
-                data = self.get_object()
-                storage.data = PRIMITIVE_PROCESSOR.to_primitive(data)
-            storage.save()
-        return storage
+        if not hasattr(self, '_temporary_store'):
+            temp_doc_id = self.temporary_document_id()
+            if temp_doc_id:
+                storage = TemporaryDocument.objects.get(temp_doc_id)
+            else:
+                storage = TemporaryDocument()
+                if 'pk' in self.kwargs:
+                    data = self.get_object()
+                    storage.data = PRIMITIVE_PROCESSOR.to_primitive(data)
+                storage.save()
+            self._temporary_store = storage
+        return self._temporary_store
     
     def post(self, request, *args, **kwargs):
         if 'pk' in self.kwargs:
@@ -190,6 +255,8 @@ class FragmentViewMixin(AdminViewMixin):
             if dotpath:
                 params['_dotpath'] = dotpath
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
+        if self.temporary_document_id():
+            self.get_temporary_store().delete()
         return self.form_valid(form)
     
     def form_valid(self, form):
@@ -204,87 +271,6 @@ class FragmentViewMixin(AdminViewMixin):
             return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
         return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
 
-
-class DocumentViewMixin(AdminViewMixin):
-    template_suffix = None
-    form_class = None
-    
-    @property
-    def document(self):
-        return self.admin.model
-    
-    def get_template_names(self):
-        opts = self.document._meta
-        app_label = opts.app_label
-        object_name = opts.object_name.lower()
-        return ['admin/%s/%s/%s.html' % (app_label, object_name, self.template_suffix),
-                'admin/%s/%s.html' % (app_label, self.template_suffix),
-                'admin/%s.html' % self.template_suffix]
-    
-    #def get_queryset(self):
-    #    return self.model.objects.all()
-    
-    def get_context_data(self, **kwargs):
-        opts = self.document._meta
-        obj = None
-        if hasattr(self, 'object'):
-            obj = self.object
-        context = AdminViewMixin.get_context_data(self, **kwargs)
-        context.update({'root_path': self.admin_site.root_path,
-                        'app_label': opts.app_label,
-                        'opts': opts,
-                        'module_name': force_unicode(opts.verbose_name_plural),
-                        
-                        'has_add_permission': self.admin.has_add_permission(self.request),
-                        'has_change_permission': self.admin.has_change_permission(self.request, obj),
-                        'has_delete_permission': self.admin.has_delete_permission(self.request, obj),
-                        'has_file_field': True, # FIXME - this should check if form or formsets have a FileField,
-                        'has_absolute_url': hasattr(self.document, 'get_absolute_url'),
-                        #'content_type_id': ContentType.objects.get_for_model(self.model).id,
-                        'save_as': self.admin.save_as,
-                        'save_on_top': self.admin.save_on_top,})
-        return context
-    
-    def create_admin_form(self):
-        form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        admin_form = helpers.AdminForm(form,
-                                       list(self.admin.get_fieldsets(self.request)),
-                                       self.admin.prepopulated_fields, 
-                                       self.admin.get_readonly_fields(self.request),
-                                       model_admin=self.admin)
-        return admin_form
-    
-    def get_form_class(self):
-        """
-        Returns the form class to use in this view
-        """
-        if self.form_class:
-            return self.form_class
-        if self.admin.form_class:
-            return self.admin.form_class
-        else:
-            return self._generate_form_class()
-    
-    def _generate_form_class(self):
-        if self.document is not None:
-            # If a document has been explicitly provided, use it
-            the_document = self.document
-        elif hasattr(self, 'object') and self.object is not None:
-            # If this view is operating on a single object, use
-            # the class of that object
-            the_document = self.object.__class__
-        else:
-            # Try to get a queryset and extract the document class
-            # from that
-            the_document = self.get_queryset().document
-        #fields = fields_for_document(document)
-        class CustomDocumentForm(DocumentForm):
-            class Meta:
-                document = the_document
-                form_field_callback = self.admin.formfield_for_field
-        #CustomDocumentForm.base_fields.update(fields)
-        return CustomDocumentForm
 
 class IndexView(DocumentViewMixin, views.ListView):
     template_suffix = 'change_list'
