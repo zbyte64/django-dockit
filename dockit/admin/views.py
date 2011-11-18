@@ -12,6 +12,7 @@ from dockit.forms import DocumentForm
 from dockit.forms.fields import HiddenJSONField
 from dockit.models import TemporaryDocument
 from dockit.schema.serializer import PRIMITIVE_PROCESSOR
+from dockit.backends import get_document_backend
 
 from urllib import urlencode
 
@@ -103,7 +104,12 @@ class DocumentViewMixin(AdminViewMixin):
         return CustomDocumentForm
 
 class FragmentViewMixin(DocumentViewMixin):
-    template_suffix = 'change_form'
+    obj_template_suffix = 'change_form'
+    
+    
+    @property
+    def template_suffix(self):
+        return 'change_form'
     
     def get_admin_form_kwargs(self):
         if self.dotpath():
@@ -222,22 +228,27 @@ class FragmentViewMixin(DocumentViewMixin):
                 storage = TemporaryDocument()
                 if 'pk' in self.kwargs:
                     data = self.get_object()
-                    storage.data = PRIMITIVE_PROCESSOR.to_primitive(data)
+                    storage._primitive_data = PRIMITIVE_PROCESSOR.to_primitive(data)
                 storage.save()
             self._temporary_store = storage
         return self._temporary_store
     
-    def post(self, request, *args, **kwargs):
+    def get_form_kwargs(self, **kwargs):
+        if self.request.POST:
+            kwargs['data'] = self.request.POST
         if 'pk' in self.kwargs:
-            self.object = self.get_object()
+            kwargs['instance'] = self.get_object()
+        else:
+            kwargs['instance'] = self.get_temporary_store()
+        return kwargs
+    
+    def post(self, request, *args, **kwargs):
         form_class = self.get_form_class()
         form = self.get_form(form_class)
         if not form.is_valid():
             return self.form_invalid(form)
         
-        obj = form.save() #CONSIDER this would normally be done in form_valid
-        if not self.dotpath():
-            self.object = obj
+        self.object = form.save() #CONSIDER this would normally be done in form_valid
         
         if self.next_dotpath():
             temp = self.get_temporary_store()
@@ -255,6 +266,17 @@ class FragmentViewMixin(DocumentViewMixin):
             if dotpath:
                 params['_dotpath'] = dotpath
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
+        
+        #now to create the object!
+        
+        if isinstance(self.object, TemporaryDocument):
+            data = self.object._primitive_data
+            #remove id field
+            backend = get_document_backend()
+            data.pop(backend.get_id_field_name(), None)
+            #create the document
+            self.object = self.document(_primitive_data=data)
+            self.object.save()
         if self.temporary_document_id():
             self.get_temporary_store().delete()
         return self.form_valid(form)
@@ -369,7 +391,7 @@ class DeleteView(DocumentViewMixin, views.DetailView):
         object_repr = unicode(obj)
         obj.delete()
         self.admin.log_deletion(request, obj, object_repr)
-        return HttpResponseRedirect(self.admin.reverse('index'))
+        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
 
 class HistoryView(DocumentViewMixin, views.ListView):
     title = _('History')

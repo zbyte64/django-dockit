@@ -53,6 +53,9 @@ class ModelDocumentStorage(BaseDocumentStorage):
     def __init__(self):
         self.indexes = dict()
     
+    def get_id_field_name(self):
+        return '_pk'
+    
     def save(self, collection, data):
         doc_id = self.get_id(data)
         document = DocumentStore(collection=collection, data=simplejson.dumps(data))
@@ -60,7 +63,7 @@ class ModelDocumentStorage(BaseDocumentStorage):
             document.pk = doc_id
         #CONSIDER this does not look before we save
         document.save()
-        data['_pk'] = document.pk
+        data[self.get_id_field_name()] = document.pk
         self.update_indexes(document, collection, data)
     
     def get(self, collection, doc_id):
@@ -69,7 +72,7 @@ class ModelDocumentStorage(BaseDocumentStorage):
         except DocumentStore.DoesNotExist:
             raise #TODO raise proper error
         data = simplejson.loads(document.data)
-        data['_pk'] = document.pk
+        data[self.get_id_field_name()] = document.pk
         return data
     
     def delete(self, collection, doc_id):
@@ -77,9 +80,6 @@ class ModelDocumentStorage(BaseDocumentStorage):
     
     def define_index(self, collection, index):
         raise NotImplementedError
-    
-    def get_id(self, data):
-        return data.get('_pk')
     
     def all(self, doc_class, collection):
         qs = DocumentStore.objects.filter(collection=collection)

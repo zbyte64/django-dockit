@@ -3,7 +3,7 @@ class BaseDocumentStorage(object):
     def register_document(self, document):
         for key, field in document._meta.fields.iteritems():
             if getattr(field, 'db_index', False):
-                self.generate_index(document.collection, field)
+                self.generate_index(document._meta.collection, field)
     
     def save(self, collection, data):
         raise NotImplementedError
@@ -30,5 +30,8 @@ class BaseDocumentStorage(object):
         raise NotImplementedError
     
     def get_id(self, data):
+        return data.get(self.get_id_field_name())
+    
+    def get_id_field_name(self):
         raise NotImplementedError
 

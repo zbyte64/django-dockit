@@ -4,6 +4,7 @@ from django.core.urlresolvers import reverse
 from django.utils.encoding import force_unicode
 from django.forms.util import flatatt
 from django.utils.safestring import mark_safe
+from django.utils import simplejson as json
 
 from dockit.forms.fields import HiddenJSONField
 
@@ -17,6 +18,8 @@ class DotPathWidget(widgets.Input):
     def render(self, name, value, attrs=None):
         if value is None:
             value = ''
+        elif not isinstance(value, basestring):
+            value = json.dumps(value)
         path_parts = list()
         if self.dotpath:
             path_parts.append(self.dotpath)
@@ -34,4 +37,11 @@ class DotPathField(HiddenJSONField):
         if 'widget' not in kwargs:
             kwargs['widget'] = self.widget(dotpath=self.dotpath)
         super(DotPathField, self).__init__(*args, **kwargs)
+    
+    def to_python(self, value):
+        if isinstance(value, basestring):
+            if not value:
+                return None
+            return json.loads(value)
+        return value
 

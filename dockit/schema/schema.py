@@ -13,7 +13,7 @@ from manager import Manager
 from common import register_schema
 
 DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
-                 'app_label')
+                 'app_label', 'collection')
 
 class Options(object):
     """ class based on django.db.models.options. We only keep
@@ -28,6 +28,7 @@ class Options(object):
         self.object_name, self.app_label = None, app_label
         self.meta = meta
         self.fields = dict() #TODO ordered dictionary
+        self.collection = None
     
     def contribute_to_class(self, cls, name):
         cls._meta = self
@@ -36,6 +37,7 @@ class Options(object):
         self.object_name = cls.__name__
         self.module_name = self.object_name.lower()
         self.verbose_name = get_verbose_name(self.object_name)
+        self.collection = self.schema_key
 
         # Next, apply any overridden values from 'class Meta'.
         if getattr(self, 'meta', None):
@@ -199,24 +201,34 @@ class Schema(object):
     
     def dot_notation_set_value(self, notation, value, parent=None):
         #name = notation.split('.', 1)[0]
+        original_notation = notation
         if '.' in notation:
             name, notation = notation.split('.', 1)
         else:
             name, notation = notation, None
-        if notation is None:
-            setattr(self, name, value)
+        
+        if name not in self._meta.fields:
+            from fields import ComplexDotNotationMixin
+            return ComplexDotNotationMixin().dot_notation_set_value(original_notation, value, parent=self._primitive_data)
         else:
-            self._meta.fields[name].dot_notation_set_value(notation, value, parent=getattr(self, name))
+            if notation is None:
+                setattr(self, name, value)
+            else:
+                self._meta.fields[name].dot_notation_set_value(notation, value, parent=getattr(self, name))
     
     def dot_notation_to_value(self, notation, value):
         if notation is None:
             return value
+        original_notation = notation
         if '.' in notation:
             name, notation = notation.split('.', 1)
         else:
             name, notation = notation, None
         if name == '*':
             pass #TODO support star??
+        if name not in self._meta.fields:
+            from fields import ComplexDotNotationMixin
+            return ComplexDotNotationMixin().dot_notation_to_value(original_notation, value._primitive_data)
         value = getattr(value, name, None)
         return self._meta.fields[name].dot_notation_to_value(notation, value)
     
@@ -228,6 +240,9 @@ class Schema(object):
             name, notation = notation.split('.', 1)
         else:
             name, notation = notation, None
+        if name not in self._meta.fields:
+            from fields import ComplexDotNotationMixin
+            return ComplexDotNotationMixin()
         return self._meta.fields[name].dot_notation_to_field(notation)
 
 class DocumentBase(SchemaBase):
@@ -238,13 +253,10 @@ class DocumentBase(SchemaBase):
             objects.contribute_to_class(new_class, 'objects')
         backend = get_document_backend()
         backend.register_document(new_class)
-        if new_class.collection is None:
-            new_class.collection = '%s.%s' % (new_class.__module__, new_class.__name__)
         return new_class
 
 class Document(Schema):
     __metaclass__ = DocumentBase
-    collection = None
     
     def get_id(self):
         backend = get_document_backend()
@@ -255,11 +267,11 @@ class Document(Schema):
     def save(self):
         backend = get_document_backend()
         data = type(self).to_primitive(self)
-        backend.save(self.collection, data)
+        backend.save(self._meta.collection, data)
     
     def delete(self):
         backend = get_document_backend()
-        backend.delete(self.collection, self.get_id())
+        backend.delete(self._meta.collection, self.get_id())
     
     def serializable_value(self, field_name):
         try:

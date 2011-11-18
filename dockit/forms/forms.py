@@ -83,7 +83,7 @@ from django.forms.forms import BaseForm, get_declared_fields
 from django.forms.widgets import media_property
 
 
-def document_to_dict(instance, properties=None, exclude=None, dotpath=None):
+def document_to_dict(schema, instance, properties=None, exclude=None, dotpath=None):
     """
     Returns a dict containing the data in ``instance`` suitable for passing as
     a Form's ``initial`` keyword argument.
@@ -98,10 +98,10 @@ def document_to_dict(instance, properties=None, exclude=None, dotpath=None):
     # avoid a circular import
     data = {}
     if dotpath:
-        field = instance.dot_notation_to_field(dotpath)
+        field = schema.dot_notation_to_field(dotpath)
         fields = field.schema._meta.fields
     else:
-        fields = instance._meta.fields
+        fields = schema._meta.fields
     for prop_name in fields.iterkeys():
         if properties and not prop_name in properties:
             continue
@@ -112,7 +112,10 @@ def document_to_dict(instance, properties=None, exclude=None, dotpath=None):
             c_dotpath = '%s.%s' % (dotpath, prop_name)
         else:
             c_dotpath = prop_name
-        data[prop_name] = instance.dot_notation(c_dotpath)
+        try:
+            data[prop_name] = instance.dot_notation(c_dotpath)
+        except KeyError:
+            pass
     return data
 
 def fields_for_document(document, properties=None, exclude=None, form_field_callback=None, dotpath=None):
@@ -216,7 +219,7 @@ class BaseDocumentForm(BaseForm):
             object_data = {}
         else:
             self.instance = instance
-            object_data = document_to_dict(instance, opts.properties, 
+            object_data = document_to_dict(self._meta.document, instance, opts.properties, 
                                         opts.exclude, dotpath=opts.dotpath) 
     
         if initial is not None:

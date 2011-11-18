@@ -200,6 +200,24 @@ class BaseComplexField(BaseField):
         return form_class(**defaults)
 
 class ComplexDotNotationMixin(object):
+    def dot_notation_to_value(self, notation, value):
+        if notation is None:
+            return value
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        if isinstance(value, list):
+            value = value[int(name)]
+        elif isinstance(value, dict):
+            value = value[name]
+        else:
+            value = getattr(value, name, None)
+        return self.dot_notation_to_value(notation, value)
+    
+    def dot_notation_to_field(self, notation):
+        return self
+    
     def dot_notation_set_value(self, notation, value, parent):
         if notation is None:
             return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
@@ -226,6 +244,7 @@ class ComplexDotNotationMixin(object):
                 else:
                     return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
             elif isinstance(parent, dict):
+                parent.setdefault(name, dict())
                 child = parent[name]
                 if hasattr(child, 'dot_notation_set_value'):
                     return child.dot_notation_set_value(notation, value, parent)

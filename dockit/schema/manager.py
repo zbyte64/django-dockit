@@ -5,7 +5,7 @@ class Manager(object):
     def contribute_to_class(self, cls, name):
         new = copy(self)
         new.schema = cls
-        new.collection = cls.collection
+        new.collection = cls._meta.collection
         setattr(cls, name, new)
     
     def all(self):

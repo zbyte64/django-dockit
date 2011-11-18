@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOne, SubComplexTwo
 
 from dockit.forms import DocumentForm
+from dockit.models import TemporaryDocument
 
 class BookTestCase(unittest.TestCase):
 
@@ -123,4 +124,33 @@ class FormTestCase(unittest.TestCase):
         self.assertTrue(form.is_valid(), str(form.errors))
         instance = form.save()
         self.assertEqual(instance.main_address.region, 'CA')
+    
+    def test_form_to_generic_document(self):
+        class CustomDocumentForm(DocumentForm):
+            class Meta:
+                document = ComplexObject
+        instance = TemporaryDocument(_primitive_data={'field1':'hello'})
+        form = CustomDocumentForm(instance=instance, data={'field1':'hello2'})
+        self.assertEqual(form.initial['field1'], 'hello')
+        self.assertTrue(form.is_valid(), str(form.errors))
+        instance = form.save()
+        self.assertEqual(instance._primitive_data['field1'], 'hello2')
+        self.assertTrue(isinstance(instance, TemporaryDocument))
+        
+        
+        class CustomDocumentAddressForm(DocumentForm):
+            class Meta:
+                document = ComplexObject
+                dotpath = 'main_address'
+        
+        data = {'street_1': '10533 Mesane Rd',
+                'city': 'San Diego',
+                'postal_code': '92126',
+                'country': 'US',
+                'region': 'CA',}
+        form = CustomDocumentAddressForm(data=data, instance=instance)
+        self.assertTrue(form.is_valid(), str(form.errors))
+        instance = form.save()
+        self.assertEqual(instance._primitive_data['main_address']['region'], 'CA', str(instance._primitive_data))
+        self.assertTrue(isinstance(instance, TemporaryDocument))
 
