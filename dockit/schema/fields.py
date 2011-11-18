@@ -226,6 +226,10 @@ class ComplexDotNotationMixin(object):
         else:
             name, notation = notation, None
         if notation is None:
+            #TODO value make primitive
+            #value = PRIMITIVE_PROCESSOR.to_primitive(value)
+            if hasattr(value, 'to_primitive'):
+                value = value.to_primitive(value)
             if isinstance(parent, list):
                 index = int(name)
                 if (len(parent) == index):
@@ -254,7 +258,7 @@ class ComplexDotNotationMixin(object):
                 parent = getattr(parent, name)
                 return self.schema._meta.fields[name].dot_notation_set_value(notation, value, parent)
 
-class SchemaField(ComplexDotNotationMixin, BaseComplexField):
+class SchemaField(BaseComplexField):
     def __init__(self, schema, *args, **kwargs):
         self.schema = schema
         super(SchemaField, self).__init__(*args, **kwargs)
@@ -282,10 +286,22 @@ class SchemaField(ComplexDotNotationMixin, BaseComplexField):
             name, notation = notation.split('.', 1)
         else:
             name, notation = notation, None
-        #name, notation = notation.split('.', 1)
         return self.schema._meta.fields[name].dot_notation_to_field(notation)
     
-class ListField(ComplexDotNotationMixin, BaseComplexField):
+    def dot_notation_set_value(self, notation, value, parent):
+        if notation is None:
+            return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        if notation is None:
+            setattr(parent, name, value)
+        else:
+            parent = getattr(parent, name)
+            return self.schema._meta.fields[name].dot_notation_set_value(notation, value, parent)
+
+class ListField(BaseComplexField):
     def __init__(self, schema, *args, **kwargs):
         self.schema = schema
         super(ListField, self).__init__(*args, **kwargs)
@@ -318,8 +334,8 @@ class ListField(ComplexDotNotationMixin, BaseComplexField):
         else:
             index, notation = notation, None
         if index == '*':
-            pass #TODO support star
-        value = value[index]
+            raise NotImplementedError
+        value = value[int(index)]
         return self.schema.dot_notation_to_value(notation, value)
     
     def dot_notation_to_field(self, notation):
@@ -329,10 +345,31 @@ class ListField(ComplexDotNotationMixin, BaseComplexField):
             index, notation = notation.split('.', 1)
         else:
             index, notation = notation, None
-        index, notation = notation.split('.', 1)
+        #print index, notation
+        #index, notation = notation.split('.', 1)
         return self.schema.dot_notation_to_field(notation)
+    
+    def dot_notation_set_value(self, notation, value, parent):
+        if notation is None:
+            return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        if notation is None:
+            index = int(name)
+            if (len(parent) == index):
+                parent.append(value)
+            else:
+                parent[index] = value
+        else:
+            child = parent[int(name)]
+            if hasattr(child, 'dot_notation_set_value'):
+                return child.dot_notation_set_value(notation, value, parent)
+            else:
+                return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
 
-class DictField(ComplexDotNotationMixin, BaseComplexField):
+class DictField(BaseComplexField):
     def __init__(self, key_schema=None, value_schema=None, **kwargs):
         self.key_schema = key_schema
         self.value_schema = value_schema
@@ -387,6 +424,23 @@ class DictField(ComplexDotNotationMixin, BaseComplexField):
             key, notation = notation, None
         key, notation = notation.split('.', 1)
         return self.value_schema.dot_notation_to_field(notation)
+    
+    def dot_notation_set_value(self, notation, value, parent):
+        if notation is None:
+            return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        if notation is None:
+            parent[name] = value
+        else:
+            parent.setdefault(name, dict())
+            child = parent[name]
+            if hasattr(child, 'dot_notation_set_value'):
+                return child.dot_notation_set_value(notation, value, parent)
+            else:
+                return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
 
 class ReferenceField(ComplexDotNotationMixin, BaseField):
     def __init__(self, document, *args, **kwargs):

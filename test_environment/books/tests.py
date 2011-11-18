@@ -58,6 +58,16 @@ class BookTestCase(unittest.TestCase):
         import admin
 
 class DotNotationTestCase(unittest.TestCase):
+    def test_dot_notation_list_field(self):
+        field = ComplexObject.dot_notation_to_field('addresses')
+        self.assertEqual(field, ComplexObject.addresses)
+        
+        field = ComplexObject.dot_notation_to_field('addresses.*.region')
+        self.assertEqual(field, Address.region)
+        
+        field = ComplexObject.dot_notation_to_field('addresses.*')
+        self.assertEqual(field.schema, Address)
+    
     def test_dot_notation_set_value(self):
         addr1 = Address(street_1='10533 Reagan Rd', city='San Diego', postal_code='92126', country='US', region='CA')
         addr2 = Address(street_1='10533 Mesane Rd', city='San Diego', postal_code='92126', country='US', region='CA')
@@ -88,11 +98,14 @@ class DotNotationTestCase(unittest.TestCase):
         co.dot_notation_set_value('addresses.1.extra_data.complexdict.inception.partners', [])
         co.dot_notation_set_value('addresses.1.extra_data.complexdict.inception.partners.0', Author(internal_id='1'))
         co.dot_notation_set_value('addresses.1.extra_data.complexdict.inception.partners.1', Author(internal_id='2'))
-        self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0].internal_id, '1')
+        #currently storing an object in a complex dict will turn it into a primitive
+        self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0]['internal_id'], '1')
         co.save()
         
         co = ComplexObject.objects.get(co.get_id())
-        self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0].internal_id, '1')
+        self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0]['internal_id'], '1')
+        
+        self.assertEqual(co.dot_notation('addresses.0'), co.addresses[0])
 
 class FormTestCase(unittest.TestCase):
     def test_form(self):
@@ -153,4 +166,22 @@ class FormTestCase(unittest.TestCase):
         instance = form.save()
         self.assertEqual(instance._primitive_data['main_address']['region'], 'CA', str(instance._primitive_data))
         self.assertTrue(isinstance(instance, TemporaryDocument))
+    
+    def test_dotnotation_form_to_list(self):
+        class CustomDocumentForm(DocumentForm):
+            class Meta:
+                document = ComplexObject
+                dotpath = 'addresses.0'
+        
+        instance = ComplexObject(field1='field1')
+        instance.save()
+        data = {'street_1': '10533 Mesane Rd',
+                'city': 'San Diego',
+                'postal_code': '92126',
+                'country': 'US',
+                'region': 'CA',}
+        form = CustomDocumentForm(data=data, instance=instance)
+        self.assertTrue(form.is_valid(), str(form.errors))
+        instance = form.save()
+        self.assertEqual(instance.addresses[0].region, 'CA')
 

@@ -18,7 +18,7 @@ class DotPathWidget(widgets.Input):
     def render(self, name, value, attrs=None):
         if value is None:
             value = ''
-        elif not isinstance(value, basestring):
+        elif not isinstance(value, basestring): 
             value = json.dumps(value)
         path_parts = list()
         if self.dotpath:

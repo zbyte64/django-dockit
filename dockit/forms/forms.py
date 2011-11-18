@@ -114,8 +114,9 @@ def document_to_dict(schema, instance, properties=None, exclude=None, dotpath=No
             c_dotpath = prop_name
         try:
             data[prop_name] = instance.dot_notation(c_dotpath)
-        except KeyError:
+        except (KeyError, IndexError):
             pass
+            #CONSIDER is this the correct way?
     return data
 
 def fields_for_document(document, properties=None, exclude=None, form_field_callback=None, dotpath=None):
@@ -241,6 +242,14 @@ class BaseDocumentForm(BaseForm):
         
         opts = self._meta
         cleaned_data = self.cleaned_data.copy()
+        
+        if opts.dotpath:
+            try:
+                self.instance.dot_notation(opts.dotpath)
+            except (KeyError, IndexError):
+                field = opts.document.dot_notation_to_field(opts.dotpath)
+                schema = field.schema
+                self.instance.dot_notation_set_value(opts.dotpath, schema())
         
         for prop_name in self.serialized_fields:
             if prop_name in cleaned_data:
