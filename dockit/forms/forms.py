@@ -156,7 +156,7 @@ def fields_for_document(document, properties=None, exclude=None, form_field_call
         
         if field and form_field_callback:
             defaults = prop.formfield_kwargs()
-            field = form_field_callback(type(field), **defaults)
+            field = form_field_callback(prop, type(field), **defaults)
         if field:
             field_list.append((prop.name, field))
     return SortedDict(field_list)

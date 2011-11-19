@@ -201,7 +201,7 @@ class FragmentViewMixin(DocumentViewMixin):
         else:
             return self._generate_form_class(self.document)
     
-    def formfield_for_field(self, field, **kwargs):
+    def formfield_for_field(self, prop, field, **kwargs):
         if field == HiddenJSONField:
             field = DotPathField
             kwargs['dotpath'] = self.dotpath()
@@ -209,7 +209,7 @@ class FragmentViewMixin(DocumentViewMixin):
                 kwargs['required'] = False
             return field(**kwargs)
         else:
-            return self.admin.formfield_for_field(field, **kwargs)
+            return self.admin.formfield_for_field(prop, field, **kwargs)
     
     def _generate_form_class(self, schema):
         class CustomDocumentForm(DocumentForm):

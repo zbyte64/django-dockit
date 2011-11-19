@@ -251,7 +251,7 @@ class BaseAdmin(object):
         app_list = resolver.app_dict['admin']
         return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
     
-    def formfield_for_field(self, field, **kwargs):
+    def formfield_for_field(self, prop, field, **kwargs):
         if field in self.formfield_overrides:
             opts = dict(self.formfield_overrides[field])
             field = opts.pop('form_class', field)
