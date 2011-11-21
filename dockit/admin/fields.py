@@ -9,6 +9,8 @@ from django.utils import simplejson as json
 
 from dockit.forms.fields import HiddenJSONField
 
+from urllib import urlencode
+
 class DotPathWidget(widgets.Input):
     input_type = 'submit'
     
@@ -16,8 +18,10 @@ class DotPathWidget(widgets.Input):
         self.dotpath = dotpath
         super(DotPathWidget, self).__init__()
     
-    def render_button(self, dotpath, label=None):
-        submit_attrs = self.build_attrs({}, type=self.input_type, name='_next_dotpath', value=dotpath)
+    def render_button(self, dotpath, label):
+        data = {'next_dotpath':dotpath}
+        name = '[fragment]%s' % urlencode(data)
+        submit_attrs = self.build_attrs({}, type=self.input_type, name=name, value=label)
         return mark_safe(u'<input%s />' % flatatt(submit_attrs))
     
     def prep_value(self, value):
@@ -49,17 +53,19 @@ class DotPathWidget(widgets.Input):
         
         if isinstance(value, list):
             rows = list()
+            index = -1
             for index, item in enumerate(value):
                 item_dotpath = '%s.%s' % (dotpath, index)
-                butn_html = self.render_button(item_dotpath)
+                butn_html = self.render_button(item_dotpath, 'edit')
                 rows.append('<td>%s</td><td>%s</td>' % (escape(force_unicode(item)), butn_html))
             item_dotpath = '%s.%s' % (dotpath, index+1)
-            butn_html = self.render_button(item_dotpath)
+            butn_html = self.render_button(item_dotpath, 'add')
             rows.append('<td></td><td>%s</td>' % butn_html)
             return mark_safe('%s<table><tr>%s</tr></table>' % (data_html, '</tr><tr>'.join(rows)))
         else:
-            butn_html = self.render_button(dotpath)
-            return mark_safe(''.join((data_html, butn_html)))
+            butn_html = self.render_button(dotpath, 'edit')
+            desc_html = escape(force_unicode(value))
+            return mark_safe(''.join((data_html, desc_html, butn_html)))
 
 class DotPathField(HiddenJSONField):
     widget = DotPathWidget

@@ -5,8 +5,11 @@ class Manager(object):
     def contribute_to_class(self, cls, name):
         new = copy(self)
         new.schema = cls
-        new.collection = cls._meta.collection
         setattr(cls, name, new)
+    
+    @property
+    def collection(self):
+        return self.schema._meta.collection
     
     def all(self):
         backend = get_document_backend()

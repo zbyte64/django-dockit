@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOne, SubComplexTwo
 
 from dockit.forms import DocumentForm
-from dockit.models import TemporaryDocument
+from dockit.models import TemporaryDocument, create_temporary_document_class
 
 class BookTestCase(unittest.TestCase):
 
@@ -142,13 +142,19 @@ class FormTestCase(unittest.TestCase):
         class CustomDocumentForm(DocumentForm):
             class Meta:
                 document = ComplexObject
-        instance = TemporaryDocument(_primitive_data={'field1':'hello'})
+        
+        TempDoc = create_temporary_document_class(ComplexObject)
+        
+        instance = TempDoc(_primitive_data={'field1':'hello'})
         form = CustomDocumentForm(instance=instance, data={'field1':'hello2'})
         self.assertEqual(form.initial['field1'], 'hello')
         self.assertTrue(form.is_valid(), str(form.errors))
         instance = form.save()
         self.assertEqual(instance._primitive_data['field1'], 'hello2')
-        self.assertTrue(isinstance(instance, TemporaryDocument))
+        self.assertTrue(isinstance(instance, TempDoc))
+        
+        complex_obj = instance.commit_changes()
+        ComplexObject.objects.get(complex_obj.pk)
         
         
         class CustomDocumentAddressForm(DocumentForm):
@@ -165,7 +171,19 @@ class FormTestCase(unittest.TestCase):
         self.assertTrue(form.is_valid(), str(form.errors))
         instance = form.save()
         self.assertEqual(instance._primitive_data['main_address']['region'], 'CA', str(instance._primitive_data))
-        self.assertTrue(isinstance(instance, TemporaryDocument))
+        self.assertTrue(isinstance(instance, TempDoc))
+        
+        print instance, type(instance)
+        
+        complex_obj = instance.commit_changes(instance=complex_obj)
+        ComplexObject.objects.get(complex_obj.pk)
+        
+        complex_obj.field1 = 'hello3'
+        complex_obj.save()
+        
+        instance.copy_from_instance(complex_obj)
+        
+        self.assertEqual(instance.field1, 'hello3')
     
     def test_dotnotation_form_to_list(self):
         class CustomDocumentForm(DocumentForm):

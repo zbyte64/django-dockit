@@ -12,15 +12,15 @@ from django.db.models import FieldDoesNotExist
 from manager import Manager
 from common import register_schema
 
-DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
-                 'app_label', 'collection')
-
 class Options(object):
     """ class based on django.db.models.options. We only keep
     useful bits."""
     
     abstract = False
     ordering = ['_id']
+    
+    DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
+                     'app_label', 'collection', 'virtual')
     
     def __init__(self, meta, app_label=None):
         self.module_name, self.verbose_name = None, None
@@ -29,6 +29,7 @@ class Options(object):
         self.meta = meta
         self.fields = dict() #TODO ordered dictionary
         self.collection = None
+        self.virtual = False
     
     def contribute_to_class(self, cls, name):
         cls._meta = self
@@ -48,7 +49,7 @@ class Options(object):
                 # over it, so we loop over the *original* dictionary instead.
                 if name.startswith('_'):
                     del meta_attrs[name]
-            for attr_name in DEFAULT_NAMES:
+            for attr_name in self.DEFAULT_NAMES:
                 if attr_name in meta_attrs:
                     setattr(self, attr_name, meta_attrs.pop(attr_name))
                 elif hasattr(self.meta, attr_name):
@@ -133,7 +134,8 @@ class SchemaBase(type):
         for obj_name, obj in attrs.items():
             new_class.add_to_class(obj_name, obj)
         
-        register_schema(new_class._meta.schema_key, new_class)
+        if not new_class._meta.virtual:
+            register_schema(new_class._meta.schema_key, new_class)
         
         return new_class
     
@@ -251,8 +253,10 @@ class DocumentBase(SchemaBase):
         if 'objects' not in attrs:
             objects = Manager()
             objects.contribute_to_class(new_class, 'objects')
-        backend = get_document_backend()
-        backend.register_document(new_class)
+        
+        if not new_class._meta.virtual:
+            backend = get_document_backend()
+            backend.register_document(new_class)
         return new_class
 
 class Document(Schema):

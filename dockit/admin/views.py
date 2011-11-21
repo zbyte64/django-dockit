@@ -10,11 +10,12 @@ from fields import DotPathField
 from dockit import views
 from dockit.forms import DocumentForm
 from dockit.forms.fields import HiddenJSONField
-from dockit.models import TemporaryDocument
+from dockit.models import TemporaryDocument, create_temporary_document_class
 from dockit.schema.serializer import PRIMITIVE_PROCESSOR
 from dockit.backends import get_document_backend
 
 from urllib import urlencode
+from urlparse import parse_qsl
 
 CALL_BACK = "" #TODO
 
@@ -184,13 +185,26 @@ class FragmentViewMixin(DocumentViewMixin):
         return context
     
     def dotpath(self):
-        return self.request.REQUEST.get('_dotpath', None)
+        return self.request.GET.get('_dotpath', None)
+    
+    def parent_dotpath(self):
+        return self.request.GET.get('_parent_dotpath', None)
+    
+    def fragment_info(self):
+        token = '[fragment]'
+        for key in self.request.POST.iterkeys():
+            if key.startswith(token):
+                info = dict(parse_qsl(key[len(token):]))
+                if info:
+                    return info
+        return {}
     
     def next_dotpath(self):
-        return self.request.REQUEST.get('_next_dotpath', None)
+        info = self.fragment_info()
+        return info.get('next_dotpath', None)
     
     def temporary_document_id(self):
-        return self.request.REQUEST.get('_tempdoc', None)
+        return self.request.GET.get('_tempdoc', None)
     
     def get_form_class(self):
         """
@@ -221,14 +235,15 @@ class FragmentViewMixin(DocumentViewMixin):
     
     def get_temporary_store(self):
         if not hasattr(self, '_temporary_store'):
+            TempDocument = create_temporary_document_class(self.document)
             temp_doc_id = self.temporary_document_id()
             if temp_doc_id:
-                storage = TemporaryDocument.objects.get(temp_doc_id)
+                storage = TempDocument.objects.get(temp_doc_id)
             else:
-                storage = TemporaryDocument()
+                storage = TempDocument()
                 if 'pk' in self.kwargs:
-                    data = self.get_object()
-                    storage._primitive_data = PRIMITIVE_PROCESSOR.to_primitive(data)
+                    instance = self.get_object()
+                    storage.copy_from_instance(instance)
                 storage.save()
             self._temporary_store = storage
         return self._temporary_store
@@ -252,31 +267,32 @@ class FragmentViewMixin(DocumentViewMixin):
         
         if self.next_dotpath():
             temp = self.get_temporary_store()
+            info = self.fragment_info()
             params = {'_dotpath': self.next_dotpath(),
+                      '_parent_dotpath': self.dotpath() or '',
                       '_tempdoc': temp.get_id(),}
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
         if self.dotpath():
             temp = self.get_temporary_store()
             params = {'_tempdoc':temp.get_id(),}
-            dotpath = self.dotpath()
-            if '.' in dotpath:
-                dotpath = dotpath[:dotpath.rfind('.')]
-            else:
-                dotpath = None
-            if dotpath:
-                params['_dotpath'] = dotpath
+            
+            next_dotpath = self.parent_dotpath()
+            if next_dotpath is None:
+                dotpath = self.dotpath()
+                if '.' in dotpath:
+                    next_dotpath = dotpath[:dotpath.rfind('.')]
+            if next_dotpath:
+                params['_dotpath'] = next_dotpath
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
         
         #now to create the object!
         
-        if isinstance(self.object, TemporaryDocument):
-            data = self.object._primitive_data
-            #remove id field
-            backend = get_document_backend()
-            data.pop(backend.get_id_field_name(), None)
-            #create the document
-            self.object = self.document(_primitive_data=data)
-            self.object.save()
+        if self.object._meta.collection != self.document._meta.collection:
+            if 'pk' in self.kwargs:
+                instance = self.get_object()
+            else:
+                instance = None
+            self.object = self.object.commit_changes(instance)
         if self.temporary_document_id():
             self.get_temporary_store().delete()
         return self.form_valid(form)
