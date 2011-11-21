@@ -2,7 +2,7 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext as _
 from django.utils.html import escape, escapejs
-from django.contrib.admin import widgets, helpers
+from django.contrib.admin import helpers
 
 from base import AdminViewMixin
 from fields import DotPathField
@@ -10,9 +10,7 @@ from fields import DotPathField
 from dockit import views
 from dockit.forms import DocumentForm
 from dockit.forms.fields import HiddenJSONField
-from dockit.models import TemporaryDocument, create_temporary_document_class
-from dockit.schema.serializer import PRIMITIVE_PROCESSOR
-from dockit.backends import get_document_backend
+from dockit.models import create_temporary_document_class
 
 from urllib import urlencode
 from urlparse import parse_qsl

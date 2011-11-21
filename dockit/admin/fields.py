@@ -76,10 +76,6 @@ class DotPathField(HiddenJSONField):
             kwargs['widget'] = self.widget(dotpath=self.dotpath)
         super(DotPathField, self).__init__(*args, **kwargs)
     
-    def to_python(self, value):
-        if isinstance(value, basestring):
-            if not value:
-                return None
-            return json.loads(value)
+    def prepare_value(self, value):
         return value
 
