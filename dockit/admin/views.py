@@ -247,8 +247,9 @@ class FragmentViewMixin(DocumentViewMixin):
         return self._temporary_store
     
     def get_form_kwargs(self, **kwargs):
-        if self.request.POST:
+        if self.request.method.upper() in ('POST', 'PUT'):
             kwargs['data'] = self.request.POST
+            kwargs['files'] = self.request.FILES
         if 'pk' in self.kwargs:
             kwargs['instance'] = self.get_object()
         else:

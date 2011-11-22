@@ -252,6 +252,7 @@ class BaseAdmin(object):
         return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
     
     def formfield_for_field(self, prop, field, **kwargs):
+        #TODO fix file fields to display file if uploaded
         if field in self.formfield_overrides:
             opts = dict(self.formfield_overrides[field])
             field = opts.pop('form_class', field)

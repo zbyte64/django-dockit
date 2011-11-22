@@ -1,5 +1,8 @@
+import os
+
 from django.utils import unittest
 from django.contrib.auth.models import User
+from django.core.files import File
 
 from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOne, SubComplexTwo
 
@@ -118,7 +121,16 @@ class FormTestCase(unittest.TestCase):
         instance = form.save()
         self.assertEqual(instance.field1, 'hello')
         
-        #TODO test file field
+        #test file field
+        directory = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(directory, 'fixtures', 'alpaca.jpg')
+        django_file = File(open(file_path, 'rb'))
+        
+        self.assertFalse(instance.image)
+        form = CustomDocumentForm(data={'field1':'hello'}, files={'image':django_file})
+        self.assertTrue(form.is_valid(), str(form.errors))
+        instance = form.save()
+        self.assertTrue(instance.image)
     
     def test_dotnotation_form(self):
         class CustomDocumentForm(DocumentForm):
