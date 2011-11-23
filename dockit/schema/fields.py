@@ -15,6 +15,7 @@ class NOT_PROVIDED:
 
 class BaseField(object):
     meta_field = False
+    form_field_class = forms.CharField
     
     def __init__(self, verbose_name=None, name=None, blank=False, null=False,
                  default=NOT_PROVIDED, editable=True,
@@ -83,8 +84,9 @@ class BaseField(object):
     def to_python(self, val):
         return val
     
-    def formfield(self, form_class=forms.CharField, **kwargs):
+    def formfield(self, **kwargs):
         "Returns a django.forms.Field instance for this database Field."
+        form_class = kwargs.pop('form_class', self.form_field_class)
         defaults = self.formfield_kwargs(**kwargs)
         return form_class(**defaults)
     
@@ -138,20 +140,27 @@ class TextField(BaseTypedField):
 
 class IntegerField(BaseTypedField):
     coerce_function = int
+    form_field_class = forms.IntegerField
 
 class BigIntegerField(BaseTypedField):
     coerce_function = long
+    form_field_class = forms.IntegerField
 
 class BooleanField(BaseTypedField):
     coerce_function = bool
+    form_field_class = forms.BooleanField
 
 class DateField(BaseTypedField):
     coerce_function = datetime.date
+    form_field_class = forms.DateField
 
 class DateTimeField(BaseTypedField):
     coerce_function = datetime.datetime
+    form_field_class = forms.DateTimeField
 
 class DecimalField(BaseField):
+    form_field_class = forms.DecimalField
+    
     def to_primitive(self, val):
         return str(val)
     
@@ -159,35 +168,41 @@ class DecimalField(BaseField):
         return Decimal(val)
 
 class EmailField(TextField):
+    form_field_class = forms.EmailField
     pass #TODO validate
 
 #TODO filefield? this will be passed off to the backend
 
 class FloatField(BaseTypedField):
     coerce_function = float
+    form_field_class = forms.FloatField
 
 #TODO imagefield
 
 class IPAddressField(TextField):
-    pass #TODO validate
+    form_field_class = forms.IPAddressField
+    #TODO validate
 
-class GenericIPAddressField(TextField):
-    pass #TODO validate
+#class GenericIPAddressField(TextField):
+#    form_field_class = forms.GenericIPAddressField
+#    #TODO validate
 
 #TODO NullBooleanField
 
 class PositiveIntegerField(IntegerField):
-    pass #TODO validate
+    form_field_class = forms.IntegerField
+    #TODO validate
 
 #TODO PositiveSmallIntegerField
 
 class SlugField(TextField):
-    pass #TODO form field
+    form_field_class = forms.SlugField
 
 #TODO SmallIntegerField
 
 class TimeField(BaseTypedField):
     coerce_function = datetime.time
+    form_field_class = forms.TimeField
 
 #TODO URLField
 #TODO XMLField
