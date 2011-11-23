@@ -289,3 +289,11 @@ class Document(Schema):
             return force_unicode(self).encode('utf-8')
         return '%s object' % self.__class__.__name__
 
+def create_document(name, fields, module='dockit.models'):
+    attrs = dict(fields)
+    attrs['__module__'] = module
+    class virtual_meta:
+        virtual = True
+    attrs['Meta'] = virtual_meta
+    return DocumentBase.__new__(DocumentBase, name, (Document,), attrs)
+

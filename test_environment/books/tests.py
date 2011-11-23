@@ -8,6 +8,7 @@ from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOn
 
 from dockit.forms import DocumentForm
 from dockit.models import TemporaryDocument, create_temporary_document_class
+from dockit.schema import create_document, TextField
 
 class BookTestCase(unittest.TestCase):
 
@@ -59,6 +60,15 @@ class BookTestCase(unittest.TestCase):
     
     def test_admin(self):
         import admin
+    
+    def test_create_document(self):
+        name = 'test'
+        fields = {'title':TextField()}
+        module = 'books.models'
+        document = create_document(name, fields, module)
+        doc = document(title='foo')
+        self.assertEqual(doc.title, 'foo')
+        doc.save()
 
 class DotNotationTestCase(unittest.TestCase):
     def test_dot_notation_list_field(self):

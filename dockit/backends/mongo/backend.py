@@ -45,8 +45,8 @@ class ModelDocumentStorage(BaseDocumentStorage):
     def define_index(self, collection, index):
         raise NotImplementedError
     
-    def get_id(self, data):
-        return str(data.get('_id'))
+    def get_id_field_name(self):
+        return '_id'
     
     def all(self, doc_class, collection):
         return DocumentQuery(self.db[collection], doc_class)
