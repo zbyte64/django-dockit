@@ -30,14 +30,17 @@ class ModelDocumentStorage(BaseDocumentStorage):
 
     def __init__(self):
         #TODO be proper about this
-        self.connection = Connetion(settings.MONGO_HOST, settings.MONGO_PORT)
-        self.db = self.connection[settings.MONGO_DB)
+        self.connection = Connection(settings.MONGO_HOST, settings.MONGO_PORT)
+        self.db = self.connection[settings.MONGO_DB]
     
     def save(self, collection, data):
         data['_id'] = self.db[collection].insert(data)
     
     def get(self, collection, doc_id):
         return self.db[collection].find_one({'_id':doc_id})
+    
+    def delete(self, collection, doc_id):
+        return self.db[collection].remove(doc_id)
     
     def define_index(self, collection, index):
         raise NotImplementedError
@@ -52,8 +55,6 @@ class ModelDocumentStorage(BaseDocumentStorage):
         qs = self.db[collection].filter(params)
         return DocumentQuery(qs, doc_class)
     
-    def generate_index(self, collection, field):
-        self.db[collection].ensureIndex({field:1})
-   
-        
+    def generate_index(self, collection, dotpath):
+        self.db[collection].ensureIndex({dotpath:1})
 

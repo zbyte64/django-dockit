@@ -6,13 +6,24 @@ from dockit.schema import fields#, Document
 
 from models import DocumentStore, StringIndex, IntegerIndex
 
-class ListIndex(object):
-    def __init__(self, index_func):
-        self.index_func = index_func
+class Indexer(object):
+    def __init__(self, doc_class, index_creator, dotpath):
+        self.doc_class = doc_class
+        self.index_creator = index_creator
+        self.dotpath = dotpath
     
-    def __call__(self, documentstore, name, value):
-        for val in value:
-            self.index_func(documentstore, name, val)
+    def __call__(self, dbdocument, data):
+        document = self.doc_class(_primitive_data=data)
+        try:
+            value = document.dot_notation(self.dotpath)
+        except (KeyError, IndexError):
+            return
+        
+        if isinstance(value, list):
+            for val in value:
+                self.index_creator(dbdocument, self.dotpath, val)
+        else:
+            self.index_creator(dbdocument, self.dotpath, value)
 
 class DocumentQuery(object):
     def __init__(self, queryset, doc_class):
@@ -91,18 +102,19 @@ class ModelDocumentStorage(BaseDocumentStorage):
             qs = qs.filter(**self.indexes[collection][key]['filter'](key, value))
         return DocumentQuery(qs, doc_class)
     
-    def generate_index(self, collection, field):
-        #TODO create a better interface
+    def generate_index(self, document, dotpath):
+        collection = document._meta.collection
         self.indexes.setdefault(collection, dict())
-        if isinstance(field, fields.ListField):
+        field = document.dot_notation_to_field(dotpath)
+        
+        subindex = self._lookup_index(field)
+        if subindex is None and hasattr(field, 'schema'):
             subindex = self._lookup_index(field.schema)
-            func = ListIndex(subindex.objects.db_index)
-            filt = subindex.objects.filter_kwargs_for_value
-        else:
-            index = self._lookup_index(field)
-            func = index.objects.db_index
-            filt = index.objects.filter_kwargs_for_value
-        self.indexes[collection][field.name] = {'map':func, 'filter':filt}
+        
+        func = Indexer(document, subindex.objects.db_index, dotpath)
+        filt = subindex.objects.filter_kwargs_for_value
+        
+        self.indexes[collection][dotpath] = {'map':func, 'filter':filt}
     
     def _lookup_index(self, field):
         for key, val in self.INDEXES:
@@ -111,9 +123,8 @@ class ModelDocumentStorage(BaseDocumentStorage):
     
     def update_indexes(self, document, collection, data):
         document.clear_indexes()
-        for field_name, entry in self.indexes.get(collection, dict()).iteritems():
-            if field_name in data:
-                index_func = entry['map']
-                index_func(document, field_name, data[field_name])
-        
+        for entry in self.indexes.get(collection, dict()).itervalues():
+            index_func = entry['map']
+            index_func(document, data)
+
 
