@@ -169,6 +169,7 @@ class FormTestCase(unittest.TestCase):
         
         instance = TempDoc(_primitive_data={'field1':'hello'})
         form = CustomDocumentForm(instance=instance, data={'field1':'hello2'})
+        
         self.assertEqual(form.initial['field1'], 'hello')
         self.assertTrue(form.is_valid(), str(form.errors))
         instance = form.save()
@@ -177,7 +178,6 @@ class FormTestCase(unittest.TestCase):
         
         complex_obj = instance.commit_changes()
         ComplexObject.objects.get(complex_obj.pk)
-        
         
         class CustomDocumentAddressForm(DocumentForm):
             class Meta:
@@ -194,8 +194,6 @@ class FormTestCase(unittest.TestCase):
         instance = form.save()
         self.assertEqual(instance._primitive_data['main_address']['region'], 'CA', str(instance._primitive_data))
         self.assertTrue(isinstance(instance, TempDoc))
-        
-        print instance, type(instance)
         
         complex_obj = instance.commit_changes(instance=complex_obj)
         ComplexObject.objects.get(complex_obj.pk)

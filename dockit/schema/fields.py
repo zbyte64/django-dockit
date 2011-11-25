@@ -8,7 +8,7 @@ from decimal import Decimal
 import datetime
 
 from serializer import PRIMITIVE_PROCESSOR
-from dockit.forms.fields import HiddenJSONField
+from dockit.forms.fields import HiddenJSONField, SchemaChoiceField
 
 class NOT_PROVIDED:
     pass
@@ -16,6 +16,7 @@ class NOT_PROVIDED:
 class BaseField(object):
     meta_field = False
     form_field_class = forms.CharField
+    form_widget_class = None #TODO support this
     
     def __init__(self, verbose_name=None, name=None, blank=False, null=False,
                  default=NOT_PROVIDED, editable=True,
@@ -135,8 +136,12 @@ class BaseTypedField(BaseField):
     def to_primitive(self, val):
         return self.coerce_function(val)
 
+class CharField(BaseTypedField):
+    coerce_function = unicode
+
 class TextField(BaseTypedField):
     coerce_function = unicode
+    form_widget_class = forms.Textarea
 
 class IntegerField(BaseTypedField):
     coerce_function = int
@@ -317,29 +322,31 @@ class SchemaField(BaseComplexField):
             return self.schema._meta.fields[name].dot_notation_set_value(notation, value, parent)
 
 class ListField(BaseComplexField):
-    def __init__(self, schema, *args, **kwargs):
+    def __init__(self, schema=None, *args, **kwargs):
         self.schema = schema
         super(ListField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
-        ret = list()
-        if val is None:
-            return ret
-        for item in val:
-            ret.append(self.schema.to_primitive(item))
-        #TODO run data through the primitive processor
-        ret = PRIMITIVE_PROCESSOR.to_primitive(ret)
-        return ret
+        if self.schema:
+            ret = list()
+            if val is None:
+                return ret
+            for item in val:
+                ret.append(self.schema.to_primitive(item))
+            #run data through the primitive processor
+            return PRIMITIVE_PROCESSOR.to_primitive(ret)
+        return PRIMITIVE_PROCESSOR.to_primitive(val)
     
     def to_python(self, val):
-        ret = list()
-        if val is None:
-            return ret
-        for item in val:
-            ret.append(self.schema.to_python(item))
-        #TODO run data through the primitive processor
-        ret = PRIMITIVE_PROCESSOR.to_python(ret)
-        return ret
+        if self.schema:
+            ret = list()
+            if val is None:
+                return ret
+            for item in val:
+                ret.append(self.schema.to_python(item))
+            #run data through the primitive processor
+            return PRIMITIVE_PROCESSOR.to_python(ret)
+        return PRIMITIVE_PROCESSOR.to_primitive(val)
     
     def dot_notation_to_value(self, notation, value):
         if notation is None:
@@ -458,6 +465,8 @@ class DictField(BaseComplexField):
                 return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
 
 class ReferenceField(ComplexDotNotationMixin, BaseField):
+    form_field_class = SchemaChoiceField
+    
     def __init__(self, document, *args, **kwargs):
         assert hasattr(document, 'objects')
         assert hasattr(document, 'get_id')
@@ -478,8 +487,15 @@ class ReferenceField(ComplexDotNotationMixin, BaseField):
             return self.document.objects.get(val)
         except ObjectDoesNotExist:
             return None
+    
+    def formfield_kwargs(self, **kwargs):
+        kwargs = BaseField.formfield_kwargs(self, **kwargs)
+        kwargs.setdefault('queryset', self.document.objects)
+        return kwargs
 
 class ModelReferenceField(BaseField):
+    form_field_class = forms.ModelChoiceField
+    
     def __init__(self, model, *args, **kwargs):
         self.model = model
         super(ModelReferenceField, self).__init__(*args, **kwargs)
@@ -490,5 +506,8 @@ class ModelReferenceField(BaseField):
     def to_python(self, val):
         return self.model.objects.get(pk=val)
     
-    #TODO formfield returns ModelChoieField
+    def formfield_kwargs(self, **kwargs):
+        kwargs = BaseField.formfield_kwargs(self, **kwargs)
+        kwargs.setdefault('queryset', self.model.objects)
+        return kwargs
 

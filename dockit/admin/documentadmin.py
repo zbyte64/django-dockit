@@ -36,6 +36,7 @@ class BaseAdmin(object):
     exclude = None
     fieldsets = None
     form = forms.ModelForm
+    form_class = None
     filter_vertical = ()
     filter_horizontal = ()
     radio_fields = {}

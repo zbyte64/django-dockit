@@ -1,4 +1,4 @@
-from django.forms.fields import ChoiceField, Field
+from django.forms.fields import ChoiceField, Field, EMPTY_VALUES
 from django.forms.widgets import HiddenInput
 from django.forms import ValidationError
 from django.utils.translation import ugettext as _
@@ -130,9 +130,8 @@ class SchemaChoiceField(ChoiceField):
         if value in EMPTY_VALUES:
             return None
         try:
-            key = self.to_field_name or 'pk'
-            value = self.queryset.get(**{key: value})
-        except (ValueError, self.queryset.model.DoesNotExist):
+            value = self.queryset.get(value)
+        except (ValueError):#, self.queryset.model.DoesNotExist): #TODO catch the propr does not exist error
             raise ValidationError(self.error_messages['invalid_choice'])
         return value
 

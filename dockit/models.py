@@ -1,6 +1,8 @@
 import dockit
 from dockit.backends import get_document_backend
 
+from copy import deepcopy
+
 class TemporaryDocument(dockit.Document):
     pass
 
@@ -10,19 +12,11 @@ class FactoryMeta(object):
             setattr(self, key, value)
 
 def create_temporary_document_class(document_cls):
-    original_collection = document_cls._meta.collection
     
-    new_meta = dict()
-    
-    for key in document_cls._meta.DEFAULT_NAMES:
-        if hasattr(document_cls._meta, key):
-            new_meta[key] = getattr(document_cls._meta, key)
-    
-    new_meta.update({'virtual':True,
-                     'collection': TemporaryDocument._meta.collection,})
-    
-    class TempDocument(document_cls):
-        Meta = FactoryMeta(new_meta)
+    class TempDocument(dockit.Document):
+        class Meta:
+            virtual = True
+            collection = TemporaryDocument._meta.collection
         
         def commit_changes(self, instance=None):
             if instance is None:
@@ -43,6 +37,14 @@ def create_temporary_document_class(document_cls):
             backend = get_document_backend()
             data.pop(backend.get_id_field_name(), None)
             self._primitive_data = data
+            self._python_data = dict()
     
-    assert original_collection == document_cls._meta.collection
+    #TODO investigate: Exception RuntimeError: 'maximum recursion depth exceeded in __subclasscheck__' in <type 'exceptions.AttributeError'> ignored
+    TempDocument._meta.fields = deepcopy(document_cls._meta.fields)
+    for name, value in TempDocument._meta.fields.iteritems():
+        if hasattr(value, 'contribute_to_class'):
+            value.contribute_to_class(TempDocument, name)
+        else:
+            setattr(TempDocument, name, value)
+    
     return TempDocument

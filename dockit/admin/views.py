@@ -188,6 +188,10 @@ class FragmentViewMixin(DocumentViewMixin):
     def parent_dotpath(self):
         return self.request.GET.get('_parent_dotpath', None)
     
+    @property
+    def form_class(self):
+        return self.admin.form_class
+    
     def fragment_info(self):
         token = '[fragment]'
         for key in self.request.POST.iterkeys():
