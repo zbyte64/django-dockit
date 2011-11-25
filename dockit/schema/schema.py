@@ -292,8 +292,5 @@ class Document(Schema):
 def create_document(name, fields, module='dockit.models'):
     attrs = dict(fields)
     attrs['__module__'] = module
-    class virtual_meta:
-        virtual = True
-    attrs['Meta'] = virtual_meta
     return DocumentBase.__new__(DocumentBase, name, (Document,), attrs)
 
