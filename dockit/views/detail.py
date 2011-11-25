@@ -4,6 +4,8 @@ from django.utils.translation import ugettext as _
 from django.http import Http404
 
 class SingleObjectMixin(detailview.SingleObjectMixin):
+    document = None
+    
     def get_object(self, queryset=None):
         """
         Returns the object the view is displaying.

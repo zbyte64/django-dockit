@@ -5,6 +5,7 @@ from django.views.generic import list as listview
 
 class MultipleObjectMixin(listview.MultipleObjectMixin):
     paginator_class = Paginator
+    document = None
     
     def get_queryset(self):
         """
@@ -15,8 +16,8 @@ class MultipleObjectMixin(listview.MultipleObjectMixin):
             queryset = self.queryset
             if hasattr(queryset, '_clone'):
                 queryset = queryset._clone()
-        elif self.model is not None:
-            queryset = lambda **kwargs: self.model.view('_all_docs', include_docs=True, **kwargs)
+        elif self.document is not None:
+            queryset = self.document.objects.all()
         else:
             raise ImproperlyConfigured(u"'%s' must define 'queryset' or 'model'"
                                        % self.__class__.__name__)
