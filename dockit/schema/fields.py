@@ -39,6 +39,10 @@ class BaseField(object):
         self.help_text = help_text
         self.validators = validators
         self.db_index = db_index
+        
+        #TODO support the following:
+        self.rel = None
+        self.flatchoices = None
     
     def contribute_to_class(self, cls, name):
         self.name = name
