@@ -22,11 +22,10 @@ class BaseField(object):
                  default=NOT_PROVIDED, editable=True,
                  serialize=True, choices=None, help_text='',
                  validators=[],
-                 db_index=False,
-                #db_index=False,  db_column=None, primary_key=False, max_length=None, unique=False, 
+                 db_index=False, unique=False,
+                #db_index=False,  db_column=None, primary_key=False, max_length=None
                 #db_tablespace=None, auto_created=False, 
                 #unique_for_date=None, unique_for_month=None, unique_for_year=None, 
-                #rel=None,
                  error_messages=None):
         self.verbose_name = verbose_name
         self.name = name
@@ -43,6 +42,7 @@ class BaseField(object):
         #TODO support the following:
         self.rel = None
         self.flatchoices = None
+        self.unique = unique
     
     def contribute_to_class(self, cls, name):
         self.name = name
