@@ -245,8 +245,8 @@ class BaseDocumentForm(BaseForm):
         
         if opts.dotpath:
             try:
-                self.instance.dot_notation(opts.dotpath)
-            except (KeyError, IndexError):
+                assert self.instance.dot_notation(opts.dotpath) is not None
+            except (KeyError, IndexError, AssertionError):
                 field = opts.document.dot_notation_to_field(opts.dotpath)
                 schema = field.schema
                 self.instance.dot_notation_set_value(opts.dotpath, schema())
@@ -254,12 +254,11 @@ class BaseDocumentForm(BaseForm):
         for prop_name in self.serialized_fields:
             if prop_name in cleaned_data:
                 value = cleaned_data.pop(prop_name)
-                if value is not None:
-                    if opts.dotpath:
-                        dotpath = '%s.%s' % (opts.dotpath, prop_name)
-                    else:
-                        dotpath = prop_name
-                    self.instance.dot_notation_set_value(dotpath, value)
+                if opts.dotpath:
+                    dotpath = '%s.%s' % (opts.dotpath, prop_name)
+                else:
+                    dotpath = prop_name
+                self.instance.dot_notation_set_value(dotpath, value)
         
         if dynamic:
             for attr_name in cleaned_data.keys():

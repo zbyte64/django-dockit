@@ -316,6 +316,7 @@ class SchemaField(BaseComplexField):
         return self.schema._meta.fields[name].dot_notation_to_field(notation)
     
     def dot_notation_set_value(self, notation, value, parent):
+        assert parent
         if notation is None:
             return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
         if '.' in notation:
@@ -508,9 +509,13 @@ class ModelReferenceField(BaseField):
         super(ModelReferenceField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
+        if val is None:
+            return None
         return val.pk
     
     def to_python(self, val):
+        if val is None:
+            return None
         return self.model.objects.get(pk=val)
     
     def formfield_kwargs(self, **kwargs):

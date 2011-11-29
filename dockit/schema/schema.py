@@ -186,7 +186,7 @@ class Schema(object):
                     #TODO run entry through generic primitive processor
                     val._primitive_data[name] = entry
             return val._primitive_data
-        assert isinstance(val, (dict, list, None)), str(type(val))
+        assert isinstance(val, (dict, list, type(None))), str(type(val))
         return val
     
     @classmethod
