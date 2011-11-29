@@ -307,7 +307,7 @@ class UserMeta(object):
             setattr(self, key, value)
 
 def create_document(name, fields, module='dockit.models', collection=None):
-    attrs = dict(fields)
+    attrs = SortedDict(fields)
     attrs['__module__'] = module
     if collection:
        attrs['Meta'] = UserMeta(collection=collection)
