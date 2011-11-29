@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db.models.options import get_verbose_name
 from django.utils.translation import activate, deactivate_all, get_language, string_concat
 from django.utils.encoding import smart_str, force_unicode
+from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
 
 from manager import Manager
@@ -27,7 +28,7 @@ class Options(object):
         self.verbose_name_plural = None
         self.object_name, self.app_label = None, app_label
         self.meta = meta
-        self.fields = dict() #TODO ordered dictionary
+        self.fields = SortedDict()
         self.collection = None
         self.virtual = False
     
