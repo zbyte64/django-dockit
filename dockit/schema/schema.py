@@ -176,11 +176,15 @@ class Schema(object):
         if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
             #we've cached python values on access, we need to pump these back to the primitive dictionary
             for name, entry in val._python_data.iteritems():
-                try:
-                    val._primitive_data[name] = val._meta.fields[name].to_primitive(entry)
-                except:
-                    print name, val._meta.fields[name], entry
-                    raise
+                if name in val._meta.fields:
+                    try:
+                        val._primitive_data[name] = val._meta.fields[name].to_primitive(entry)
+                    except:
+                        print name, val._meta.fields[name], entry
+                        raise
+                else:
+                    #TODO run entry through generic primitive processor
+                    val._primitive_data[name] = entry
             return val._primitive_data
         assert isinstance(val, (dict, list, None)), str(type(val))
         return val
@@ -209,6 +213,28 @@ class Schema(object):
             #self._primtive_data[name] = store_val
         else:
             super(Schema, self).__setattr__(name, val)
+    
+    def __getitem__(self, key):
+        if key in self._meta.fields:
+            return getattr(self, key)
+        return self._python_data[key]
+    
+    def __setitem__(self, key, value):
+        if key in self._meta.fields:
+            setattr(self, key, value)
+            return
+        self._python_data[key] = value
+    
+    def __delitem__(self, key):
+        if key in self._meta.fields:
+            setattr(self, key, None)
+            return
+        del self._python_data[key]
+    
+    def __hasitem__(self, key):
+        if key in self._meta.fields:
+            return True
+        return key in self._python_data
     
     def dot_notation(self, notation):
         return self.dot_notation_to_value(notation, self)

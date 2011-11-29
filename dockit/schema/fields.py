@@ -16,7 +16,7 @@ class NOT_PROVIDED:
 class BaseField(object):
     meta_field = False
     form_field_class = forms.CharField
-    form_widget_class = None #TODO support this
+    form_widget_class = None
     
     def __init__(self, verbose_name=None, name=None, blank=False, null=False,
                  default=NOT_PROVIDED, editable=True,
@@ -96,7 +96,10 @@ class BaseField(object):
         return form_class(**defaults)
     
     def formfield_kwargs(self, **kwargs):
-        defaults = {'required': not self.blank, 'label': capfirst(self.verbose_name), 'help_text': self.help_text}
+        defaults = {'required': not self.blank,
+                    'label': capfirst(self.verbose_name),
+                    'help_text': self.help_text,
+                    'widget':self.form_widget_class,}
         if self.has_default():
             if callable(self.default):
                 defaults['initial'] = self.default
