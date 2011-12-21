@@ -21,7 +21,7 @@ class Options(object):
     ordering = ['_id']
     
     DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
-                     'app_label', 'collection', 'virtual')
+                     'app_label', 'collection', 'virtual', 'proxy')
     
     def __init__(self, meta, app_label=None):
         self.module_name, self.verbose_name = None, None
@@ -31,6 +31,7 @@ class Options(object):
         self.fields = SortedDict()
         self.collection = None
         self.virtual = False
+        self.proxy = False
     
     def contribute_to_class(self, cls, name):
         cls._meta = self
@@ -292,7 +293,7 @@ class DocumentBase(SchemaBase):
             objects = Manager()
             objects.contribute_to_class(new_class, 'objects')
         
-        if not new_class._meta.virtual:
+        if not new_class._meta.virtual and not new_class._meta.proxy:
             backend = get_document_backend()
             backend.register_document(new_class)
         return new_class
