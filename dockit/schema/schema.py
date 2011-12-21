@@ -135,12 +135,23 @@ class SchemaBase(type):
             meta = getattr(new_class, 'Meta', None)
         else:
             meta = attr_meta
+            if getattr(meta, 'proxy', False):
+                if not hasattr(new_class, '_meta'):
+                    raise ValueError('Proxy schemas must inherit from another schema')
+                parent_meta = getattr(new_class, '_meta')
+                for key in Options.DEFAULT_NAMES:
+                    if not hasattr(meta, key) and hasattr(parent_meta, key):
+                        setattr(meta, key, getattr(parent_meta, key))
         
         if getattr(meta, 'app_label', None) is None:
             document_module = sys.modules[new_class.__module__]
             app_label = document_module.__name__.split('.')[-2]
         else:
             app_label = getattr(meta, 'app_label')
+        
+        for base in bases:
+            if hasattr(base, '_meta') and hasattr(base._meta, 'fields'):
+                attrs.update(base._meta.fields)
         
         new_class.add_to_class('_meta', Options(meta, app_label=app_label))
         
