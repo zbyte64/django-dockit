@@ -102,6 +102,9 @@ class ModelDocumentStorage(BaseDocumentStorage):
             qs = qs.filter(**self.indexes[collection][key]['filter'](key, value))
         return DocumentQuery(qs, doc_class)
     
+    def unique_values(self, collection, dotpath):
+        return self.indexes[collection][dotpath]['unique_values']()
+    
     def generate_index(self, document, dotpath):
         collection = document._meta.collection
         self.indexes.setdefault(collection, dict())
@@ -113,8 +116,9 @@ class ModelDocumentStorage(BaseDocumentStorage):
         
         func = Indexer(document, subindex.objects.db_index, dotpath)
         filt = subindex.objects.filter_kwargs_for_value
+        unique_values = subindex.objects.unique_values
         
-        self.indexes[collection][dotpath] = {'map':func, 'filter':filt}
+        self.indexes[collection][dotpath] = {'map':func, 'filter':filt, 'unique_values':unique_values}
     
     def _lookup_index(self, field):
         for key, val in self.INDEXES:

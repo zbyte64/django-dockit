@@ -45,6 +45,9 @@ class BaseIndexManager(models.Manager):
             filter_kwargs['%s__value' % prefix] = value
         return filter_kwargs
     
+    def unique_values(self, index):
+        return self.filter(index=index).values_list('value', flat=True).distinct()
+    
     def clear_db_index(self, documentstore):
         self.filter(document=documentstore).delete()
     

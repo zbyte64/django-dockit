@@ -34,4 +34,7 @@ class BaseDocumentStorage(object):
     
     def get_id_field_name(self):
         raise NotImplementedError
+    
+    def unique_values(self, doc_class, dotpath):
+        raise NotImplementedError
 
