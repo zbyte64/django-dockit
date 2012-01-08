@@ -40,6 +40,8 @@ class Book(dockit.Document):
     class Meta:
         collection = 'book'
 
+Book.objects.enable_index("equals", "tags", {'field':'tags'})
+
 class SubComplexTwo(dockit.Schema):
     field2 = dockit.TextField()
 

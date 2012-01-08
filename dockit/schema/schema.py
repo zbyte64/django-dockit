@@ -119,6 +119,9 @@ class Options(object):
                 for key, value in kwargs.iteritems():
                     setattr(self, key, value)
         return DummyField(attname='pk')
+    
+    def get_backend(self):
+        return get_document_backend()
 
 class SchemaBase(type):
     """
@@ -313,19 +316,30 @@ class Document(Schema):
     __metaclass__ = DocumentBase
     
     def get_id(self):
-        backend = get_document_backend()
+        backend = self._meta.get_backend()
         return backend.get_id(self._primitive_data)
     
     pk = property(get_id)
     
+    def notify_indexers_of_save(self, collection, data):
+        for key, value in self._indexers.iteritems():
+            value.on_document_save(collection, data)
+    
+    def notify_indexers_of_delete(self, collection, doc_id):
+        pass
+    
     def save(self):
-        backend = get_document_backend()
+        backend = self._meta.get_backend()
         data = type(self).to_primitive(self)
         backend.save(self._meta.collection, data)
-    
+        for value in self.objects.get_indexes().itervalues():
+            value.on_document_save(self)
+        
     def delete(self):
-        backend = get_document_backend()
+        backend = self._meta.get_backend()
         backend.delete(self._meta.collection, self.get_id())
+        for value in self.objects.get_indexes().itervalues():
+            value.on_document_delete(self)
     
     def serializable_value(self, field_name):
         try:

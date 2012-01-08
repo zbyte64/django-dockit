@@ -43,10 +43,10 @@ class BookTestCase(unittest.TestCase):
         
         self.assertEqual(publisher.address.street_2, 'Apt 1')
         
-        book = Book.objects.filter(tags='historical')[0]
+        book = Book.objects.filter.tags('historical')[0]
         self.assertEqual(book.title, 'Of Mice and Men')
         
-        self.assertEqual(Book.objects.filter(tags='fiction').count(), 0)
+        self.assertEqual(Book.objects.filter.tags('fiction').count(), 0)
         
         self.assertEqual(publisher.dot_notation('address.country'), 'US')
         

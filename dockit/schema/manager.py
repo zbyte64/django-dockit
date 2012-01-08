@@ -1,25 +1,67 @@
 from copy import copy
 from dockit.backends import get_document_backend
 
+class MethodProxy(object):
+    def __init__(self, obj, attribute):
+        self.obj = obj
+        self.attribute = attribute
+    
+    def __call__(self, *args, **kwargs):
+        return getattr(self.obj, self.attribute)(*args, **kwargs)
+
+class DictObjectMethodProxy(object):
+    def __init__(self, dct, attribute):
+        self._dct = dct
+        self._attribute = attribute
+    
+    def __getattribute__(self, key):
+        dct = object.__getattribute__(self, '_dct')
+        if key in dct:
+            return MethodProxy(dct[key], object.__getattribute__(self, '_attribute'))
+        return object.__getattribute__(self, key)
+
 class Manager(object):
+    def __init__(self):
+        self._indexes = dict()
+        self.filter = DictObjectMethodProxy(self._indexes, 'filter')
+        self.values = DictObjectMethodProxy(self._indexes, 'values')
+        super(Manager, self).__init__()
+    
     def contribute_to_class(self, cls, name):
         new = copy(self)
         new.schema = cls
         setattr(cls, name, new)
     
     @property
+    def backend(self):
+        return self.schema._meta.get_backend()
+    
+    @property
     def collection(self):
         return self.schema._meta.collection
     
     def all(self):
-        backend = get_document_backend()
-        return backend.all(self.schema, self.collection)
+        return self.backend.all(self.schema, self.collection)
     
     def get(self, doc_id):
-        backend = get_document_backend()
-        data = backend.get(self.collection, doc_id)
+        data = self.backend.get(self.collection, doc_id)
         return self.schema.to_python(data)
     
-    def filter(self, **params):
-        backend = get_document_backend()
-        return backend.filter(self.schema, self.collection, params)
+    def enable_index(self, index_cls_name, index_name, params):
+        #TODO lazy load
+        index_cls = self.backend.get_indexer(index_cls_name)
+        indexer = index_cls(self.schema, index_name, params)
+        self._indexes[index_name] = indexer
+    
+    def get_indexes(self):
+        return self._indexes
+
+'''
+register_indexer(backend, "equals", index_cls)
+
+Book.objects.enable_index("equals", "author_name", {'field':'author_name'})
+Book.objects.enable_index("fulltext", "author_name__search", {'field':'author_name'})
+Book.objects.filter.author_name__search('Twain')
+Book.objects.values.author_name()
+
+'''

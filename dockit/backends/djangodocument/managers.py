@@ -48,10 +48,12 @@ class BaseIndexManager(models.Manager):
     def unique_values(self, index):
         return self.filter(index=index).values_list('value', flat=True).distinct()
     
-    def clear_db_index(self, documentstore):
-        self.filter(document=documentstore).delete()
+    def clear_db_index(self, instance_id, name=None):
+        if name is None:
+            return self.filter(document=instance_id).delete()
+        return self.filter(document=instance_id, index=name).delete()
     
-    def db_index(self, documentstore, name, value):
-        self.filter(document=documentstore, index=name).delete()
-        self.create(document=documentstore, index=name, value=value)
+    def db_index(self, instance_id, name, value):
+        self.filter(document=instance_id, index=name).delete()
+        self.create(document_id=instance_id, index=name, value=value)
 
