@@ -1,4 +1,5 @@
 from django.utils import simplejson
+from django.core.serializers.json import DjangoJSONEncoder
 
 from dockit.backends.base import BaseDocumentStorage
 from dockit.schema import fields#, Document
@@ -41,7 +42,8 @@ class ModelDocumentStorage(BaseDocumentStorage):
     
     def save(self, collection, data):
         doc_id = self.get_id(data)
-        document = DocumentStore(collection=collection, data=simplejson.dumps(data))
+        encoded_data = simplejson.dumps(data, cls=DjangoJSONEncoder)
+        document = DocumentStore(collection=collection, data=encoded_data)
         if doc_id is not None:
             document.pk = doc_id
         #CONSIDER this does not look before we save

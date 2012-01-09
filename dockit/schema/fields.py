@@ -141,6 +141,8 @@ class BaseTypedField(BaseField):
     coerce_function = None
     
     def to_primitive(self, val):
+        if isinstance(self.coerce_function, type) and isinstance(val, self.coerce_function):
+            return val
         return self.coerce_function(val)
 
 class CharField(BaseTypedField):
@@ -179,7 +181,7 @@ class DecimalField(BaseField):
     def to_python(self, val):
         return Decimal(val)
 
-class EmailField(TextField):
+class EmailField(CharField):
     form_field_class = forms.EmailField
     pass #TODO validate
 
@@ -191,7 +193,7 @@ class FloatField(BaseTypedField):
 
 #TODO imagefield
 
-class IPAddressField(TextField):
+class IPAddressField(CharField):
     form_field_class = forms.IPAddressField
     #TODO validate
 
@@ -207,7 +209,7 @@ class PositiveIntegerField(IntegerField):
 
 #TODO PositiveSmallIntegerField
 
-class SlugField(TextField):
+class SlugField(CharField):
     form_field_class = forms.SlugField
 
 #TODO SmallIntegerField
