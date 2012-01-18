@@ -12,6 +12,7 @@ from django.db.models import FieldDoesNotExist
 
 from manager import Manager
 from common import register_schema
+from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
 
 class Options(object):
     """ class based on django.db.models.options. We only keep
@@ -167,6 +168,7 @@ class SchemaBase(type):
         if not new_class._meta.virtual:
             register_schema(new_class._meta.schema_key, new_class)
         
+        class_prepared.send(**{'sender':cls, 'class':new_class})
         return new_class
     
     def add_to_class(cls, name, value):
@@ -179,6 +181,7 @@ class Schema(object):
     __metaclass__ = SchemaBase
     
     def __init__(self, **kwargs):
+        pre_init.send(sender=self.__class__, kwargs=kwargs)
         #super(Schema, self).__init-_()
         self._primitive_data = dict()
         self._python_data = dict()
@@ -187,6 +190,7 @@ class Schema(object):
             setattr(self, key, value)
         assert self._primitive_data is not None
         assert self._python_data is not None
+        post_init.send(sender=self.__class__, instance=self)
     
     @classmethod
     def to_primitive(cls, val):
@@ -332,17 +336,22 @@ class Document(Schema):
         pass
     
     def save(self):
+        created = not self.pk
+        pre_save.send(sender=type(self), instance=self)
         backend = self._meta.get_backend()
         data = type(self).to_primitive(self)
         backend.save(self._meta.collection, data)
         for value in self.objects.get_indexes().itervalues():
             value.on_document_save(self)
+        post_save.send(sender=type(self), instance=self, created=created)
         
     def delete(self):
+        pre_delete.send(sender=type(self), instance=self)
         backend = self._meta.get_backend()
         backend.delete(self._meta.collection, self.get_id())
         for value in self.objects.get_indexes().itervalues():
             value.on_document_delete(self)
+        post_delete.send(sender=type(self), instance=self)
     
     def serializable_value(self, field_name):
         try:
