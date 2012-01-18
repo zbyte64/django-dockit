@@ -14,11 +14,13 @@ from dockit.models import create_temporary_document_class
 
 from urllib import urlencode
 from urlparse import parse_qsl
+import re
 
 CALL_BACK = "" #TODO
 
 class DocumentViewMixin(AdminViewMixin):
     template_suffix = None
+    template_name = None
     form_class = None
     
     @property
@@ -26,6 +28,8 @@ class DocumentViewMixin(AdminViewMixin):
         return self.admin.model
     
     def get_template_names(self):
+        if self.template_name:
+            return [self.template_name]
         opts = self.document._meta
         app_label = opts.app_label
         object_name = opts.object_name.lower()
@@ -102,9 +106,8 @@ class DocumentViewMixin(AdminViewMixin):
         #CustomDocumentForm.base_fields.update(fields)
         return CustomDocumentForm
 
-class FragmentViewMixin(DocumentViewMixin):
+class BaseFragmentViewMixin(DocumentViewMixin):
     obj_template_suffix = 'change_form'
-    
     
     @property
     def template_suffix(self):
@@ -212,7 +215,7 @@ class FragmentViewMixin(DocumentViewMixin):
         """
         Returns the form class to use in this view
         """
-        if self.form_class and not self.dotpath():
+        if self.form_class:
             return self.form_class
         else:
             return self._generate_form_class(self.document)
@@ -258,6 +261,8 @@ class FragmentViewMixin(DocumentViewMixin):
             kwargs['instance'] = self.get_object()
         else:
             kwargs['instance'] = self.get_temporary_store()
+        if self.dotpath():
+            kwargs['dotpath'] = self.dotpath()
         return kwargs
     
     def post(self, request, *args, **kwargs):
@@ -312,6 +317,51 @@ class FragmentViewMixin(DocumentViewMixin):
             return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
         return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
 
+class SingleObjectFragmentView(BaseFragmentViewMixin, views.UpdateView):
+    template_suffix = 'fragment_change_form'
+    
+    def get_object(self):
+        if not hasattr(self, 'object'):
+            self.object = views.UpdateView.get_object(self)
+        return self.object
+    
+    def get_context_data(self, **kwargs):
+        context = views.UpdateView.get_context_data(self, **kwargs)
+        context.update(BaseFragmentViewMixin.get_context_data(self, **kwargs))
+        
+        obj = self.get_object()
+        opts = self.document._meta
+        context.update({'title':_('Change %s') % force_unicode(opts.verbose_name),
+                        'show_delete': False,
+                        'add_another': False,
+                        'object_id': obj.get_id,
+                        'original': obj,
+                        'change': True,
+                        'add': False,
+                        'delete': False, #TODO true if field allows null
+                        'adminform':self.create_admin_form(),})
+        context['media'] += context['adminform'].form.media
+        return context
+    
+    def form_valid(self, form):
+        self.admin.log_change(self.request, self.object, '')
+        return BaseFragmentViewMixin.form_valid(self, form)
+
+class FragmentViewMixin(BaseFragmentViewMixin):
+    def lookup_view_class_for_dotpath(self):
+        if self.dotpath() and self.admin.inline_views:
+            for match, view_class in self.admin.inline_views:
+                match = re.compile(match)
+                if match.search(self.dotpath()):
+                    return view_class
+        if self.dotpath():
+            return SingleObjectFragmentView
+    
+    def lookup_view_for_dotpath(self):
+        view_class = self.lookup_view_class_for_dotpath()
+        if view_class:
+            init = self.admin.get_view_kwargs()
+            return view_class.as_view(**init)
 
 class IndexView(DocumentViewMixin, views.ListView):
     template_suffix = 'change_list'
@@ -349,6 +399,15 @@ class IndexView(DocumentViewMixin, views.ListView):
 class CreateView(FragmentViewMixin, views.CreateView):
     template_suffix = 'change_form'
     
+    def dispatch(self, request, *args, **kwargs):
+        self.request = request
+        self.args = args
+        self.kwargs = kwargs
+        view = self.lookup_view_for_dotpath()
+        if view:
+            return view(request, *args, **kwargs)
+        return super(CreateView, self).dispatch(request, *args, **kwargs)
+    
     def get_context_data(self, **kwargs):
         context = views.CreateView.get_context_data(self, **kwargs)
         context.update(FragmentViewMixin.get_context_data(self, **kwargs))
@@ -368,6 +427,15 @@ class CreateView(FragmentViewMixin, views.CreateView):
     
 class UpdateView(FragmentViewMixin, views.UpdateView):
     template_suffix = 'change_form'
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.request = request
+        self.args = args
+        self.kwargs = kwargs
+        view = self.lookup_view_for_dotpath()
+        if view:
+            return view(request, *args, **kwargs)
+        return super(UpdateView, self).dispatch(request, *args, **kwargs)
     
     def get_object(self):
         if not hasattr(self, 'object'):

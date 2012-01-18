@@ -86,13 +86,17 @@ class BaseAdmin(object):
         overrides.update(self.formfield_overrides)
         self.formfield_overrides = overrides
     
+    def get_view_kwargs(self):
+        return {'admin':self,
+                'admin_site':self.admin_site,}
+    
     def get_urls(self):
         def wrap(view, cacheable=False):
             def wrapper(*args, **kwargs):
                 return self.as_view(view, cacheable)(*args, **kwargs)
             return update_wrapper(wrapper, view)
         
-        init = {'admin':self, 'admin_site':self.admin_site}
+        init = self.get_view_kwargs()
         
         # Admin-site-wide views.
         urlpatterns = self.get_extra_urls()
@@ -269,6 +273,7 @@ class DocumentAdmin(BaseAdmin):
     index = views.IndexView
     history = views.HistoryView
     detail_views = [views.HistoryView, views.DeleteView]
+    inline_views = []
 
 """
 #TO register a schema in the admin:

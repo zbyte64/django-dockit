@@ -368,7 +368,7 @@ class ListField(BaseComplexField):
         if index == '*':
             raise NotImplementedError
         value = value[int(index)]
-        return self.schema.dot_notation_to_value(notation, value)
+        return value.dot_notation_to_value(notation, value)
     
     def dot_notation_to_field(self, notation):
         if notation is None:

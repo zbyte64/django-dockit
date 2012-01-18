@@ -209,7 +209,7 @@ class FormTestCase(unittest.TestCase):
         class CustomDocumentForm(DocumentForm):
             class Meta:
                 document = ComplexObject
-                dotpath = 'addresses.0'
+                dotpath = 'addresses.*'
         
         instance = ComplexObject(field1='field1')
         instance.save()
@@ -218,8 +218,13 @@ class FormTestCase(unittest.TestCase):
                 'postal_code': '92126',
                 'country': 'US',
                 'region': 'CA',}
-        form = CustomDocumentForm(data=data, instance=instance)
+        form = CustomDocumentForm(data=data, instance=instance, dotpath='addresses.0')
         self.assertTrue(form.is_valid(), str(form.errors))
         instance = form.save()
         self.assertEqual(instance.addresses[0].region, 'CA')
+        
+        form = CustomDocumentForm(instance=instance, dotpath='addresses.0')
+        instance = ComplexObject.objects.get(instance.pk)
+        form = CustomDocumentForm(instance=instance, dotpath='addresses.0')
+        
 

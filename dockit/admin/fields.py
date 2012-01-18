@@ -14,7 +14,7 @@ from urllib import urlencode
 class DotPathWidget(widgets.Input):
     input_type = 'submit'
     
-    def __init__(self, dotpath):
+    def __init__(self, dotpath=None):
         self.dotpath = dotpath
         super(DotPathWidget, self).__init__()
     
@@ -72,9 +72,10 @@ class DotPathField(HiddenJSONField):
     
     def __init__(self, *args, **kwargs):
         self.dotpath = kwargs.pop('dotpath')
-        if 'widget' not in kwargs:
-            kwargs['widget'] = self.widget(dotpath=self.dotpath)
+        #if 'widget' not in kwargs or self.widget == kwargs['widget']:
+        #    kwargs['widget'] = self.widget(dotpath=self.dotpath)
         super(DotPathField, self).__init__(*args, **kwargs)
+        self.widget.dotpath = self.dotpath
     
     def prepare_value(self, value):
         return value

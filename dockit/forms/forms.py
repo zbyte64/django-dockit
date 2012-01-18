@@ -99,7 +99,10 @@ def document_to_dict(schema, instance, properties=None, exclude=None, dotpath=No
     data = {}
     if dotpath:
         field = schema.dot_notation_to_field(dotpath)
-        fields = field.schema._meta.fields
+        if hasattr(field, '_meta'):
+            fields = field._meta.fields
+        else:
+            fields = field.schema._meta.fields
     else:
         fields = schema._meta.fields
     for prop_name in fields.iterkeys():
@@ -132,7 +135,10 @@ def fields_for_document(document, properties=None, exclude=None, form_field_call
     """
     if dotpath:
         field = document.dot_notation_to_field(dotpath)
-        fields = field.schema._meta.fields
+        if hasattr(field, '_meta'):
+            fields = field._meta.fields
+        else:
+            fields = field.schema._meta.fields
     else:
         fields = document._meta.fields
     
@@ -211,9 +217,10 @@ class BaseDocumentForm(BaseForm):
     
     def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None, 
             initial=None, error_class=ErrorList, label_suffix=":",
-            empty_permitted=False, instance=None):
+            empty_permitted=False, instance=None, dotpath=None):
             
         opts = self._meta
+        self.dotpath = dotpath or opts.dotpath
         
         if instance is None:
             self.instance = opts.document()
@@ -221,7 +228,7 @@ class BaseDocumentForm(BaseForm):
         else:
             self.instance = instance
             object_data = document_to_dict(self._meta.document, instance, opts.properties, 
-                                        opts.exclude, dotpath=opts.dotpath) 
+                                        opts.exclude, dotpath=self.dotpath)
     
         if initial is not None:
             object_data.update(initial)
@@ -243,19 +250,22 @@ class BaseDocumentForm(BaseForm):
         opts = self._meta
         cleaned_data = self.cleaned_data.copy()
         
-        if opts.dotpath:
+        if self.dotpath:
             try:
-                assert self.instance.dot_notation(opts.dotpath) is not None
+                assert self.instance.dot_notation(self.dotpath) is not None
             except (KeyError, IndexError, AssertionError):
-                field = opts.document.dot_notation_to_field(opts.dotpath)
-                schema = field.schema
-                self.instance.dot_notation_set_value(opts.dotpath, schema())
+                field = opts.document.dot_notation_to_field(self.dotpath)
+                if hasattr(field, 'schema'):
+                    schema = field.schema
+                else:
+                    schema = field
+                self.instance.dot_notation_set_value(self.dotpath, schema())
         
         for prop_name in self.serialized_fields:
             if prop_name in cleaned_data:
                 value = cleaned_data.pop(prop_name)
-                if opts.dotpath:
-                    dotpath = '%s.%s' % (opts.dotpath, prop_name)
+                if self.dotpath:
+                    dotpath = '%s.%s' % (self.dotpath, prop_name)
                 else:
                     dotpath = prop_name
                 self.instance.dot_notation_set_value(dotpath, value)
@@ -266,8 +276,8 @@ class BaseDocumentForm(BaseForm):
                     continue
                 value = cleaned_data[attr_name]
                 if value is not None:
-                    if opts.dotpath:
-                        dotpath = '%s.%s' % (opts.dotpath, attr_name)
+                    if self.dotpath:
+                        dotpath = '%s.%s' % (self.dotpath, attr_name)
                     else:
                         dotpath = attr_name
                     self.instance.dot_notation_set_value(dotpath, value)
