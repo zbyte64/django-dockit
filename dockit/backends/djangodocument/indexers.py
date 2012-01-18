@@ -1,6 +1,6 @@
 from django.db.models import Model
 
-from dockit.backends.indexer import BaseIndex
+from dockit.backends.indexer import BaseIndexer
 from dockit.schema import fields#, Document
 
 from models import DocumentStore, StringIndex, IntegerIndex, DateIndex
@@ -26,7 +26,7 @@ class Indexer(object):
             self.index_creator(document.pk, self.dotpath, value)
 
 
-class ExactIndex(BaseIndex):
+class ExactIndexer(BaseIndexer):
     '''
     register_indexer(backend, "equals", index_cls)
 
@@ -45,7 +45,7 @@ class ExactIndex(BaseIndex):
            (fields.ModelReferenceField, StringIndex),]
     
     def __init__(self, *args, **kwargs):
-        super(ExactIndex, self).__init__(*args, **kwargs)
+        super(ExactIndexer, self).__init__(*args, **kwargs)
         self.dotpath = self.params.get('field', self.params.get('dotpath'))
         self.generate_index()
     
@@ -81,13 +81,13 @@ class ExactIndex(BaseIndex):
         return DocumentQuery(qs, self.document)
     
     def values(self):
-        return self.indexes[self.collection][dotpath]['unique_values']()
+        return self.indexes[self.collection][self.dotpath]['unique_values']()
 
-ModelDocumentStorage.register_indexer("equals", ExactIndex)
+ModelDocumentStorage.register_indexer("equals", ExactIndexer)
 
-class DateIndex(BaseIndex):
+class DateIndexer(BaseIndexer):
     def __init__(self, *args, **kwargs):
-        super(ExactIndex, self).__init__(*args, **kwargs)
+        super(DateIndexer, self).__init__(*args, **kwargs)
         self.dotpath = self.params.get('field', self.params.get('dotpath'))
         self.generate_index()
         
@@ -121,7 +121,7 @@ class DateIndex(BaseIndex):
             qs = qs.filter(**filter_func('%s__in' % self.name, args))
         for key, value in kwargs.iteritems():
             qs = qs.filter(**filter_func('%s__%s' % (self.name, key), value))
-        return qs.values_list('value', flat=True).distinct()
+        return qs.values_list('dateindex__value', flat=True).distinct()
 
-ModelDocumentStorage.register_indexer("date", DateIndex)
+ModelDocumentStorage.register_indexer("date", DateIndexer)
 

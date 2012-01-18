@@ -40,7 +40,7 @@ class Options(object):
         self.object_name = cls.__name__
         self.module_name = self.object_name.lower()
         self.verbose_name = get_verbose_name(self.object_name)
-        self.collection = self.schema_key
+        self.collection = self.default_schema_key()
 
         # Next, apply any overridden values from 'class Meta'.
         if getattr(self, 'meta', None):
@@ -68,12 +68,15 @@ class Options(object):
         else:
             self.verbose_name_plural = string_concat(self.verbose_name, 's')
     
-    @property
-    def schema_key(self):
+    def default_schema_key(self):
         return "%s.%s" % (smart_str(self.app_label), smart_str(self.module_name))
     
+    @property
+    def schema_key(self):
+        return self.collection
+    
     def __str__(self):
-        return self.schema_key
+        return self.collection
 
     def verbose_name_raw(self):
         """

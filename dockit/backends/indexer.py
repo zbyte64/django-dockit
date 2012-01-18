@@ -1,7 +1,7 @@
 
-class BaseIndex(object):
+class BaseIndexer(object):
     def __init__(self, document, name, params):
-        super(BaseIndex, self).__init__()
+        super(BaseIndexer, self).__init__()
         self.document = document
         self.name = name
         self.params = params
