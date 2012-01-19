@@ -106,6 +106,11 @@ class BaseField(object):
                 defaults['show_hidden_initial'] = True
             else:
                 defaults['initial'] = self.get_default()
+        
+        for key, value in defaults.items():
+            if value is None:
+                del defaults[key]
+        
         if self.choices:
             # Fields with choices get special treatment.
             include_blank = self.blank or not (self.has_default() or 'initial' in kwargs)

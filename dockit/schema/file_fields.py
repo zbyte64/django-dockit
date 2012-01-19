@@ -18,6 +18,8 @@ class FileField(Field):
     descriptor_class = FileDescriptor
 
     description = ugettext_lazy("File path")
+    
+    form_field_class = forms.FileField
 
     def __init__(self, verbose_name=None, name=None, upload_to='', storage=None, **kwargs):
         self.storage = storage or default_storage
@@ -44,16 +46,14 @@ class FileField(Field):
         return os.path.join(self.get_directory_name(), self.get_filename(filename))
 
     def formfield(self, **kwargs):
-        defaults = {'form_class': forms.FileField}
         # If a file has been provided previously, then the form doesn't require
         # that a new file is provided this time.
         # The code to mark the form field as not required is used by
         # form_for_instance, but can probably be removed once form_for_instance
         # is gone. ModelForm uses a different method to check for an existing file.
         if 'initial' in kwargs:
-            defaults['required'] = False
-        defaults.update(kwargs)
-        return super(FileField, self).formfield(**defaults)
+            kwargs['required'] = False
+        return super(FileField, self).formfield(**kwargs)
     
     def to_primitive(self, val):
         """
@@ -73,7 +73,12 @@ class FileField(Field):
     def to_python(self, val):
         if not val:
             return None
+        #self.attr_class(instance, field, name)
         ret = self.storage.open(val)
         ret.storage_path = val
+        try:
+            ret.url = self.storage.url(val)
+        except Exception, error:
+            print error
         return ret
 
