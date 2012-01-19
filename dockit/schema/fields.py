@@ -331,6 +331,8 @@ class SchemaField(BaseComplexField):
         else:
             name, notation = notation, None
         if notation is None:
+            if not isinstance(value, self.schema) and isinstance(value, dict):
+                value = self.schema.to_python(value)
             setattr(parent, name, value)
         else:
             parent = getattr(parent, name)
@@ -388,7 +390,7 @@ class ListField(BaseComplexField):
     
     def dot_notation_set_value(self, notation, value, parent):
         if notation is None:
-            return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
+            return super(ListField, self).dot_notation_set_value(notation, value, parent)
         if '.' in notation:
             name, notation = notation.split('.', 1)
         else:

@@ -221,10 +221,13 @@ class FormTestCase(unittest.TestCase):
         form = CustomDocumentForm(data=data, instance=instance, dotpath='addresses.0')
         self.assertTrue(form.is_valid(), str(form.errors))
         instance = form.save()
+        self.assertTrue(isinstance(instance.addresses[0], Address))
         self.assertEqual(instance.addresses[0].region, 'CA')
         
         form = CustomDocumentForm(instance=instance, dotpath='addresses.0')
         instance = ComplexObject.objects.get(instance.pk)
         form = CustomDocumentForm(instance=instance, dotpath='addresses.0')
         
+        instance.dot_notation_set_value('addresses', [data])
+        self.assertTrue(isinstance(instance.addresses[0], Address))
 
