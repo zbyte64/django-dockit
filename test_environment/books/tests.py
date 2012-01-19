@@ -168,6 +168,9 @@ class FormTestCase(unittest.TestCase):
         TempDoc = create_temporary_document_class(ComplexObject)
         
         instance = TempDoc(_primitive_data={'field1':'hello'})
+        self.assertEqual(instance.field1, 'hello')
+        self.assertEqual(instance.dot_notation('field1'), 'hello')
+        
         form = CustomDocumentForm(instance=instance, data={'field1':'hello2'})
         
         self.assertEqual(form.initial['field1'], 'hello')
@@ -227,6 +230,9 @@ class FormTestCase(unittest.TestCase):
         form = CustomDocumentForm(instance=instance, dotpath='addresses.0')
         instance = ComplexObject.objects.get(instance.pk)
         form = CustomDocumentForm(instance=instance, dotpath='addresses.0')
+        
+        instance.dot_notation_set_value('addresses.0', data)
+        self.assertTrue(isinstance(instance.addresses[0], Address))
         
         instance.dot_notation_set_value('addresses', [data])
         self.assertTrue(isinstance(instance.addresses[0], Address))

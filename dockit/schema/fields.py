@@ -14,7 +14,6 @@ class NOT_PROVIDED:
     pass
 
 class BaseField(object):
-    meta_field = False
     form_field_class = forms.CharField
     form_widget_class = None
     
@@ -130,17 +129,26 @@ class BaseField(object):
         defaults.update(kwargs)
         return defaults
     
-    def dot_notation_to_value(self, notation, value):
+    def split_dot_notation(self, notation):
+        if '.' in notation:
+            name, notation = notation.split('.', 1)
+        else:
+            name, notation = notation, None
+        return name, notation
+    
+    def dot_notation_to_value(self, notation, parent):
         assert notation is None
-        return value
+        return parent
     
     def dot_notation_to_field(self, notation):
         assert notation is None
         return self
     
     def dot_notation_set_value(self, notation, value, parent):
-        assert notation is None
-        setattr(parent, self.name, value)
+        assert False, 'Parent should set value'
+    
+    def is_instance(self, value):
+        return False
 
 class BaseTypedField(BaseField):
     coerce_function = None
@@ -149,6 +157,11 @@ class BaseTypedField(BaseField):
         if isinstance(self.coerce_function, type) and isinstance(val, self.coerce_function):
             return val
         return self.coerce_function(val)
+    
+    def is_instance(self, val):
+        if isinstance(self.coerce_function, type) and isinstance(val, self.coerce_function):
+            return True
+        return False
 
 class CharField(BaseTypedField):
     coerce_function = unicode
@@ -227,27 +240,29 @@ class TimeField(BaseTypedField):
 #TODO XMLField
 
 class BaseComplexField(BaseField):
-    meta_field = True
-    
     def formfield(self, form_class=HiddenJSONField, **kwargs):
         defaults = self.formfield_kwargs(**kwargs)
         return form_class(**defaults)
 
 class ComplexDotNotationMixin(object):
-    def dot_notation_to_value(self, notation, value):
-        if notation is None:
-            return value
+    def split_dot_notation(self, notation):
         if '.' in notation:
             name, notation = notation.split('.', 1)
         else:
             name, notation = notation, None
-        if isinstance(value, list):
-            value = value[int(name)]
-        elif isinstance(value, dict):
-            value = value[name]
+        return name, notation
+    
+    def dot_notation_to_value(self, notation, parent):
+        if notation is None:
+            return parent
+        name, notation = self.split_dot_notation(notation)
+        if isinstance(parent, list):
+            parent = parent[int(name)]
+        elif isinstance(parent, dict):
+            parent = parent[name]
         else:
-            value = getattr(value, name, None)
-        return self.dot_notation_to_value(notation, value)
+            parent = getattr(parent, name, None)
+        return self.dot_notation_to_value(notation, parent)
     
     def dot_notation_to_field(self, notation):
         return self
@@ -255,10 +270,7 @@ class ComplexDotNotationMixin(object):
     def dot_notation_set_value(self, notation, value, parent):
         if notation is None:
             return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
+        name, notation = self.split_dot_notation(notation)
         if notation is None:
             #TODO value make primitive
             #value = PRIMITIVE_PROCESSOR.to_primitive(value)
@@ -303,36 +315,31 @@ class SchemaField(BaseComplexField):
     def to_python(self, val):
         return self.schema.to_python(val)
     
-    def dot_notation_to_value(self, notation, value):
+    def is_instance(self, val):
+        return isinstance(val, self.schema)
+    
+    def dot_notation_to_value(self, notation, parent):
         if notation is None:
-            return value
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
-        value = getattr(value, name, None)
-        return self.schema._meta.fields[name].dot_notation_to_value(notation, value)
+            return parent
+        name, notation = self.split_dot_notation(notation)
+        parent = getattr(parent, name, None)
+        return self.schema._meta.fields[name].dot_notation_to_value(notation, parent)
     
     def dot_notation_to_field(self, notation):
         if notation is None:
             return self
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
+        name, notation = self.split_dot_notation(notation)
         return self.schema._meta.fields[name].dot_notation_to_field(notation)
     
     def dot_notation_set_value(self, notation, value, parent):
         assert parent
         if notation is None:
             return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
+        name, notation = self.split_dot_notation(notation)
         if notation is None:
-            if not isinstance(value, self.schema) and isinstance(value, dict):
-                value = self.schema.to_python(value)
+            field = self.schema._meta.fields[name]
+            if not field.is_instance(value):
+                value = field.to_python(value)
             setattr(parent, name, value)
         else:
             parent = getattr(parent, name)
@@ -340,7 +347,7 @@ class SchemaField(BaseComplexField):
 
 class ListField(BaseComplexField):
     def __init__(self, schema=None, *args, **kwargs):
-        self.schema = schema
+        self.schema = schema #CONSIDER, rename to subfield
         super(ListField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
@@ -365,37 +372,37 @@ class ListField(BaseComplexField):
             return PRIMITIVE_PROCESSOR.to_python(ret)
         return PRIMITIVE_PROCESSOR.to_primitive(val)
     
-    def dot_notation_to_value(self, notation, value):
+    def is_instance(self, val):
+        if not isinstance(val, list):
+            return False
+        if self.schema:
+            for item in val:
+                if not self.schema.is_instance(item):
+                    return False
+        return True
+    
+    def dot_notation_to_value(self, notation, parent):
         if notation is None:
-            return value
-        if '.' in notation:
-            index, notation = notation.split('.', 1)
-        else:
-            index, notation = notation, None
+            return parent
+        index, notation = self.split_dot_notation(notation)
         if index == '*':
             raise NotImplementedError
-        value = value[int(index)]
-        return value.dot_notation_to_value(notation, value)
+        parent = parent[int(index)]
+        return parent.dot_notation_to_value(notation, parent)
     
     def dot_notation_to_field(self, notation):
         if notation is None:
             return self;
-        if '.' in notation:
-            index, notation = notation.split('.', 1)
-        else:
-            index, notation = notation, None
-        #print index, notation
-        #index, notation = notation.split('.', 1)
+        name, notation = self.split_dot_notation(notation)
         return self.schema.dot_notation_to_field(notation)
     
     def dot_notation_set_value(self, notation, value, parent):
         if notation is None:
             return super(ListField, self).dot_notation_set_value(notation, value, parent)
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
+        name, notation = self.split_dot_notation(notation)
         if notation is None:
+            if isinstance(value, dict) and not self.schema.is_instance(value):
+                value = self.schema.to_python(value)
             index = int(name)
             if (len(parent) == index):
                 parent.append(value)
@@ -442,36 +449,42 @@ class DictField(BaseComplexField):
         ret = PRIMITIVE_PROCESSOR.to_python(ret)
         return ret
     
-    def dot_notation_to_value(self, notation, value):
+    def is_instance(self, val):
+        if not isinstance(val, dict):
+            return False
+        if self.value_schema:
+            for item in val.itervalues():
+                if not self.value_schema.is_instance(item):
+                    return False
+        if self.key_schema:
+            for item in val.iterkeys():
+                if not self.key_schema.is_instance(item):
+                    return False
+        return True
+    
+    def dot_notation_to_value(self, notation, parent):
         if notation is None:
-            return value
-        if '.' in notation:
-            key, notation = notation.split('.', 1)
-        else:
-            key, notation = notation, None
+            return parent
+        key, notation = self.split_dot_notation(notation)
         if key == '*':
             pass #TODO support star??
-        value = value[key]
-        return self.value_schema.dot_notation_to_value(notation, value)
+        parent = parent[key]
+        return self.value_schema.dot_notation_to_value(notation, parent)
     
     def dot_notation_to_field(self, notation):
         if notation is None:
             return self
-        if '.' in notation:
-            key, notation = notation.split('.', 1)
-        else:
-            key, notation = notation, None
+        name, notation = self.split_dot_notation(notation)
         key, notation = notation.split('.', 1)
         return self.value_schema.dot_notation_to_field(notation)
     
     def dot_notation_set_value(self, notation, value, parent):
         if notation is None:
             return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
+        name, notation = self.split_dot_notation(notation)
         if notation is None:
+            if self.value_schema and isinstance(value, dict) and not self.value_schema.is_instance(value):
+                value = self.value_schema.to_python(value)
             parent[name] = value
         else:
             parent.setdefault(name, dict())
@@ -493,6 +506,9 @@ class ReferenceField(ComplexDotNotationMixin, BaseField):
     @property
     def _meta(self):
         return self.document._meta
+    
+    def is_instance(self, val):
+        return isinstance(val, self.document)
     
     def to_primitive(self, val):
         if isinstance(val, basestring): #CONSIDER, should this happen?
@@ -516,6 +532,9 @@ class ModelReferenceField(BaseField):
     def __init__(self, model, *args, **kwargs):
         self.model = model
         super(ModelReferenceField, self).__init__(*args, **kwargs)
+    
+    def is_instance(self, val):
+        return isinstance(val, self.model)
     
     def to_primitive(self, val):
         if val is None:

@@ -262,50 +262,20 @@ class Schema(object):
         return self.dot_notation_to_value(notation, self)
     
     def dot_notation_set_value(self, notation, value, parent=None):
-        #name = notation.split('.', 1)[0]
-        original_notation = notation
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
-        
-        if name not in self._meta.fields:
-            from fields import ComplexDotNotationMixin
-            return ComplexDotNotationMixin().dot_notation_set_value(original_notation, value, parent=self._primitive_data)
-        else:
-            if notation is None:
-                setattr(self, name, value)
-            else:
-                self._meta.fields[name].dot_notation_set_value(notation, value, parent=getattr(self, name))
+        from fields import SchemaField
+        field = SchemaField(schema=type(self))
+        return field.dot_notation_set_value(notation, value, self)
     
-    def dot_notation_to_value(self, notation, value):
-        if notation is None:
-            return value
-        original_notation = notation
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
-        if name == '*':
-            pass #TODO support star??
-        if name not in self._meta.fields:
-            from fields import ComplexDotNotationMixin
-            return ComplexDotNotationMixin().dot_notation_to_value(original_notation, value._primitive_data)
-        value = getattr(value, name, None)
-        return self._meta.fields[name].dot_notation_to_value(notation, value)
+    def dot_notation_to_value(self, notation, parent):
+        from fields import SchemaField
+        field = SchemaField(schema=type(self))
+        return field.dot_notation_to_value(notation, parent)
     
     @classmethod
-    def dot_notation_to_field(self, notation):
-        if notation is None:
-            return self
-        if '.' in notation:
-            name, notation = notation.split('.', 1)
-        else:
-            name, notation = notation, None
-        if name not in self._meta.fields:
-            from fields import ComplexDotNotationMixin
-            return ComplexDotNotationMixin()
-        return self._meta.fields[name].dot_notation_to_field(notation)
+    def dot_notation_to_field(cls, notation):
+        from fields import SchemaField
+        field = SchemaField(schema=cls)
+        return field.dot_notation_to_field(notation)
 
 class DocumentBase(SchemaBase):
     def __new__(cls, name, bases, attrs):

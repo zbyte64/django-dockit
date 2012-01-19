@@ -4,6 +4,7 @@ from django.db.models.fields.files import FieldFile, FileDescriptor
 from django.utils.encoding import force_unicode, smart_str
 from django.utils.translation import ugettext_lazy
 from django.core.files.storage import default_storage
+from django.core.files import File
 from django import forms
 
 import datetime
@@ -54,6 +55,9 @@ class FileField(Field):
         if 'initial' in kwargs:
             kwargs['required'] = False
         return super(FileField, self).formfield(**kwargs)
+    
+    def is_instance(self, val):
+        return isinstance(val, File)
     
     def to_primitive(self, val):
         """
