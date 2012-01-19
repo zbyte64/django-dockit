@@ -328,13 +328,6 @@ class Document(Schema):
     
     pk = property(get_id)
     
-    def notify_indexers_of_save(self, collection, data):
-        for key, value in self._indexers.iteritems():
-            value.on_document_save(collection, data)
-    
-    def notify_indexers_of_delete(self, collection, doc_id):
-        pass
-    
     def save(self):
         created = not self.pk
         pre_save.send(sender=type(self), instance=self)

@@ -1,5 +1,6 @@
 *~
 *.py[cdo]
+docs/build
 test_environment/bin
 test_environment/include
 test_environment/lib
