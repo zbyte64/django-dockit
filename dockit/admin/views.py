@@ -275,6 +275,7 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         if self.next_dotpath():
             temp = self.get_temporary_store()
             info = self.fragment_info()
+            #TODO pass on post params as get based on dotpath selection
             params = {'_dotpath': self.next_dotpath(),
                       '_parent_dotpath': self.dotpath() or '',
                       '_tempdoc': temp.get_id(),}
