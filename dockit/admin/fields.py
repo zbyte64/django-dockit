@@ -1,5 +1,4 @@
-from django.forms import fields, widgets, ValidationError
-from django.core.urlresolvers import reverse
+from django.forms import widgets
 
 from django.utils.encoding import force_unicode
 from django.forms.util import flatatt
@@ -18,7 +17,11 @@ class DotPathWidget(widgets.Input):
         self.dotpath = dotpath
         super(DotPathWidget, self).__init__()
     
-    def render_button(self, dotpath, label):
+    def render_button(self, dotpath, edit=False):
+        if edit:
+            label = 'edit'
+        else:
+            label = 'add'
         data = {'next_dotpath':dotpath}
         name = '[fragment]%s' % urlencode(data)
         submit_attrs = self.build_attrs({}, type=self.input_type, name=name, value=label)
@@ -56,14 +59,14 @@ class DotPathWidget(widgets.Input):
             index = -1
             for index, item in enumerate(value):
                 item_dotpath = '%s.%s' % (dotpath, index)
-                butn_html = self.render_button(item_dotpath, 'edit')
+                butn_html = self.render_button(item_dotpath, edit=True)
                 rows.append('<td>%s</td><td>%s</td>' % (escape(force_unicode(item)), butn_html))
             item_dotpath = '%s.%s' % (dotpath, index+1)
-            butn_html = self.render_button(item_dotpath, 'add')
+            butn_html = self.render_button(item_dotpath)
             rows.append('<td></td><td>%s</td>' % butn_html)
             return mark_safe('%s<table><tr>%s</tr></table>' % (data_html, '</tr><tr>'.join(rows)))
         else:
-            butn_html = self.render_button(dotpath, 'edit')
+            butn_html = self.render_button(dotpath, edit=True)
             desc_html = escape(force_unicode(value))
             return mark_safe(''.join((data_html, desc_html, butn_html)))
 

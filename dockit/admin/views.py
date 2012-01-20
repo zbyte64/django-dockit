@@ -203,6 +203,17 @@ class BaseFragmentViewMixin(DocumentViewMixin):
                     return info
         return {}
     
+    def fragment_passthrough(self):
+        dotpath = self.next_dotpath()
+        token = '[fragment-passthrough]'
+        passthrough = dict()
+        for key, value in self.request.POST.iteritems():
+            if key.startswith(token):
+                info = dict(parse_qsl(key[len(token):]))
+                if info and info.pop('next_dotpath', None) == dotpath:
+                    passthrough[info['name']] = value
+        return passthrough
+    
     def next_dotpath(self):
         info = self.fragment_info()
         return info.get('next_dotpath', None)
@@ -275,10 +286,12 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         if self.next_dotpath():
             temp = self.get_temporary_store()
             info = self.fragment_info()
+            passthrough = self.fragment_passthrough()
             #TODO pass on post params as get based on dotpath selection
             params = {'_dotpath': self.next_dotpath(),
                       '_parent_dotpath': self.dotpath() or '',
                       '_tempdoc': temp.get_id(),}
+            params.update(passthrough)
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
         if self.dotpath():
             temp = self.get_temporary_store()
@@ -322,7 +335,10 @@ class SingleObjectFragmentView(BaseFragmentViewMixin, views.UpdateView):
     
     def get_object(self):
         if not hasattr(self, 'object'):
-            self.object = views.UpdateView.get_object(self)
+            if 'pk' in self.kwargs:
+                self.object = views.UpdateView.get_object(self)
+            else:
+                self.object = None
         return self.object
     
     def get_context_data(self, **kwargs):
@@ -334,7 +350,7 @@ class SingleObjectFragmentView(BaseFragmentViewMixin, views.UpdateView):
         context.update({'title':_('Change %s') % force_unicode(opts.verbose_name),
                         'show_delete': False,
                         'add_another': False,
-                        'object_id': obj.get_id,
+                        'object_id': obj and obj.get_id or None,
                         'original': obj,
                         'change': True,
                         'add': False,
