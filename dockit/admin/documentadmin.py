@@ -265,6 +265,7 @@ class BaseAdmin(object):
         return field(**kwargs)
 
 import views
+import re
 
 class DocumentAdmin(BaseAdmin):
     create = views.CreateView
@@ -272,18 +273,22 @@ class DocumentAdmin(BaseAdmin):
     delete = views.DeleteView
     index = views.IndexView
     history = views.HistoryView
+    default_fragment = views.SingleObjectFragmentView
     detail_views = [views.HistoryView, views.DeleteView]
     inline_views = []
-
-"""
-#TO register a schema in the admin:
-
-from django.contrib import admin
-
-from dockit.admin.documentadmin import DocumentAdmin
-
-from models import Greeting
-
-admin.site.register([Greeting], DocumentAdmin)
-"""
+    
+    def lookup_view_class_for_dotpath(self, dotpath):
+        if dotpath and self.inline_views:
+            for match, view_class in self.inline_views:
+                match = re.compile(match)
+                if match.search(dotpath):
+                    return view_class
+        if dotpath:
+            return self.default_fragment
+    
+    def lookup_view_for_dotpath(self, dotpath):
+        view_class = self.lookup_view_class_for_dotpath(dotpath)
+        if view_class:
+            init = self.get_view_kwargs()
+            return view_class.as_view(**init)
 

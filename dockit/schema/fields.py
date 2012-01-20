@@ -85,7 +85,7 @@ class BaseField(object):
         """
         return val
     
-    def to_python(self, val):
+    def to_python(self, val, parent=None):
         return val
     
     def formfield(self, **kwargs):
@@ -196,7 +196,7 @@ class DecimalField(BaseField):
     def to_primitive(self, val):
         return str(val)
     
-    def to_python(self, val):
+    def to_python(self, val, parent=None):
         return Decimal(val)
 
 class EmailField(CharField):
@@ -312,8 +312,8 @@ class SchemaField(BaseComplexField):
     def to_primitive(self, val):
         return self.schema.to_primitive(val)
     
-    def to_python(self, val):
-        return self.schema.to_python(val)
+    def to_python(self, val, parent=None):
+        return self.schema.to_python(val, parent)
     
     def is_instance(self, val):
         return isinstance(val, self.schema)
@@ -361,11 +361,12 @@ class ListField(BaseComplexField):
             return PRIMITIVE_PROCESSOR.to_primitive(ret)
         return PRIMITIVE_PROCESSOR.to_primitive(val)
     
-    def to_python(self, val):
+    def to_python(self, val, parent=None):
         if self.schema:
             ret = list()
             if val is None:
                 return ret
+            #TODO pass in parent
             for item in val:
                 ret.append(self.schema.to_python(item))
             #run data through the primitive processor
@@ -435,7 +436,7 @@ class DictField(BaseComplexField):
         ret = PRIMITIVE_PROCESSOR.to_primitive(ret)
         return ret
     
-    def to_python(self, val):
+    def to_python(self, val, parent=None):
         ret = dict()
         if val is None:
             return ret
@@ -515,7 +516,7 @@ class ReferenceField(ComplexDotNotationMixin, BaseField):
             return val
         return val.get_id()
     
-    def to_python(self, val):
+    def to_python(self, val, parent=None):
         try:
             return self.document.objects.get(val)
         except ObjectDoesNotExist:
@@ -541,7 +542,7 @@ class ModelReferenceField(BaseField):
             return None
         return val.pk
     
-    def to_python(self, val):
+    def to_python(self, val, parent=None):
         if val is None:
             return None
         return self.model.objects.get(pk=val)

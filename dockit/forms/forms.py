@@ -170,6 +170,7 @@ def fields_for_document(document, properties=None, exclude=None, form_field_call
 class DocumentFormOptions(object):
     def __init__(self, options=None):
         self.document = getattr(options, 'document', None)
+        self.schema = getattr(options, 'schema', None)
         self.properties = getattr(options, 'properties', None)
         self.exclude = getattr(options, 'exclude', None)
         self.form_field_callback = getattr(options, 'form_field_callback', None)
@@ -195,8 +196,14 @@ class DocumentFormMetaClass(type):
     
         opts = new_class._meta = DocumentFormOptions(getattr(new_class, 
                                                 'Meta', None))
-        
-        if opts.document:
+        if opts.schema:
+            fields = fields_for_document(opts.schema, opts.properties,
+                                         opts.exclude, form_field_callback=opts.form_field_callback,)
+            # Override default docuemnt fields with any custom declared ones
+            # (plus, include all the other declared fields).
+            new_class.serialized_fields = fields.keys()
+            fields.update(declared_fields)
+        elif opts.document:
             # If a document is defined, extract form fields from it.
             fields = fields_for_document(opts.document, opts.properties,
                                          opts.exclude, form_field_callback=opts.form_field_callback,

@@ -14,7 +14,6 @@ from dockit.models import create_temporary_document_class
 
 from urllib import urlencode
 from urlparse import parse_qsl
-import re
 
 CALL_BACK = "" #TODO
 
@@ -348,20 +347,8 @@ class SingleObjectFragmentView(BaseFragmentViewMixin, views.UpdateView):
         return BaseFragmentViewMixin.form_valid(self, form)
 
 class FragmentViewMixin(BaseFragmentViewMixin):
-    def lookup_view_class_for_dotpath(self):
-        if self.dotpath() and self.admin.inline_views:
-            for match, view_class in self.admin.inline_views:
-                match = re.compile(match)
-                if match.search(self.dotpath()):
-                    return view_class
-        if self.dotpath():
-            return SingleObjectFragmentView
-    
     def lookup_view_for_dotpath(self):
-        view_class = self.lookup_view_class_for_dotpath()
-        if view_class:
-            init = self.admin.get_view_kwargs()
-            return view_class.as_view(**init)
+        return self.admin.lookup_view_for_dotpath(self.dotpath())
 
 class IndexView(DocumentViewMixin, views.ListView):
     template_suffix = 'change_list'

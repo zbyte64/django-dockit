@@ -74,7 +74,7 @@ class FileField(Field):
         assert name
         return name
     
-    def to_python(self, val):
+    def to_python(self, val, parent=None):
         if not val:
             return None
         #self.attr_class(instance, field, name)

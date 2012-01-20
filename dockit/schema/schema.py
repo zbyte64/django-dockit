@@ -185,6 +185,7 @@ class Schema(object):
         #super(Schema, self).__init-_()
         self._primitive_data = dict()
         self._python_data = dict()
+        self._parent = None #TODO make parent a configurable field
         for key, value in kwargs.iteritems():
             #TODO check that key is a field or _data
             setattr(self, key, value)
@@ -212,10 +213,10 @@ class Schema(object):
         return val
     
     @classmethod
-    def to_python(cls, val):
+    def to_python(cls, val, parent=None):
         if val is None:
             val = dict()
-        return cls(_primitive_data=val)
+        return cls(_primitive_data=val, _parent=parent)
     
     def __getattribute__(self, name):
         fields = object.__getattribute__(self, '_meta').fields
@@ -223,7 +224,7 @@ class Schema(object):
             python_data = object.__getattribute__(self, '_python_data')
             if name not in python_data:
                 primitive_data = object.__getattribute__(self, '_primitive_data')
-                python_data[name] = fields[name].to_python(primitive_data.get(name))
+                python_data[name] = fields[name].to_python(primitive_data.get(name), parent=self)
             return python_data[name]
         return object.__getattribute__(self, name)
     
@@ -332,6 +333,11 @@ class UserMeta(object):
     def __init__(self, **kwargs):
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
+
+def create_schema(name, fields, module='dockit.models'):
+    attrs = SortedDict(fields)
+    attrs['__module__'] = module
+    return SchemaBase.__new__(SchemaBase, name, (Schema,), attrs)
 
 def create_document(name, fields, module='dockit.models', collection=None):
     attrs = SortedDict(fields)
