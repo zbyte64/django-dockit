@@ -175,6 +175,15 @@ class DocumentFormOptions(object):
         self.exclude = getattr(options, 'exclude', None)
         self.form_field_callback = getattr(options, 'form_field_callback', None)
         self.dotpath = getattr(options, 'dotpath', None)
+        
+        #lookup the appropriate schema if none is given
+        if self.document and not self.schema:
+            if self.dotpath:
+                field = self.document.dot_notation_to_field(self.dotpath)
+                if hasattr(field, 'schema'):
+                    self.schema = field.schema
+            else:
+                self.schema = self.document
 
 class DocumentFormMetaClass(type):
     def __new__(cls, name, bases, attrs):
@@ -203,7 +212,7 @@ class DocumentFormMetaClass(type):
             # (plus, include all the other declared fields).
             new_class.serialized_fields = fields.keys()
             fields.update(declared_fields)
-        elif opts.document:
+        elif opts.document: #TODO this should no longer be necessary
             # If a document is defined, extract form fields from it.
             fields = fields_for_document(opts.document, opts.properties,
                                          opts.exclude, form_field_callback=opts.form_field_callback,
@@ -258,36 +267,31 @@ class BaseDocumentForm(BaseForm):
         cleaned_data = self.cleaned_data.copy()
         
         if self.dotpath:
+            obj = None
             try:
-                assert self.instance.dot_notation(self.dotpath) is not None
-            except (KeyError, IndexError, AssertionError):
-                field = opts.document.dot_notation_to_field(self.dotpath)
-                if hasattr(field, 'schema'):
-                    schema = field.schema
-                else:
-                    schema = field
-                self.instance.dot_notation_set_value(self.dotpath, schema())
+                obj = self.instance.dot_notation(self.dotpath)
+            except:
+                pass
+            if obj is None:
+                obj = opts.schema()
+        else:
+            obj = self.instance
         
         for prop_name in self.serialized_fields:
-            if prop_name in cleaned_data:
+            if prop_name in cleaned_data.keys():
                 value = cleaned_data.pop(prop_name)
-                if self.dotpath:
-                    dotpath = '%s.%s' % (self.dotpath, prop_name)
-                else:
-                    dotpath = prop_name
-                self.instance.dot_notation_set_value(dotpath, value)
+                setattr(obj, prop_name, value)
         
         if dynamic:
-            for attr_name in cleaned_data.keys():
+            for attr_name in cleaned_data.iterkeys():
                 if opts.exclude and attr_name in opts.exclude:
                     continue
                 value = cleaned_data[attr_name]
                 if value is not None:
-                    if self.dotpath:
-                        dotpath = '%s.%s' % (self.dotpath, attr_name)
-                    else:
-                        dotpath = attr_name
-                    self.instance.dot_notation_set_value(dotpath, value)
+                    setattr(obj, attr_name, value)
+        
+        if self.dotpath:
+            self.instance.dot_notation_set_value(self.dotpath, obj)
         
         if commit:
             self.instance.save()
