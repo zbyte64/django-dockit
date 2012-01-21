@@ -267,10 +267,10 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         if self.request.method.upper() in ('POST', 'PUT'):
             kwargs['data'] = self.request.POST
             kwargs['files'] = self.request.FILES
-        if 'pk' in self.kwargs:
-            kwargs['instance'] = self.get_object()
-        else:
+        if self.temporary_document_id() or 'pk' not in self.kwargs:
             kwargs['instance'] = self.get_temporary_store()
+        else:
+            kwargs['instance'] = self.get_object()
         if self.dotpath():
             kwargs['dotpath'] = self.dotpath()
         return kwargs
@@ -287,7 +287,6 @@ class BaseFragmentViewMixin(DocumentViewMixin):
             temp = self.get_temporary_store()
             info = self.fragment_info()
             passthrough = self.fragment_passthrough()
-            #TODO pass on post params as get based on dotpath selection
             params = {'_dotpath': self.next_dotpath(),
                       '_parent_dotpath': self.dotpath() or '',
                       '_tempdoc': temp.get_id(),}

@@ -249,15 +249,7 @@ class BaseDocumentForm(BaseForm):
                                             label_suffix, empty_permitted)
         #print self.data, self.initial, self.instance._primitive_data, self.instance._python_data
     
-    def save(self, commit=True, dynamic=True):
-        """
-        Saves this ``form``'s cleaned_data into document instance
-        ``self.instance``.
-
-        If commit=True, then the changes to ``instance`` will be saved to the
-        database. Returns ``instance``.
-        """
-        
+    def _inner_save(self, dynamic=True):
         opts = self._meta
         cleaned_data = self.cleaned_data.copy()
         
@@ -284,6 +276,18 @@ class BaseDocumentForm(BaseForm):
                 value = cleaned_data[attr_name]
                 if value is not None:
                     setattr(obj, attr_name, value)
+        return obj
+    
+    def save(self, commit=True, dynamic=True):
+        """
+        Saves this ``form``'s cleaned_data into document instance
+        ``self.instance``.
+
+        If commit=True, then the changes to ``instance`` will be saved to the
+        database. Returns ``instance``.
+        """
+        
+        obj = self._inner_save(dynamic)
         
         if self.dotpath:
             self.instance.dot_notation_set_value(self.dotpath, obj)
