@@ -240,6 +240,11 @@ class Schema(object):
     def __getitem__(self, key):
         if key in self._meta.fields:
             return getattr(self, key)
+        if key in self._primitive_data and key not in self._python_data:
+            from serializer import PRIMITIVE_PROCESSOR
+            r_val = self._primitive_data[key]
+            p_val = PRIMITIVE_PROCESSOR.to_python(r_val)
+            self._python_data[key] = p_val
         return self._python_data[key]
     
     def __setitem__(self, key, value):
@@ -252,12 +257,17 @@ class Schema(object):
         if key in self._meta.fields:
             setattr(self, key, None)
             return
-        del self._python_data[key]
+        self._python_data.pop(key, None)
+        self._primitive_data.pop(key, None)
     
     def __hasitem__(self, key):
         if key in self._meta.fields:
             return True
         return key in self._python_data
+    
+    def keys(self):
+        #TODO more dictionary like functionality
+        return set(self._primitive_data.keys() + self._meta.fields.keys())
     
     def dot_notation(self, notation):
         return self.dot_notation_to_value(notation, self)

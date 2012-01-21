@@ -82,8 +82,9 @@ from django.forms.util import ErrorList
 from django.forms.forms import BaseForm, get_declared_fields
 from django.forms.widgets import media_property
 
+from dockit.schema.exceptions import DotPathNotFound
 
-def document_to_dict(schema, instance, properties=None, exclude=None, dotpath=None):
+def document_to_dict(document, instance, properties=None, exclude=None, dotpath=None):
     """
     Returns a dict containing the data in ``instance`` suitable for passing as
     a Form's ``initial`` keyword argument.
@@ -98,28 +99,22 @@ def document_to_dict(schema, instance, properties=None, exclude=None, dotpath=No
     # avoid a circular import
     data = {}
     if dotpath:
-        field = schema.dot_notation_to_field(dotpath)
-        if hasattr(field, '_meta'):
-            fields = field._meta.fields
-        else:
-            fields = field.schema._meta.fields
+        try:
+            src_data = instance.dot_notation(dotpath)
+        except DotPathNotFound:
+            src_data = dict()
     else:
-        fields = schema._meta.fields
-    for prop_name in fields.iterkeys():
+        src_data = instance
+    
+    if src_data is None:
+        src_data = dict()
+    
+    for prop_name in src_data.keys():
         if properties and not prop_name in properties:
             continue
         if exclude and prop_name in exclude:
             continue
-        
-        if dotpath:
-            c_dotpath = '%s.%s' % (dotpath, prop_name)
-        else:
-            c_dotpath = prop_name
-        try:
-            data[prop_name] = instance.dot_notation(c_dotpath)
-        except (KeyError, IndexError):
-            pass
-            #CONSIDER is this the correct way?
+        data[prop_name] = src_data[prop_name]
     return data
 
 def fields_for_document(document, properties=None, exclude=None, form_field_callback=None, dotpath=None):

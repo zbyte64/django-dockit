@@ -8,6 +8,7 @@ from decimal import Decimal
 import datetime
 
 from serializer import PRIMITIVE_PROCESSOR
+from exceptions import DotPathNotFound
 from dockit.forms.fields import HiddenJSONField, SchemaChoiceField
 
 class NOT_PROVIDED:
@@ -137,15 +138,17 @@ class BaseField(object):
         return name, notation
     
     def dot_notation_to_value(self, notation, parent):
-        assert notation is None
+        if notation is not None:
+            raise DotPathNotFound
         return parent
     
     def dot_notation_to_field(self, notation):
-        assert notation is None
+        if notation is not None:
+            raise DotPathNotFound
         return self
     
     def dot_notation_set_value(self, notation, value, parent):
-        assert False, 'Parent should set value'
+        raise DotPathNotFound('Tried to set an attribute belonging to a primitive')
     
     def is_instance(self, value):
         return False
@@ -257,10 +260,17 @@ class ComplexDotNotationMixin(object):
             return parent
         name, notation = self.split_dot_notation(notation)
         if isinstance(parent, list):
-            parent = parent[int(name)]
+            try:
+                parent = parent[int(name)]
+            except IndexError:
+                raise DotPathNotFound
         elif isinstance(parent, dict):
-            parent = parent[name]
+            try:
+                parent = parent[name]
+            except KeyError:
+                raise DotPathNotFound
         else:
+            #TODO this should behave like SchemaField
             parent = getattr(parent, name, None)
         return self.dot_notation_to_value(notation, parent)
     
@@ -301,6 +311,7 @@ class ComplexDotNotationMixin(object):
                 else:
                     return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
             else:
+                #TODO this should behave like SchemaField
                 parent = getattr(parent, name)
                 return self.schema._meta.fields[name].dot_notation_set_value(notation, value, parent)
 
@@ -318,18 +329,26 @@ class SchemaField(BaseComplexField):
     def is_instance(self, val):
         return isinstance(val, self.schema)
     
+    def _get_notation_handler(self, name):
+        if name in self.schema._meta.fields:
+            return self.schema._meta.fields[name]
+        else:
+            return ComplexDotNotationMixin()
+    
     def dot_notation_to_value(self, notation, parent):
         if notation is None:
             return parent
         name, notation = self.split_dot_notation(notation)
-        parent = getattr(parent, name, None)
-        return self.schema._meta.fields[name].dot_notation_to_value(notation, parent)
+        parent = parent[name]
+        notation_handler = self._get_notation_handler(name)
+        return notation_handler.dot_notation_to_value(notation, parent)
     
     def dot_notation_to_field(self, notation):
         if notation is None:
             return self
         name, notation = self.split_dot_notation(notation)
-        return self.schema._meta.fields[name].dot_notation_to_field(notation)
+        notation_handler = self._get_notation_handler(name)
+        return notation_handler.dot_notation_to_field(notation)
     
     def dot_notation_set_value(self, notation, value, parent):
         assert parent
@@ -340,14 +359,16 @@ class SchemaField(BaseComplexField):
             field = self.schema._meta.fields[name]
             if not field.is_instance(value):
                 value = field.to_python(value)
-            setattr(parent, name, value)
+            parent[name] = value
         else:
-            parent = getattr(parent, name)
-            return self.schema._meta.fields[name].dot_notation_set_value(notation, value, parent)
+            parent = parent[name]
+            notation_handler = self._get_notation_handler(name)
+            return notation_handler.dot_notation_set_value(notation, value, parent)
 
 class ListField(BaseComplexField):
     def __init__(self, schema=None, *args, **kwargs):
         self.schema = schema #CONSIDER, rename to subfield
+        kwargs.setdefault('default', list)
         super(ListField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
@@ -388,7 +409,10 @@ class ListField(BaseComplexField):
         index, notation = self.split_dot_notation(notation)
         if index == '*':
             raise NotImplementedError
-        parent = parent[int(index)]
+        try:
+            parent = parent[int(index)]
+        except IndexError:
+            raise DotPathNotFound
         return parent.dot_notation_to_value(notation, parent)
     
     def dot_notation_to_field(self, notation):

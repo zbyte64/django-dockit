@@ -1,0 +1,2 @@
+class DotPathNotFound(Exception):
+    pass
