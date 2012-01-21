@@ -365,6 +365,62 @@ class SchemaField(BaseComplexField):
             notation_handler = self._get_notation_handler(name)
             return notation_handler.dot_notation_set_value(notation, value, parent)
 
+class GenericSchemaField(BaseComplexField):
+    def to_primitive(self, val):
+        ret = PRIMITIVE_PROCESSOR.to_primitive(val)
+        return ret
+    
+    def to_python(self, val, parent=None):
+        if hasattr(val, 'to_python'):
+            return val.to_python(val, parent)
+        ret = PRIMITIVE_PROCESSOR.to_python(val)
+        if not self.is_instance(ret):
+            #TODO fail wail
+            print 'Could not convert (%s) to schema, got (%s)' % (val, ret)
+            from schema import Schema
+            ret = Schema(_primitive_data=ret)
+        return ret
+    
+    def is_instance(self, val):
+        from schema import Schema
+        return isinstance(val, Schema)
+    
+    def _get_notation_handler(self, name):
+        return ComplexDotNotationMixin()
+    
+    def dot_notation_to_value(self, notation, parent):
+        if notation is None:
+            return parent
+        name, notation = self.split_dot_notation(notation)
+        parent = parent[name]
+        notation_handler = self._get_notation_handler(name)
+        return notation_handler.dot_notation_to_value(notation, parent)
+    
+    def dot_notation_to_field(self, notation):
+        if notation is None:
+            return self
+        name, notation = self.split_dot_notation(notation)
+        notation_handler = self._get_notation_handler(name)
+        return notation_handler.dot_notation_to_field(notation)
+    
+    def dot_notation_set_value(self, notation, value, parent):
+        assert parent
+        if notation is None:
+            return super(GenericSchemaField, self).dot_notation_set_value(notation, value, parent)
+        name, notation = self.split_dot_notation(notation)
+        if notation is None:
+            if name in parent._meta.fields:
+                field = parent._meta.fields[name]
+                if not field.is_instance(value):
+                    value = field.to_python(value)
+            #else:
+            #    value = value
+            parent[name] = value
+        else:
+            parent = parent[name]
+            notation_handler = self._get_notation_handler(name)
+            return notation_handler.dot_notation_set_value(notation, value, parent)
+
 class ListField(BaseComplexField):
     def __init__(self, schema=None, *args, **kwargs):
         self.schema = schema #CONSIDER, rename to subfield
@@ -392,7 +448,7 @@ class ListField(BaseComplexField):
                 ret.append(self.schema.to_python(item))
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_python(ret)
-        return PRIMITIVE_PROCESSOR.to_primitive(val)
+        return PRIMITIVE_PROCESSOR.to_python(val)
     
     def is_instance(self, val):
         if not isinstance(val, list):

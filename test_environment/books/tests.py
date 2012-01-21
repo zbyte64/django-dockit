@@ -208,6 +208,31 @@ class FormTestCase(unittest.TestCase):
         
         self.assertEqual(instance.field1, 'hello3')
     
+    def test_form_with_generic_schemas(self):
+        class CustomDocumentForm(DocumentForm):
+            class Meta:
+                schema = Address
+                document = ComplexObject
+                dotpath = 'generic_objects.*'
+        
+        instance = ComplexObject(field1='field1')
+        instance.save()
+        data = {'street_1': '10533 Mesane Rd',
+                'city': 'San Diego',
+                'postal_code': '92126',
+                'country': 'US',
+                'region': 'CA',}
+        form = CustomDocumentForm(data=data, instance=instance, dotpath='generic_objects.0')
+        self.assertTrue(form.is_valid(), str(form.errors))
+        instance = form.save()
+        
+        self.assertTrue(isinstance(instance.generic_objects[0], Address))
+        self.assertEqual(instance.generic_objects[0].region, 'CA')
+        
+        instance = ComplexObject.objects.get(instance.pk)
+        address = instance.dot_notation('generic_objects.0')
+        self.assertTrue(isinstance(address, Address))
+    
     def test_dotnotation_form_to_list(self):
         class CustomDocumentForm(DocumentForm):
             class Meta:

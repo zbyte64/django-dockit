@@ -54,6 +54,7 @@ class ComplexObject(dockit.Document):
     image = dockit.FileField(upload_to='complex-images', blank=True)
     addresses = dockit.ListField(dockit.SchemaField(Address), blank=True)
     main_address = dockit.SchemaField(Address, blank=True)
+    generic_objects = dockit.ListField(dockit.GenericSchemaField(), blank=True)
     
     nested = dockit.SchemaField(SubComplexOne, blank=True)
     
