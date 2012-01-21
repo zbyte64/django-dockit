@@ -281,7 +281,7 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         if not form.is_valid():
             return self.form_invalid(form)
         
-        self.object = form.save() #CONSIDER this would normally be done in form_valid
+        obj = form.save() #CONSIDER this would normally be done in form_valid
         
         if self.next_dotpath():
             temp = self.get_temporary_store()
@@ -307,12 +307,13 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         
         #now to create the object!
         
-        if self.object._meta.collection != self.document._meta.collection:
+        if obj._meta.collection != self.document._meta.collection:
             if 'pk' in self.kwargs:
                 instance = self.get_object()
+                assert instance._meta.collection == self.document._meta.collection
             else:
                 instance = None
-            self.object = self.object.commit_changes(instance)
+            self.object = obj.commit_changes(instance)
         if self.temporary_document_id():
             self.get_temporary_store().delete()
         return self.form_valid(form)

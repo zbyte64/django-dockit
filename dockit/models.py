@@ -26,6 +26,8 @@ def create_temporary_document_class(document_cls):
             #remove id field
             backend = get_document_backend()
             data.pop(backend.get_id_field_name(), None)
+            if instance and instance.pk:
+                data[backend.get_id_field_name()] = instance.pk
             
             instance._primitive_data = data
             instance.save()
