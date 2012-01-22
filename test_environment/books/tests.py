@@ -11,6 +11,9 @@ from dockit.models import TemporaryDocument, create_temporary_document_class
 from dockit.schema import create_document, TextField
 
 class BookTestCase(unittest.TestCase):
+    def test_filder_ordering(self):
+        fields = Address._meta.fields
+        self.assertEquals(fields.keys(), ['street_1', 'street_2', 'city', 'postal_code', 'region', 'country', 'extra_data'])
 
     def test_monolithic(self):
         user = User.objects.create_user(username='test', email='z@z.com')

@@ -162,6 +162,12 @@ class SchemaBase(type):
         
         new_class.add_to_class('_meta', Options(meta, app_label=app_label))
         
+        fields = [(field_name, attrs.pop(field_name)) for field_name, obj in attrs.items() if hasattr(obj, 'creation_counter')]
+        fields.sort(key=lambda x: x[1].creation_counter)
+        
+        for field_name, obj in fields:
+            new_class.add_to_class(field_name, obj)
+        
         for obj_name, obj in attrs.items():
             new_class.add_to_class(obj_name, obj)
         

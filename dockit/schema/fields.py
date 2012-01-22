@@ -18,6 +18,9 @@ class BaseField(object):
     form_field_class = forms.CharField
     form_widget_class = None
     
+    creation_counter = 0
+    auto_creation_counter = -1
+    
     def __init__(self, verbose_name=None, name=None, blank=False, null=False,
                  default=NOT_PROVIDED, editable=True,
                  serialize=True, choices=None, help_text='',
@@ -26,7 +29,7 @@ class BaseField(object):
                 #db_index=False,  db_column=None, primary_key=False, max_length=None
                 #db_tablespace=None, auto_created=False, 
                 #unique_for_date=None, unique_for_month=None, unique_for_year=None, 
-                 error_messages=None):
+                 error_messages=None, auto_created=False):
         self.verbose_name = verbose_name
         self.name = name
         self.blank = blank
@@ -43,6 +46,14 @@ class BaseField(object):
         self.rel = None
         self.flatchoices = None
         self.unique = unique
+        
+        # Adjust the appropriate creation counter, and save our local copy.
+        if auto_created:
+            self.creation_counter = BaseField.auto_creation_counter
+            BaseField.auto_creation_counter -= 1
+        else:
+            self.creation_counter = BaseField.creation_counter
+            BaseField.creation_counter += 1
     
     def contribute_to_class(self, cls, name):
         self.name = name
