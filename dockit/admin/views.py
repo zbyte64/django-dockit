@@ -156,12 +156,16 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         context = AdminViewMixin.get_context_data(self, **kwargs)
         opts = self.document._meta
         context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
-                        'show_delete': False,
+                        'show_save': True,
+                        'show_delete_link': False,
+                        'show_save_and_add_another': False,
+                        'show_save_and_continue': True,
                         'add': True,
                         'add_another': True,
                         'cancel': False,
                         'change': False,
                         'delete': False,
+                        'dotpath': self.dotpath(),
                         'adminform':self.create_admin_form(),})
         context['media'] += context['adminform'].form.media
         
@@ -172,8 +176,8 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         context.update({'root_path': self.admin_site.root_path,
                         'app_label': opts.app_label,
                         'opts': opts,
+                        'original': obj,
                         'module_name': force_unicode(opts.verbose_name_plural),
-                        
                         'has_add_permission': self.admin.has_add_permission(self.request),
                         'has_change_permission': self.admin.has_change_permission(self.request, obj),
                         'has_delete_permission': self.admin.has_delete_permission(self.request, obj),
@@ -182,7 +186,6 @@ class BaseFragmentViewMixin(DocumentViewMixin):
                         #'content_type_id': ContentType.objects.get_for_model(self.model).id,
                         'save_as': self.admin.save_as,
                         'save_on_top': self.admin.save_on_top,})
-        
         return context
     
     def dotpath(self):
@@ -297,17 +300,21 @@ class BaseFragmentViewMixin(DocumentViewMixin):
             temp = self.get_temporary_store()
             params = {'_tempdoc':temp.get_id(),}
             
-            next_dotpath = self.parent_dotpath()
-            if next_dotpath is None:
-                dotpath = self.dotpath()
-                if '.' in dotpath:
-                    next_dotpath = dotpath[:dotpath.rfind('.')]
-                field = self.document.dot_notation_to_field(next_dotpath)
-                if isinstance(field, ListField):
-                    if '.' in next_dotpath:
-                        next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
-                    else:
-                        next_dotpath = None
+            #if they signaled to continue editing
+            if self.request.POST.get('_continue', False):
+                next_dotpath = self.dotpath()
+            else:
+                next_dotpath = self.parent_dotpath()
+                if next_dotpath is None:
+                    dotpath = self.dotpath()
+                    if '.' in dotpath:
+                        next_dotpath = dotpath[:dotpath.rfind('.')]
+                    field = self.document.dot_notation_to_field(next_dotpath)
+                    if isinstance(field, ListField):
+                        if '.' in next_dotpath:
+                            next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
+                        else:
+                            next_dotpath = None
             if next_dotpath:
                 params['_dotpath'] = next_dotpath
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))

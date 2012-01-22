@@ -14,16 +14,15 @@
 
 {% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }} change-form{% endblock %}
 
-{% comment %}
 {% block breadcrumbs %}{% if not is_popup %}
 <div class="breadcrumbs">
      <a href="../../../">{% trans "Home" %}</a> &rsaquo;
      <a href="../../">{{ app_label|capfirst|escape }}</a> &rsaquo;
      {% if has_change_permission %}<a href="../">{{ opts.verbose_name_plural|capfirst }}</a>{% else %}{{ opts.verbose_name_plural|capfirst }}{% endif %} &rsaquo;
      {% if add %}{% trans "Add" %} {{ opts.verbose_name }}{% else %}{{ original|truncatewords:"18" }}{% endif %}
+      &rsaquo; {{dotpath}}
 </div>
 {% endif %}{% endblock %}
-{% endcomment %}
 
 {% block content %}<div id="content-main">
 
@@ -41,8 +40,8 @@
   {% include "admin/includes/fieldset.html" %}
 {% endfor %}
 
-
-{% submit_row %}
+{% include "admin/submit_line.html" %}
+{# submit_row #}
 </div>
 </form></div>
 {% endblock %}
