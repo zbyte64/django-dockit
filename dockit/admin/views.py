@@ -480,23 +480,27 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         self.admin.log_change(self.request, self.object, '')
         return FragmentViewMixin.form_valid(self, form)
 
-class DeleteView(DocumentViewMixin, views.DetailView):
+class DeleteView(FragmentViewMixin, views.DetailView):
     template_suffix = 'delete_selected_confirmation'
     title = _('Delete')
     key = 'delete'
     
     def get_context_data(self, **kwargs):
         context = views.DetailView.get_context_data(self, **kwargs)
-        context.update(DocumentViewMixin.get_context_data(self, **kwargs))
+        context.update(FragmentViewMixin.get_context_data(self, **kwargs))
         #TODO add what will be deleted
         return context
     
     def post(self, request, *args, **kwargs):
-        obj = self.get_object()
-        object_repr = unicode(obj)
-        obj.delete()
-        self.admin.log_deletion(request, obj, object_repr)
-        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
+        if self.dotpath():
+            pass
+            #TODO delete the suboject
+        else:
+            obj = self.get_object()
+            object_repr = unicode(obj)
+            obj.delete()
+            self.admin.log_deletion(request, obj, object_repr)
+            return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
 
 class HistoryView(DocumentViewMixin, views.ListView):
     title = _('History')
