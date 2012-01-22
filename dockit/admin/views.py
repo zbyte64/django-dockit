@@ -11,6 +11,7 @@ from dockit import views
 from dockit.forms import DocumentForm
 from dockit.forms.fields import HiddenJSONField
 from dockit.models import create_temporary_document_class
+from dockit.schema.fields import ListField
 
 from urllib import urlencode
 from urlparse import parse_qsl
@@ -301,6 +302,12 @@ class BaseFragmentViewMixin(DocumentViewMixin):
                 dotpath = self.dotpath()
                 if '.' in dotpath:
                     next_dotpath = dotpath[:dotpath.rfind('.')]
+                field = self.document.dot_notation_to_field(next_dotpath)
+                if isinstance(field, ListField):
+                    if '.' in next_dotpath:
+                        next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
+                    else:
+                        next_dotpath = None
             if next_dotpath:
                 params['_dotpath'] = next_dotpath
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))

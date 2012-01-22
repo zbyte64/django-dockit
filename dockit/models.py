@@ -40,6 +40,12 @@ def create_temporary_document_class(document_cls):
             data.pop(backend.get_id_field_name(), None)
             self._primitive_data = data
             self._python_data = dict()
+        
+        def save(self, *args, **kwargs):
+            return dockit.Document.save(self, *args, **kwargs)
+        
+        def delete(self, *args, **kwargs):
+            return dockit.Document.delete(self, *args, **kwargs)
     
     #TODO investigate: Exception RuntimeError: 'maximum recursion depth exceeded in __subclasscheck__' in <type 'exceptions.AttributeError'> ignored
     TempDocument._meta.fields = deepcopy(document_cls._meta.fields)
