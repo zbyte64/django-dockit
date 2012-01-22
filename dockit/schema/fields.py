@@ -190,6 +190,10 @@ class BigIntegerField(BaseTypedField):
 class BooleanField(BaseTypedField):
     coerce_function = bool
     form_field_class = forms.BooleanField
+    
+    def __init__(self, *args, **kwargs):
+        super(BooleanField, self).__init__(*args, **kwargs)
+        self.blank = True
 
 class DateField(BaseTypedField):
     coerce_function = datetime.date
