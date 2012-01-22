@@ -230,6 +230,9 @@ class Schema(object):
     
     def __setattr__(self, name, val):
         if name in self._meta.fields:
+            field = self._meta.fields[name]
+            if not field.is_instance(val):
+                val = field.to_python(val)
             self._python_data[name] = val
             #field = self._fields[name]
             #store_val = field.to_primitive(val)

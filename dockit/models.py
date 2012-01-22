@@ -13,7 +13,7 @@ class FactoryMeta(object):
 
 def create_temporary_document_class(document_cls):
     
-    class TempDocument(dockit.Document):
+    class TempDocument(document_cls):
         class Meta:
             virtual = True
             collection = TemporaryDocument._meta.collection

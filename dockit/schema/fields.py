@@ -91,7 +91,11 @@ class BaseField(object):
     
     def formfield(self, **kwargs):
         "Returns a django.forms.Field instance for this database Field."
-        form_class = kwargs.pop('form_class', self.form_field_class)
+        if self.choices:
+            default = forms.ChoiceField
+        else:
+            default = self.form_field_class
+        form_class = kwargs.pop('form_class', default)
         defaults = self.formfield_kwargs(**kwargs)
         return form_class(**defaults)
     
@@ -115,7 +119,7 @@ class BaseField(object):
             # Fields with choices get special treatment.
             include_blank = self.blank or not (self.has_default() or 'initial' in kwargs)
             defaults['choices'] = self.get_choices(include_blank=include_blank)
-            defaults['coerce'] = self.to_python
+            #defaults['coerce'] = self.to_python
             if self.null:
                 defaults['empty_value'] = None
             form_class = forms.TypedChoiceField
@@ -123,7 +127,7 @@ class BaseField(object):
             # max_value) don't apply for choice fields, so be sure to only pass
             # the values that TypedChoiceField will understand.
             for k in kwargs.keys():
-                if k not in ('coerce', 'empty_value', 'choices', 'required',
+                if k not in ('empty_value', 'choices', 'required',#'coerce',
                              'widget', 'label', 'initial', 'help_text',
                              'error_messages', 'show_hidden_initial'):
                     del kwargs[k]
@@ -158,6 +162,8 @@ class BaseTypedField(BaseField):
     
     def to_primitive(self, val):
         if isinstance(self.coerce_function, type) and isinstance(val, self.coerce_function):
+            return val
+        if self.null and val is None:
             return val
         return self.coerce_function(val)
     
