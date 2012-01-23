@@ -551,9 +551,9 @@ class ListField(BaseComplexField):
                 return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
 
 class DictField(BaseComplexField):
-    def __init__(self, key_schema=None, value_schema=None, **kwargs):
-        self.key_schema = key_schema
-        self.value_schema = value_schema
+    def __init__(self, key_subfield=None, value_subfield=None, **kwargs):
+        self.key_subfield = key_subfield
+        self.value_subfield = value_subfield
         super(DictField, self).__init__(**kwargs)
     
     def to_primitive(self, val):
@@ -575,10 +575,10 @@ class DictField(BaseComplexField):
         if val is None:
             return ret
         for key, value in val.iteritems():
-            if self.value_schema:
-                value = self.value_schema.to_python(value)
-            if self.key_schema:
-                key = self.key_schema.to_python(key)
+            if self.value_subfield:
+                value = self.value_subfield.to_python(value)
+            if self.key_subfield:
+                key = self.key_subfield.to_python(key)
             ret[key] = value
         #TODO run data through the primitive processor
         ret = PRIMITIVE_PROCESSOR.to_python(ret)
@@ -587,13 +587,13 @@ class DictField(BaseComplexField):
     def is_instance(self, val):
         if not isinstance(val, dict):
             return False
-        if self.value_schema:
+        if self.value_subfield:
             for item in val.itervalues():
-                if not self.value_schema.is_instance(item):
+                if not self.value_subfield.is_instance(item):
                     return False
-        if self.key_schema:
+        if self.key_subfield:
             for item in val.iterkeys():
-                if not self.key_schema.is_instance(item):
+                if not self.key_subfield.is_instance(item):
                     return False
         return True
     
@@ -604,22 +604,22 @@ class DictField(BaseComplexField):
         if key == '*':
             pass #TODO support star??
         parent = parent[key]
-        return self.value_schema.dot_notation_to_value(notation, parent)
+        return self.value_subfield.dot_notation_to_value(notation, parent)
     
     def dot_notation_to_field(self, notation):
         if notation is None:
             return self
         name, notation = self.split_dot_notation(notation)
         key, notation = notation.split('.', 1)
-        return self.value_schema.dot_notation_to_field(notation)
+        return self.value_subfield.dot_notation_to_field(notation)
     
     def dot_notation_set_value(self, notation, value, parent):
         if notation is None:
             return super(SchemaField, self).dot_notation_set_value(notation, value, parent)
         name, notation = self.split_dot_notation(notation)
         if notation is None:
-            if self.value_schema and isinstance(value, dict) and not self.value_schema.is_instance(value):
-                value = self.value_schema.to_python(value)
+            if self.value_subfield and isinstance(value, dict) and not self.value_subfield.is_instance(value):
+                value = self.value_subfield.to_python(value)
             parent[name] = value
         else:
             parent.setdefault(name, dict())
