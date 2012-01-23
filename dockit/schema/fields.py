@@ -9,6 +9,7 @@ import datetime
 
 from serializer import PRIMITIVE_PROCESSOR
 from exceptions import DotPathNotFound
+from common import get_schema
 from dockit.forms.fields import HiddenJSONField, SchemaChoiceField
 
 class NOT_PROVIDED:
@@ -387,20 +388,36 @@ class SchemaField(BaseComplexField):
             return notation_handler.dot_notation_set_value(notation, value, parent)
 
 class GenericSchemaField(BaseComplexField):
+    def __init__(self, field_name='_type', **kwargs):
+        self.type_field_name = field_name
+        super(GenericSchemaField, self).__init__(**kwargs)
+    
+    def lookup_schema(self, key):
+        return get_schema(key)
+    
+    def get_schema_type(self, val):
+        return val._meta.schema_key
+    
+    def get_schema_choices(self):
+        raise NotImplementedError
+    
+    def set_schema_type(self, val):
+        val[self.type_field_name] = self.get_schema_type(val)
+    
     def to_primitive(self, val):
-        ret = PRIMITIVE_PROCESSOR.to_primitive(val)
-        return ret
+        if hasattr(val, 'to_primitive'):
+            self.set_schema_type(val)
+            return val.to_primitive(val)
+        return val
     
     def to_python(self, val, parent=None):
         if hasattr(val, 'to_python'):
             return val.to_python(val, parent)
-        ret = PRIMITIVE_PROCESSOR.to_python(val)
-        if not self.is_instance(ret):
-            #TODO fail wail
-            print 'Could not convert (%s) to schema, got (%s)' % (val, ret)
-            from schema import Schema
-            ret = Schema(_primitive_data=ret)
-        return ret
+        if not self.is_instance(val):
+            key = val[self.type_field_name]
+            schema_cls = self.lookup_schema(key)
+            return schema_cls(_primitive_data=val)
+        return val
     
     def is_instance(self, val):
         from schema import Schema
@@ -442,31 +459,47 @@ class GenericSchemaField(BaseComplexField):
             notation_handler = self._get_notation_handler(name)
             return notation_handler.dot_notation_set_value(notation, value, parent)
 
+class TypedSchemaField(GenericSchemaField):
+    def __init__(self, schemas, field_name='_type', **kwargs):
+        self.schemas = schemas
+        super(TypedSchemaField, self).__init__(field_name, **kwargs)
+    
+    def lookup_schema(self, key):
+        return self.schemas[key]
+    
+    def get_schema_type(self, val):
+        return val._meta.schema_key
+    
+    def get_schema_choices(self):
+        return self.schemas.items()
+    
+    #TODO what about a widget?
+
 class ListField(BaseComplexField):
-    def __init__(self, schema=None, *args, **kwargs):
-        self.schema = schema #CONSIDER, rename to subfield
+    def __init__(self, subfield=None, *args, **kwargs):
+        self.subfield = subfield
         kwargs.setdefault('default', list)
         super(ListField, self).__init__(*args, **kwargs)
     
     def to_primitive(self, val):
-        if self.schema:
+        if self.subfield:
             ret = list()
             if val is None:
                 return ret
             for item in val:
-                ret.append(self.schema.to_primitive(item))
+                ret.append(self.subfield.to_primitive(item))
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_primitive(ret)
         return PRIMITIVE_PROCESSOR.to_primitive(val)
     
     def to_python(self, val, parent=None):
-        if self.schema:
+        if self.subfield:
             ret = list()
             if val is None:
                 return ret
             #TODO pass in parent
             for item in val:
-                ret.append(self.schema.to_python(item))
+                ret.append(self.subfield.to_python(item))
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_python(ret)
         return PRIMITIVE_PROCESSOR.to_python(val)
@@ -474,9 +507,9 @@ class ListField(BaseComplexField):
     def is_instance(self, val):
         if not isinstance(val, list):
             return False
-        if self.schema:
+        if self.subfield:
             for item in val:
-                if not self.schema.is_instance(item):
+                if not self.subfield.is_instance(item):
                     return False
         return True
     
@@ -496,15 +529,15 @@ class ListField(BaseComplexField):
         if notation is None:
             return self;
         name, notation = self.split_dot_notation(notation)
-        return self.schema.dot_notation_to_field(notation)
+        return self.subfield.dot_notation_to_field(notation)
     
     def dot_notation_set_value(self, notation, value, parent):
         if notation is None:
             return super(ListField, self).dot_notation_set_value(notation, value, parent)
         name, notation = self.split_dot_notation(notation)
         if notation is None:
-            if isinstance(value, dict) and not self.schema.is_instance(value):
-                value = self.schema.to_python(value)
+            if isinstance(value, dict) and not self.subfield.is_instance(value):
+                value = self.subfield.to_python(value)
             index = int(name)
             if (len(parent) == index):
                 parent.append(value)

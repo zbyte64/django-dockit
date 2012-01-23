@@ -21,7 +21,7 @@ class Options(object):
     abstract = False
     ordering = ['_id']
     
-    DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
+    DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering', 'schema_key',
                      'app_label', 'collection', 'virtual', 'proxy')
     
     def __init__(self, meta, app_label=None):
@@ -31,6 +31,7 @@ class Options(object):
         self.meta = meta
         self.fields = SortedDict()
         self.collection = None
+        self.schema_key = None
         self.virtual = False
         self.proxy = False
     
@@ -42,6 +43,7 @@ class Options(object):
         self.module_name = self.object_name.lower()
         self.verbose_name = get_verbose_name(self.object_name)
         self.collection = self.default_schema_key()
+        self.schema_key = self.default_schema_key()
 
         # Next, apply any overridden values from 'class Meta'.
         if getattr(self, 'meta', None):
@@ -71,10 +73,6 @@ class Options(object):
     
     def default_schema_key(self):
         return "%s.%s" % (smart_str(self.app_label), smart_str(self.module_name))
-    
-    @property
-    def schema_key(self):
-        return self.collection
     
     def __str__(self):
         return self.collection

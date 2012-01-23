@@ -54,8 +54,8 @@ class ExactIndexer(BaseIndexer):
         field = self.document.dot_notation_to_field(self.dotpath)
         
         subindex = self._lookup_index(field)
-        if subindex is None and hasattr(field, 'schema'):
-            subindex = self._lookup_index(field.schema)
+        if subindex is None and hasattr(field, 'subfield'):
+            subindex = self._lookup_index(field.subfield)
         
         func = Indexer(self.document, subindex.objects.db_index, self.dotpath)
         filt = subindex.objects.filter_kwargs_for_value

@@ -235,6 +235,15 @@ class BaseFragmentViewMixin(DocumentViewMixin):
             return self._generate_form_class(self.document)
     
     def formfield_for_field(self, prop, field, **kwargs):
+        import dockit
+        if isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField):
+            from fields import TypedSchemaField
+            field = TypedSchemaField
+            kwargs['dotpath'] = self.dotpath()
+            kwargs['schema_property'] = prop
+            if self.next_dotpath():
+                kwargs['required'] = False
+            return field(**kwargs)
         if field == HiddenJSONField:
             field = DotPathField
             kwargs['dotpath'] = self.dotpath()

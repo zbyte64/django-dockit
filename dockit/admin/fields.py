@@ -88,3 +88,36 @@ class DotPathField(HiddenJSONField):
     def prepare_value(self, value):
         return value
 
+
+class TypedSchemaFieldWidget(DotPathWidget):
+    input_type = 'submit'
+    
+    def __init__(self, dotpath=None, schema_property=None):
+        self.dotpath = dotpath
+        self.schema_property = schema_property
+        super(DotPathWidget, self).__init__()
+    
+    def render_type_dropdown(self, dotpath):
+        options = list()
+        for val, label in self.schema_property.get_schema_choices():
+            options.append(u'<option value="%s">%s</option>' % (escape(force_unicode(val)), escape(force_unicode(label))))
+        data = {'next_dotpath':dotpath,
+                'name':self.schema_property.type_field_name,}
+        name = '[fragment-passthrough]%s' % urlencode(data)
+        return u'<select name="%s">%s</select>' % (name, '\n'.join(options))
+    
+    def get_label(self, dotpath, value=None):
+        if value:
+            return escape(force_unicode(value))
+        return self.render_type_dropdown(dotpath)
+
+class TypedSchemaField(DotPathField):
+    widget = TypedSchemaFieldWidget
+    
+    def __init__(self, *args, **kwargs):
+        self.schema_property = kwargs.pop('schema_property')
+        if hasattr(self.schema_property, 'subfield'):
+            self.schema_property = self.schema_property.subfield
+        super(TypedSchemaField, self).__init__(*args, **kwargs)
+        self.widget.schema_property = self.schema_property
+
