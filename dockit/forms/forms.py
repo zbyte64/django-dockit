@@ -129,11 +129,8 @@ def fields_for_document(document, properties=None, exclude=None, form_field_call
     they are listed in the ``properties`` argument.
     """
     if dotpath:
-        field = document.dot_notation_to_field(dotpath)
-        if hasattr(field, '_meta'):
-            fields = field._meta.fields
-        else:
-            fields = field.schema._meta.fields
+        field = document._meta.dot_notation_to_field(dotpath)
+        fields = field.schema._meta.fields
     else:
         fields = document._meta.fields
     
@@ -174,7 +171,7 @@ class DocumentFormOptions(object):
         #lookup the appropriate schema if none is given
         if self.document and not self.schema:
             if self.dotpath:
-                field = self.document.dot_notation_to_field(self.dotpath)
+                field = self.document._meta.dot_notation_to_field(self.dotpath)
                 if hasattr(field, 'schema'):
                     self.schema = field.schema
             else:

@@ -11,7 +11,7 @@ from django.utils import simplejson
 from decimal import Decimal
 
 from schema import Schema
-from common import get_schema
+from common import get_schema, DotNotationHandlerMixin
 
 class Handler(object):
     def encode(self, obj):
@@ -109,6 +109,55 @@ def make_serializers():
     return {'encoder': JSONEncoder(handlers=handlers),
             'decoder': JSONDecoder(handlers=handlers),}
 
+class DotPathList(DotNotationHandlerMixin, list):
+    def dot_notation_set_value(self, notation, value, parent=None):
+        from fields import ComplexDotNotationMixin
+        field = ComplexDotNotationMixin()
+        return field.dot_notation_set_value(notation, value, self)
+    
+    def dot_notation_to_value(self, notation, parent=None):
+        from fields import ComplexDotNotationMixin
+        field = ComplexDotNotationMixin()
+        return field.dot_notation_to_value(notation, self)
+    
+    def dot_notation_to_field(self, notation):
+        if notation is None:
+            from fields import ListField
+            return ListField()
+        name, notation = self.split_dot_notation(notation)
+        #CONSIDER an emptry list may still indicate the field?
+        value = self.dot_notation_to_value(name)
+        if hasattr(value, 'dot_notation_to_field'):
+            return value.dot_notation_to_field(notation)
+        #preferably could we use the parent to resolve instead?
+        #ie parents[-1].schema, need a traversal strategy....
+        from fields import ComplexDotNotationMixin
+        field = ComplexDotNotationMixin()
+        return field.dot_notation_to_field(notation)
+
+class DotPathDict(DotNotationHandlerMixin, dict):
+    def dot_notation_set_value(self, notation, value, parent=None):
+        from fields import ComplexDotNotationMixin
+        field = ComplexDotNotationMixin()
+        return field.dot_notation_set_value(notation, value, self)
+    
+    def dot_notation_to_value(self, notation, parent=None):
+        from fields import ComplexDotNotationMixin
+        field = ComplexDotNotationMixin()
+        return field.dot_notation_to_value(notation, self)
+    
+    def dot_notation_to_field(self, notation):
+        if notation is None:
+            from fields import DictField
+            return DictField()
+        name, notation = self.split_dot_notation(notation)
+        value = self.dot_notation_to_value(name)
+        if hasattr(value, 'dot_notation_to_field'):
+            return value.dot_notation_to_field(notation)
+        from fields import ComplexDotNotationMixin
+        field = ComplexDotNotationMixin()
+        return field.dot_notation_to_field(notation)
+
 class PrimitiveProcessor(object):
     def __init__(self, handlers):
         self.handlers = handlers
@@ -133,8 +182,9 @@ class PrimitiveProcessor(object):
                 return self.handlers_by_key[obj['__type__']].decode(obj)
             for key, value in obj.items():
                 obj[self.to_python(key)] = self.to_python(value)
+            obj = DotPathDict(obj)
         elif isinstance(obj, list):
-            return map(self.to_python, obj)
+            return DotPathList(map(self.to_python, obj))
         return obj
 
 def make_primitive_processor():

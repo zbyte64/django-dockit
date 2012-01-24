@@ -75,13 +75,13 @@ class BookTestCase(unittest.TestCase):
 
 class DotNotationTestCase(unittest.TestCase):
     def test_dot_notation_list_field(self):
-        field = ComplexObject.dot_notation_to_field('addresses')
+        field = ComplexObject._meta.dot_notation_to_field('addresses')
         self.assertEqual(field, ComplexObject.addresses)
         
-        field = ComplexObject.dot_notation_to_field('addresses.*.region')
+        field = ComplexObject._meta.dot_notation_to_field('addresses.*.region')
         self.assertEqual(field, Address.region)
         
-        field = ComplexObject.dot_notation_to_field('addresses.*')
+        field = ComplexObject._meta.dot_notation_to_field('addresses.*')
         self.assertEqual(field.schema, Address)
     
     def test_dot_notation_set_value(self):

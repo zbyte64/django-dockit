@@ -146,6 +146,11 @@ class BaseField(object):
         defaults.update(kwargs)
         return defaults
     
+    def traverse_dot_path(self, traverser):
+        if traverser.remaining_paths:
+            raise DotPathNotFound
+        tranverser.end(field=self)
+    
     def split_dot_notation(self, notation):
         if '.' in notation:
             name, notation = notation.split('.', 1)
@@ -351,6 +356,12 @@ class SchemaField(BaseComplexField):
     def is_instance(self, val):
         return isinstance(val, self.schema)
     
+    def traverse_dot_path(self, traverser):
+        if traverser.remaining_paths:
+            traverser.current
+        else:
+            traverser.end(field=self)
+    
     def _get_notation_handler(self, name):
         if name in self.schema._meta.fields:
             return self.schema._meta.fields[name]
@@ -523,7 +534,7 @@ class ListField(BaseComplexField):
             parent = parent[int(index)]
         except IndexError:
             raise DotPathNotFound
-        return parent.dot_notation_to_value(notation, parent)
+        return parent.dot_notation_to_value(notation)
     
     def dot_notation_to_field(self, notation):
         if notation is None:
@@ -546,7 +557,7 @@ class ListField(BaseComplexField):
         else:
             child = parent[int(name)]
             if hasattr(child, 'dot_notation_set_value'):
-                return child.dot_notation_set_value(notation, value, parent)
+                return child.dot_notation_set_value(notation, value)
             else:
                 return ComplexDotNotationMixin().dot_notation_set_value(notation, value, child)
 

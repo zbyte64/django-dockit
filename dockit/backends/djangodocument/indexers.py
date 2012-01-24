@@ -51,7 +51,7 @@ class ExactIndexer(BaseIndexer):
     
     def generate_index(self):
         collection = self.document._meta.collection
-        field = self.document.dot_notation_to_field(self.dotpath)
+        field = self.document._meta.dot_notation_to_field(self.dotpath)
         
         subindex = self._lookup_index(field)
         if subindex is None and hasattr(field, 'subfield'):
@@ -93,7 +93,7 @@ class DateIndexer(BaseIndexer):
         
     def generate_index(self):
         collection = self.document._meta.collection
-        field = self.document.dot_notation_to_field(self.dotpath)
+        field = self.document._meta.dot_notation_to_field(self.dotpath)
         
         subindex = DateIndex
         

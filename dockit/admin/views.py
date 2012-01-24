@@ -232,7 +232,7 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         if self.form_class:
             return self.form_class
         else:
-            return self._generate_form_class(self.document)
+            return self._generate_form_class()
     
     def formfield_for_field(self, prop, field, **kwargs):
         import dockit
@@ -253,10 +253,20 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         else:
             return self.admin.formfield_for_field(prop, field, **kwargs)
     
-    def _generate_form_class(self, schema):
+    def get_schema(self):
+        if self.dotpath():
+            val = self.get_temporary_store()
+            field = val.dot_notation_to_field(self.dotpath())
+            if hasattr(field, 'schema'):
+                return field.schema
+            assert False
+        return
+    
+    def _generate_form_class(self):
         class CustomDocumentForm(DocumentForm):
             class Meta:
-                document = schema
+                document = self.document
+                schema = self.get_schema()
                 form_field_callback = self.formfield_for_field
                 dotpath = self.dotpath() or None
         return CustomDocumentForm

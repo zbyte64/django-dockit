@@ -11,7 +11,7 @@ from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
 
 from manager import Manager
-from common import register_schema
+from common import register_schema, DotPathTraverser
 from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
 
 class Options(object):
@@ -34,9 +34,11 @@ class Options(object):
         self.schema_key = None
         self.virtual = False
         self.proxy = False
+        self._document = None
     
     def contribute_to_class(self, cls, name):
         cls._meta = self
+        self._document = cls
         self.installed = re.sub('\.models$', '', cls.__module__) in settings.INSTALLED_APPS
         # First, construct the default values for these options.
         self.object_name = cls.__name__
@@ -124,6 +126,12 @@ class Options(object):
     
     def get_backend(self):
         return get_document_backend()
+    
+    def dot_notation_to_field(self, notation):
+        traverser = DotPathTraverser(notation)
+        from fields import SchemaField
+        field = SchemaField(schema=self._document)
+        return field.dot_notation_to_field(notation)
 
 class SchemaBase(type):
     """
@@ -181,7 +189,7 @@ class SchemaBase(type):
         else:
             setattr(cls, name, value)
 
-class Schema(object):
+class Schema(DotNotationHandlerMixin):
     __metaclass__ = SchemaBase
     
     def __init__(self, **kwargs):
@@ -277,22 +285,28 @@ class Schema(object):
         return set(self._primitive_data.keys() + self._meta.fields.keys())
     
     def dot_notation(self, notation):
-        return self.dot_notation_to_value(notation, self)
+        return self.dot_notation_to_value(notation)
     
-    def dot_notation_set_value(self, notation, value, parent=None):
+    def dot_notation_set_value(self, notation, value):
         from fields import SchemaField
         field = SchemaField(schema=type(self))
         return field.dot_notation_set_value(notation, value, self)
     
-    def dot_notation_to_value(self, notation, parent):
+    def dot_notation_to_value(self, notation):
         from fields import SchemaField
         field = SchemaField(schema=type(self))
-        return field.dot_notation_to_value(notation, parent)
+        return field.dot_notation_to_value(notation, self)
     
-    @classmethod
-    def dot_notation_to_field(cls, notation):
+    def dot_notation_to_field(self, notation):
+        if notation is None:
+            from fields import SchemaField
+            return SchemaField(schema=type(self))
+        name, notation = self.split_dot_notation(notation)
+        value = self.dot_notation_to_value(name)
+        if hasattr(value, 'dot_notation_to_field'):
+            return value.dot_notation_to_field(notation)
         from fields import SchemaField
-        field = SchemaField(schema=cls)
+        field = SchemaField(schema=type(self))
         return field.dot_notation_to_field(notation)
 
 class DocumentBase(SchemaBase):
