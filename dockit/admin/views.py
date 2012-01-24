@@ -328,7 +328,7 @@ class BaseFragmentViewMixin(DocumentViewMixin):
                     dotpath = self.dotpath()
                     if '.' in dotpath:
                         next_dotpath = dotpath[:dotpath.rfind('.')]
-                    field = self.document.dot_notation_to_field(next_dotpath)
+                    field = temp.dot_notation_to_field(next_dotpath)
                     if isinstance(field, ListField):
                         if '.' in next_dotpath:
                             next_dotpath = next_dotpath[:next_dotpath.rfind('.')]

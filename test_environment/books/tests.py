@@ -101,7 +101,9 @@ class DotNotationTestCase(unittest.TestCase):
         co.save()
         
         co.dot_notation_set_value('addresses.1.extra_data.complexdict', {'foo':'bar'})
+        print co.addresses[1].extra_data['complexdict']
         co.dot_notation_set_value('addresses.1.extra_data.complexdict.bar', 'foo')
+        print co.addresses[1].extra_data['complexdict']
         self.assertTrue('bar' in co.addresses[1].extra_data['complexdict'])
         self.assertEqual(co.addresses[1].extra_data['complexdict']['bar'], 'foo')
         co.save()

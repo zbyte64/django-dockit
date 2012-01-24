@@ -129,9 +129,8 @@ class Options(object):
     
     def dot_notation_to_field(self, notation):
         traverser = DotPathTraverser(notation)
-        from fields import SchemaField
-        field = SchemaField(schema=self._document)
-        return field.dot_notation_to_field(notation)
+        traverser.resolve_for_schema(self._document)
+        return traverser.current['field']
 
 class SchemaBase(type):
     """
@@ -189,7 +188,7 @@ class SchemaBase(type):
         else:
             setattr(cls, name, value)
 
-class Schema(DotNotationHandlerMixin):
+class Schema(object):
     __metaclass__ = SchemaBase
     
     def __init__(self, **kwargs):
@@ -284,30 +283,45 @@ class Schema(DotNotationHandlerMixin):
         #TODO more dictionary like functionality
         return set(self._primitive_data.keys() + self._meta.fields.keys())
     
+    def traverse_dot_path(self, traverser):
+        if traverser.remaining_paths:
+            value = field = None
+            name = traverser.next_part
+            try:
+                value = self[name]
+            except KeyError:
+                pass
+            if name in self._meta.fields:
+                field = self._meta.fields[name]
+            traverser.next(value=value, field=field)
+        else:
+            traverser.end(value=self)
+    
     def dot_notation(self, notation):
         return self.dot_notation_to_value(notation)
     
     def dot_notation_set_value(self, notation, value):
-        from fields import SchemaField
-        field = SchemaField(schema=type(self))
-        return field.dot_notation_set_value(notation, value, self)
+        traverser = DotPathTraverser(notation)
+        traverser.resolve_for_instance(self)
+        
+        try:
+            traverser.set_value(value)
+        except:
+            print traverser.resolved_paths
+            raise
     
     def dot_notation_to_value(self, notation):
-        from fields import SchemaField
-        field = SchemaField(schema=type(self))
-        return field.dot_notation_to_value(notation, self)
+        traverser = DotPathTraverser(notation)
+        traverser.resolve_for_instance(self)
+        return traverser.current['value']
     
     def dot_notation_to_field(self, notation):
-        if notation is None:
-            from fields import SchemaField
-            return SchemaField(schema=type(self))
-        name, notation = self.split_dot_notation(notation)
-        value = self.dot_notation_to_value(name)
-        if hasattr(value, 'dot_notation_to_field'):
-            return value.dot_notation_to_field(notation)
-        from fields import SchemaField
-        field = SchemaField(schema=type(self))
-        return field.dot_notation_to_field(notation)
+        traverser = DotPathTraverser(notation)
+        traverser.resolve_for_instance(self)
+        return traverser.current['field']
+    
+    def set_value(self, attr, value):
+        self[attr] = value
 
 class DocumentBase(SchemaBase):
     def __new__(cls, name, bases, attrs):
