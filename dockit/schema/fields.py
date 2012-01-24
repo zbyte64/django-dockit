@@ -168,6 +168,8 @@ class BaseTypedField(BaseField):
     def is_instance(self, val):
         if isinstance(self.coerce_function, type) and isinstance(val, self.coerce_function):
             return True
+        if val is None:
+            return True
         return False
 
 class CharField(BaseTypedField):
@@ -267,6 +269,8 @@ class SchemaField(BaseComplexField):
         return self.schema.to_python(val, parent)
     
     def is_instance(self, val):
+        if val is None:
+            return True
         return isinstance(val, self.schema)
     
     def traverse_dot_path(self, traverser):
@@ -326,6 +330,8 @@ class GenericSchemaField(BaseComplexField):
         return val
     
     def is_instance(self, val):
+        if val is None:
+            return True
         from schema import Schema
         return isinstance(val, Schema)
     
@@ -404,6 +410,8 @@ class ListField(BaseComplexField):
         return PRIMITIVE_PROCESSOR.to_python(val)
     
     def is_instance(self, val):
+        if val is None:
+            return True
         if not isinstance(val, DotPathList):
             return False
         if self.subfield:
@@ -475,6 +483,8 @@ class DictField(BaseComplexField):
         return ret
     
     def is_instance(self, val):
+        if val is None:
+            return True
         if not isinstance(val, DotPathDict):
             return False
         if self.value_subfield:
@@ -526,6 +536,8 @@ class ReferenceField(BaseField):
         return self.document._meta
     
     def is_instance(self, val):
+        if val is None:
+            return True
         return isinstance(val, self.document)
     
     def to_primitive(self, val):
@@ -573,6 +585,8 @@ class ModelReferenceField(BaseField):
         super(ModelReferenceField, self).__init__(*args, **kwargs)
     
     def is_instance(self, val):
+        if val is None:
+            return True
         return isinstance(val, self.model)
     
     def to_primitive(self, val):

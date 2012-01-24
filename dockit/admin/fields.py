@@ -71,7 +71,7 @@ class DotPathWidget(widgets.Input):
             rows.append('<td>%s</td><td>%s</td>' % (self.get_label(item_dotpath), butn_html))
             return mark_safe('%s<table><tr>%s</tr></table>' % (data_html, '</tr><tr>'.join(rows)))
         else:
-            butn_html = self.render_button(dotpath, edit=True)
+            butn_html = self.render_button(dotpath, edit=bool(value))
             desc_html = self.get_label(dotpath, value)
             return mark_safe(''.join((data_html, desc_html, butn_html)))
 

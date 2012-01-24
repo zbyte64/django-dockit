@@ -238,7 +238,8 @@ class BaseFragmentViewMixin(DocumentViewMixin):
     
     def formfield_for_field(self, prop, field, **kwargs):
         import dockit
-        if isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField):
+        if ((isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField)) or
+             isinstance(prop, dockit.TypedSchemaField)):
             from fields import TypedSchemaField
             field = TypedSchemaField
             kwargs['dotpath'] = self.dotpath()
