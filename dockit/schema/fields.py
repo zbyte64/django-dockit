@@ -146,10 +146,10 @@ class BaseField(object):
         defaults.update(kwargs)
         return defaults
     
-    def traverse_dot_path(self, traverser, value=None):
+    def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             raise DotPathNotFound
-        traverser.end(field=self, value=value)
+        traverser.end(field=self)
     
     def split_dot_notation(self, notation):
         if '.' in notation:
@@ -356,9 +356,10 @@ class SchemaField(BaseComplexField):
     def is_instance(self, val):
         return isinstance(val, self.schema)
     
-    def traverse_dot_path(self, traverser, value=None):
+    def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             name = traverser.next_part
+            value = traverser.current_value
             next_value = field = None
             
             if value:
@@ -371,7 +372,7 @@ class SchemaField(BaseComplexField):
             
             traverser.next(field=field, value=next_value)
         else:
-            traverser.end(field=self, value=value)
+            traverser.end(field=self)
     
     def _get_notation_handler(self, name):
         if name in self.schema._meta.fields:
@@ -445,9 +446,10 @@ class GenericSchemaField(BaseComplexField):
         from schema import Schema
         return isinstance(val, Schema)
     
-    def traverse_dot_path(self, traverser, value=None):
+    def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             name = traverser.next_part
+            value = traverser.current_value
             next_value = field = None
             
             if value:
@@ -461,7 +463,7 @@ class GenericSchemaField(BaseComplexField):
             
             traverser.next(field=field, value=next_value)
         else:
-            traverser.end(field=self, value=value)
+            traverser.end(field=self)
     
     def _get_notation_handler(self, name):
         return ComplexDotNotationMixin()
@@ -553,9 +555,10 @@ class ListField(BaseComplexField):
                     return False
         return True
     
-    def traverse_dot_path(self, traverser, value=None):
+    def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             new_value = None
+            value = traverser.current_value
             if value:
                 name = traverser.next_part
                 try:
@@ -566,7 +569,7 @@ class ListField(BaseComplexField):
                     pass
             traverser.next(field=self.subfield, value=new_value)
         else:
-            traverser.end(field=self, value=value)
+            traverser.end(field=self)
     
     def dot_notation_to_value(self, notation, parent):
         if notation is None:
@@ -652,8 +655,9 @@ class DictField(BaseComplexField):
                     return False
         return True
     
-    def traverse_dot_path(self, traverser, value=None):
+    def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
+            value = traverser.current_value
             new_value = None
             if value:
                 name = traverser.next_part
@@ -663,7 +667,7 @@ class DictField(BaseComplexField):
                     pass
             traverser.next(field=self.subfield, value=new_value)
         else:
-            traverser.end(field=self, value=value)
+            traverser.end(field=self)
     
     def dot_notation_to_value(self, notation, parent):
         if notation is None:
