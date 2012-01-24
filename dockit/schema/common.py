@@ -20,3 +20,9 @@ class DotPathTraverser(object):
     @property
     def next_part(self):
         return self.remaining_parts[0]
+    
+    def end(self, **kwargs):
+        pass
+    
+    def next(self, **kwargs):
+        pass
