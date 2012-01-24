@@ -12,6 +12,7 @@ from dockit.forms import DocumentForm
 from dockit.forms.fields import HiddenJSONField
 from dockit.models import create_temporary_document_class
 from dockit.schema.fields import ListField
+from dockit.schema.common import UnSet
 
 from urllib import urlencode
 from urlparse import parse_qsl
@@ -157,7 +158,7 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         opts = self.document._meta
         context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
                         'show_save': True,
-                        'show_delete_link': False,
+                        'show_delete_link': bool(self.dotpath()), #TODO is it a new subobject?
                         'show_save_and_add_another': False,
                         'show_save_and_continue': True,
                         'add': True,
@@ -166,6 +167,7 @@ class BaseFragmentViewMixin(DocumentViewMixin):
                         'change': False,
                         'delete': False,
                         'dotpath': self.dotpath(),
+                        'tempdoc': self.get_temporary_store(),
                         'adminform':self.create_admin_form(),})
         context['media'] += context['adminform'].form.media
         
@@ -506,14 +508,34 @@ class DeleteView(FragmentViewMixin, views.DetailView):
     
     def get_context_data(self, **kwargs):
         context = views.DetailView.get_context_data(self, **kwargs)
-        context.update(FragmentViewMixin.get_context_data(self, **kwargs))
+        #context.update(FragmentViewMixin.get_context_data(self, **kwargs))
         #TODO add what will be deleted
         return context
     
     def post(self, request, *args, **kwargs):
         if self.dotpath():
-            pass
-            #TODO delete the suboject
+            temp = self.get_temporary_store()
+            params = {'_tempdoc':temp.get_id(),}
+            
+            #TODO in FragmentViewMixin, get_effective_parent_dotpath()
+            next_dotpath = self.parent_dotpath()
+            if next_dotpath is None:
+                dotpath = self.dotpath()
+                if '.' in dotpath:
+                    next_dotpath = dotpath[:dotpath.rfind('.')]
+                field = temp.dot_notation_to_field(next_dotpath)
+                if isinstance(field, ListField):
+                    if '.' in next_dotpath:
+                        next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
+                    else:
+                        next_dotpath = None
+            
+            if next_dotpath:
+                params['_dotpath'] = next_dotpath
+            #TODO make this a blessed function
+            temp.dot_notation_set_value(self.dotpath(), UnSet)
+            temp.save()
+            return HttpResponseRedirect('%s?%s' % (self.admin.reverse(self.admin.app_name+'_change', self.kwargs['pk']), urlencode(params)))
         else:
             obj = self.get_object()
             object_repr = unicode(obj)

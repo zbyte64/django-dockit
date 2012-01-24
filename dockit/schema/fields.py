@@ -9,7 +9,7 @@ import datetime
 
 from serializer import PRIMITIVE_PROCESSOR
 from exceptions import DotPathNotFound
-from common import get_schema, DotPathList, DotPathDict
+from common import get_schema, DotPathList, DotPathDict, UnSet
 from dockit.forms.fields import HiddenJSONField, SchemaChoiceField
 
 class NOT_PROVIDED:
@@ -288,7 +288,10 @@ class SchemaField(BaseComplexField):
             traverser.end(field=self)
     
     def set_value(self, parent, attr, value):
-        parent[attr] = value
+        if value is UnSet:
+            del parent[attr]
+        else:
+            parent[attr] = value
 
 class GenericSchemaField(BaseComplexField):
     def __init__(self, field_name='_type', **kwargs):
@@ -327,6 +330,7 @@ class GenericSchemaField(BaseComplexField):
         return isinstance(val, Schema)
     
     def traverse_dot_path(self, traverser):
+        #CONSIDER if there is a value then return an exacto schema field
         if traverser.remaining_paths:
             name = traverser.next_part
             value = traverser.current_value
@@ -343,10 +347,16 @@ class GenericSchemaField(BaseComplexField):
             
             traverser.next(field=field, value=next_value)
         else:
-            traverser.end(field=self)
+            if traverser.current_value:
+                traverser.end(field=SchemaField(schema=type(traverser.current_value)))
+            else:
+                traverser.end(field=self)
     
     def set_value(self, parent, attr, value):
-        parent[attr] = value
+        if value is UnSet:
+            del parent[attr]
+        else:
+            parent[attr] = value
 
 class TypedSchemaField(GenericSchemaField):
     def __init__(self, schemas, field_name='_type', **kwargs):
@@ -420,12 +430,15 @@ class ListField(BaseComplexField):
     
     def set_value(self, parent, attr, value):
         index = int(attr)
-        if self.subfield and not self.subfield.is_instance(value):
-            value = self.subfield.to_python(value)
-        if index == len(parent):
-            parent.append(value)
+        if value is UnSet:
+            parent.pop(index)
         else:
-            parent[index] = value
+            if self.subfield and not self.subfield.is_instance(value):
+                value = self.subfield.to_python(value)
+            if index == len(parent):
+                parent.append(value)
+            else:
+                parent[index] = value
 
 class DictField(BaseComplexField):
     def __init__(self, key_subfield=None, value_subfield=None, **kwargs):
@@ -492,9 +505,12 @@ class DictField(BaseComplexField):
             traverser.end(field=self)
     
     def set_value(self, parent, attr, value):
-        if self.value_subfield and not self.value_subfield.is_instance(value):
-            value = self.value_subfield.to_python(value)
-        parent[attr] = value
+        if value is UnSet:
+            del parent[attr]
+        else:
+            if self.value_subfield and not self.value_subfield.is_instance(value):
+                value = self.value_subfield.to_python(value)
+            parent[attr] = value
 
 class ReferenceField(BaseField):
     form_field_class = SchemaChoiceField

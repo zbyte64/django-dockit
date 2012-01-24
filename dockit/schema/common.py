@@ -8,11 +8,17 @@ def register_schema(key, cls):
 def get_schema(key):
     return SCHEMAS[key]
 
+class UnSet(object):
+    def __nonzero__(self):
+        return False
+
 class DotPathTraverser(object):
     def __init__(self, dotpath):
         self.dotpath = dotpath
         self.remaining_paths = dotpath.split('.')
         self.resolved_paths = list() #part, value, field
+        self._finished = False
+        self._called = False
     
     def resolve_for_schema(self, schema):
         from fields import SchemaField
@@ -31,12 +37,12 @@ class DotPathTraverser(object):
         self._resolve_loop()
     
     def _resolve_loop(self):
-        while self.remaining_paths:
-            count = len(self.remaining_paths)
+        while not self._finished:
+            self._called = False
             self.resolve_next()
-            if count == len(self.remaining_paths):
-                #TODO raise error, the remaining_path did not expire
-                assert False
+            if not self._called:
+                assert False, str(self.resolved_paths)
+            #need a better control routine, want one last resolve if end wasn't called
     
     def resolve_next(self):
         current = self.current
@@ -44,10 +50,14 @@ class DotPathTraverser(object):
             if hasattr(current['value'], 'traverse_dot_path'):
                 current['value'].traverse_dot_path(self)
                 #note the result may or may not have a field
-            else:
+            elif self.remaining_paths:
                 print current
                 assert False
                 #raise DotPathNotFound
+            else:
+                #nothing left to resolve
+                self._finished = True
+                self._called = True
         else:
             current['field'].traverse_dot_path(self)
     
@@ -69,6 +79,9 @@ class DotPathTraverser(object):
             last_entry['field'] = field
         if value:
             last_entry['value'] = value
+        assert len(self.remaining_paths) == 0
+        self._finished = True
+        self._called = True
     
     def next(self, field=None, value=None):
         part = self.remaining_paths.pop(0)
@@ -81,6 +94,7 @@ class DotPathTraverser(object):
                  'value':value,
                  'part':part,}
         self.resolved_paths.append(entry)
+        self._called = True
     
     def set_value(self, value):
         parent_entry = self.resolved_paths[-2]
@@ -109,7 +123,9 @@ class DotPathList(list):
     
     def set_value(self, attr, value):
         index = int(attr)
-        if index == len(self):
+        if value is UnSet:
+            self.pop(index)
+        elif index == len(self):
             self.append(value)
         else:
             self[index] = value
@@ -128,5 +144,8 @@ class DotPathDict(dict):
             traverser.end(value=self)
     
     def set_value(self, attr, value):
-        self[attr] = value
+        if value is UnSet:
+            del self[attr]
+        else:
+            self[attr] = value
 

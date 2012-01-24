@@ -11,7 +11,7 @@ from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
 
 from manager import Manager
-from common import register_schema, DotPathTraverser
+from common import register_schema, DotPathTraverser, UnSet
 from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
 
 class Options(object):
@@ -321,7 +321,10 @@ class Schema(object):
         return traverser.current['field']
     
     def set_value(self, attr, value):
-        self[attr] = value
+        if value is UnSet:
+            del self[attr]
+        else:
+            self[attr] = value
 
 class DocumentBase(SchemaBase):
     def __new__(cls, name, bases, attrs):
