@@ -380,6 +380,7 @@ class TypedSchemaField(GenericSchemaField):
     
     #TODO what about a widget?
 
+#TODO need a more comprehensive form field and widget solution for these
 class ListField(BaseComplexField):
     def __init__(self, subfield=None, *args, **kwargs):
         self.subfield = subfield

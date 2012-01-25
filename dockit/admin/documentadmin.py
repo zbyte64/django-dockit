@@ -292,3 +292,18 @@ class DocumentAdmin(BaseAdmin):
             init = self.get_view_kwargs()
             return view_class.as_view(**init)
 
+'''
+bring back inlines with a vengance
+
+StackedInline, TabularInline, FieldInline
+
+admin excludes these fields, need to get inlines for schema
+2nd pass could get rid of some nasty hacks
+
+django admin is strict about inlines, may need to implement under a different name
+inline.get_formset => powerhouse, basic formset support is all that is needed
+
+CONSIDER: may want to create new admin instance for a subschema, like get_view_for_schema...
+what other sane strategies are there?
+'''
+
