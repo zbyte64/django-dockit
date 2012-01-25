@@ -3,7 +3,7 @@ from django.utils.text import get_text_list, capfirst
 from django.utils.translation import ugettext_lazy as _, ugettext
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 
-from forms import DocumentForm
+from forms import DocumentForm, documentform_factory
 
 # ModelFormSets ##############################################################
 
@@ -123,33 +123,7 @@ class BaseDocumentFormSet(BaseFormSet):
     def add_fields(self, form, index):
         #CONSIDER there is no parent object, more like a document/instance and a dotpath
         """Add a hidden field for the object's primary key."""
-        from django.db.models import AutoField, OneToOneField, ForeignKey
-        self._pk_field = pk = self.model._meta.pk
-        # If a pk isn't editable, then it won't be on the form, so we need to
-        # add it here so we can tell which object is which when we get the
-        # data back. Generally, pk.editable should be false, but for some
-        # reason, auto_created pk fields and AutoField's editable attribute is
-        # True, so check for that as well.
-        def pk_is_not_editable(pk):
-            return ((not pk.editable) or (pk.auto_created or isinstance(pk, AutoField))
-                or (pk.rel and pk.rel.parent_link and pk_is_not_editable(pk.rel.to._meta.pk)))
-        if pk_is_not_editable(pk) or pk.name not in form.fields:
-            if form.is_bound:
-                pk_value = form.instance.pk
-            else:
-                try:
-                    if index is not None:
-                        pk_value = self.get_queryset()[index].pk
-                    else:
-                        pk_value = None
-                except IndexError:
-                    pk_value = None
-            if isinstance(pk, OneToOneField) or isinstance(pk, ForeignKey):
-                qs = pk.rel.to._default_manager.get_query_set()
-            else:
-                qs = self.model._default_manager.get_query_set()
-            qs = qs.using(form.instance._state.db)
-            form.fields[self._pk_field.name] = ModelChoiceField(qs, initial=pk_value, required=False, widget=HiddenInput)
+        #TODO
         super(BaseDocumentFormSet, self).add_fields(form, index)
 
 def documentformset_factory(document, form=DocumentForm, formfield_callback=None,
@@ -169,21 +143,15 @@ def documentformset_factory(document, form=DocumentForm, formfield_callback=None
 
 # InlineFormSets #############################################################
 
-class BaseInlineFormSet(BaseDocumentFormSet):
+class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
     """A formset for child objects related to a parent."""
     def __init__(self, data=None, files=None, instance=None,
-                 save_as_new=False, prefix=None, queryset=None):
-        from django.db.models.fields.related import RelatedObject
-        if instance is None:
-            self.instance = self.fk.rel.to()
-        else:
-            self.instance = instance
+                 save_as_new=False, prefix=None, dotpath=None):
+        self.instance = instance
         self.save_as_new = save_as_new
+        self.dotpath = dotpath
         # is there a better way to get the object descriptor?
-        self.rel_name = RelatedObject(self.fk.rel.to, self.model, self.fk).get_accessor_name()
-        if queryset is None:
-            queryset = self.model._default_manager
-        qs = queryset.filter(**{self.fk.name: self.instance})
+        qs = self.instance.dot_path(dotpath)
         super(BaseInlineFormSet, self).__init__(data, files, prefix=prefix,
                                                 queryset=qs)
 
@@ -198,27 +166,25 @@ class BaseInlineFormSet(BaseDocumentFormSet):
         if self.save_as_new:
             # Remove the primary key from the form's data, we are only
             # creating new instances
-            form.data[form.add_prefix(self._pk_field.name)] = None
+            #form.data[form.add_prefix(self._pk_field.name)] = None
 
             # Remove the foreign key from the form's data
-            form.data[form.add_prefix(self.fk.name)] = None
+            #form.data[form.add_prefix(self.fk.name)] = None
+            pass
 
         # Set the fk value here so that the form can do it's validation.
-        setattr(form.instance, self.fk.get_attname(), self.instance.pk)
+        #?????
+        #setattr(form.instance, self.fk.get_attname(), self.instance.pk)
         return form
 
-    #@classmethod
-    def get_default_prefix(cls):
-        from django.db.models.fields.related import RelatedObject
-        return RelatedObject(cls.fk.rel.to, cls.model, cls.fk).get_accessor_name().replace('+','')
+    def get_default_prefix(self):
+        return self.dotpath.rsplit('.', 1)[-1]
     get_default_prefix = classmethod(get_default_prefix)
 
     def save_new(self, form, commit=True):
         # Use commit=False so we can assign the parent key afterwards, then
         # save the object.
         obj = form.save(commit=False)
-        pk_value = getattr(self.instance, self.fk.rel.field_name)
-        setattr(obj, self.fk.get_attname(), getattr(pk_value, 'pk', pk_value))
         if commit:
             obj.save()
         # form.save_m2m() can be called via the formset later on if commit=False
@@ -226,36 +192,8 @@ class BaseInlineFormSet(BaseDocumentFormSet):
             form.save_m2m()
         return obj
 
-    def add_fields(self, form, index):
-        super(BaseInlineFormSet, self).add_fields(form, index)
-        if self._pk_field == self.fk:
-            name = self._pk_field.name
-            kwargs = {'pk_field': True}
-        else:
-            # The foreign key field might not be on the form, so we poke at the
-            # Model field to get the label, since we need that for error messages.
-            name = self.fk.name
-            kwargs = {
-                'label': getattr(form.fields.get(name), 'label', capfirst(self.fk.verbose_name))
-            }
-            if self.fk.rel.field_name != self.fk.rel.to._meta.pk.name:
-                kwargs['to_field'] = self.fk.rel.field_name
-
-        form.fields[name] = InlineForeignKeyField(self.instance, **kwargs)
-
-        # Add the generated field to form._meta.fields if it's defined to make
-        # sure validation isn't skipped on that field.
-        if form._meta.fields:
-            if isinstance(form._meta.fields, tuple):
-                form._meta.fields = list(form._meta.fields)
-            form._meta.fields.append(self.fk.name)
-
-    def get_unique_error_message(self, unique_check):
-        unique_check = [field for field in unique_check if field != self.fk.name]
-        return super(BaseInlineFormSet, self).get_unique_error_message(unique_check)
-
-def inlineformset_factory(parent_model, model, form=DocumentForm,
-                          formset=BaseInlineFormSet, fk_name=None,
+def inlineformset_factory(document, dotpath, form=DocumentForm,
+                          formset=BaseInlineFormSet,
                           fields=None, exclude=None,
                           extra=3, can_order=False, can_delete=True, max_num=None,
                           formfield_callback=None):
@@ -276,7 +214,7 @@ def inlineformset_factory(parent_model, model, form=DocumentForm,
         'exclude': exclude,
         'max_num': max_num,
     }
-    FormSet = documentformset_factory(model, **kwargs)
+    FormSet = documentformset_factory(document, **kwargs)
     #FormSet.fk = fk
     return FormSet
 
