@@ -128,12 +128,14 @@ class BaseDocumentFormSet(BaseFormSet):
 
 def documentformset_factory(document, form=DocumentForm, formfield_callback=None,
                          formset=BaseDocumentFormSet,
+                         dotpath=None, schema=None,
                          extra=1, can_delete=False, can_order=False,
                          max_num=None, fields=None, exclude=None):
     """
     Returns a FormSet class for the given Document class.
     """
     form = documentform_factory(document, form=form, fields=fields, exclude=exclude,
+                             dotpath=dotpath, schema=schema,
                              formfield_callback=formfield_callback)
     FormSet = formset_factory(form, formset, extra=extra, max_num=max_num,
                               can_order=can_order, can_delete=can_delete)
@@ -149,9 +151,9 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
                  save_as_new=False, prefix=None, dotpath=None):
         self.instance = instance
         self.save_as_new = save_as_new
-        self.dotpath = dotpath
+        self.dotpath = dotpath or self.form._meta.dotpath
         # is there a better way to get the object descriptor?
-        qs = self.instance.dot_path(dotpath)
+        qs = self.instance.dot_notation(self.dotpath)
         super(BaseInlineFormSet, self).__init__(data, files, prefix=prefix,
                                                 queryset=qs)
 
@@ -177,9 +179,9 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
         #setattr(form.instance, self.fk.get_attname(), self.instance.pk)
         return form
 
-    def get_default_prefix(self):
-        return self.dotpath.rsplit('.', 1)[-1]
-    get_default_prefix = classmethod(get_default_prefix)
+    #def get_default_prefix(self):
+    #    return self.dotpath.rsplit('.', 1)[-1]
+    #get_default_prefix = classmethod(get_default_prefix)
 
     def save_new(self, form, commit=True):
         # Use commit=False so we can assign the parent key afterwards, then
@@ -192,9 +194,9 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
             form.save_m2m()
         return obj
 
-def inlineformset_factory(document, dotpath, form=DocumentForm,
+def inlinedocumentformset_factory(document, dotpath, form=DocumentForm,
                           formset=BaseInlineFormSet,
-                          fields=None, exclude=None,
+                          fields=None, exclude=None, schema=None,
                           extra=3, can_order=False, can_delete=True, max_num=None,
                           formfield_callback=None):
     """
@@ -213,6 +215,8 @@ def inlineformset_factory(document, dotpath, form=DocumentForm,
         'fields': fields,
         'exclude': exclude,
         'max_num': max_num,
+        'schema': schema,
+        'dotpath': dotpath,
     }
     FormSet = documentformset_factory(document, **kwargs)
     #FormSet.fk = fk

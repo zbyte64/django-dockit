@@ -51,9 +51,9 @@ class DotPathTraverser(object):
                 current['value'].traverse_dot_path(self)
                 #note the result may or may not have a field
             elif self.remaining_paths:
-                print current
+                print current, self.resolved_paths
                 assert False
-                #raise DotPathNotFound
+                #raise DotPathNotFound(traverser=self)
             else:
                 #nothing left to resolve
                 self._finished = True

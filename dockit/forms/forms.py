@@ -298,3 +298,21 @@ class DocumentForm(BaseDocumentForm):
     """ The document form object """
     __metaclass__ = DocumentFormMetaClass
 
+class UserMeta(object):
+    def __init__(self, **kwargs):
+        for key, value in kwargs.iteritems():
+            setattr(self, key, value)
+
+def documentform_factory(document, form=DocumentForm, fields=None, exclude=None,
+                             formfield_callback=None, schema=None, dotpath=None):
+    meta = UserMeta(document=document,
+                    fields=fields,
+                    exclude=exclude,
+                    formfield_callback=formfield_callback,
+                    schema=schema,
+                    dotpath=dotpath,)
+    class FactoryForm(form):
+        Meta = meta
+    
+    return FactoryForm
+

@@ -273,3 +273,20 @@ class FormTestCase(unittest.TestCase):
         instance.dot_notation_set_value('addresses', [data])
         self.assertTrue(isinstance(instance.addresses[0], Address))
 
+class FormsetTestCase(unittest.TestCase):
+    def test_formset_factory(self):
+        from dockit.forms.formsets import documentformset_factory
+        
+        formset = documentformset_factory(ComplexObject)
+        print formset()
+    
+    def test_inline_formset_factory(self):
+        from dockit.forms.formsets import inlinedocumentformset_factory
+        
+        instance = ComplexObject(field1='field1')
+        instance.save()
+        
+        formset = inlinedocumentformset_factory(ComplexObject, dotpath='addresses.*')
+        print formset(instance=instance)
+
+
