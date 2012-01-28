@@ -97,7 +97,7 @@ class BaseDocumentFormSet(BaseFormSet):
             obj = self._existing_object(i)
             if self.can_delete and self._should_delete_form(form):
                 self.deleted_objects.append(obj)
-                obj.delete()
+                #obj.delete()
                 continue
             if form.has_changed():
                 self.changed_objects.append((obj, form.changed_data))
@@ -153,18 +153,23 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
         self.save_as_new = save_as_new
         self.dotpath = dotpath or self.form._meta.dotpath
         # is there a better way to get the object descriptor?
-        qs = self.instance.dot_notation(self.dotpath)
+        qs = self.instance.dot_notation(self.base_dotpath)
         super(BaseInlineFormSet, self).__init__(data, files, prefix=prefix,
                                                 queryset=qs)
-
+    
+    @property
+    def base_dotpath(self):
+        return self.dotpath.rsplit('.', 1)[0]
+    
     def initial_form_count(self):
         if self.save_as_new:
             return 0
         return super(BaseInlineFormSet, self).initial_form_count()
 
-
     def _construct_form(self, i, **kwargs):
-        form = super(BaseInlineFormSet, self)._construct_form(i, **kwargs)
+        kwargs['dotpath'] = '%s.%i' % (self.base_dotpath, i)
+        kwargs['instance'] = self.instance
+        form = super(BaseDocumentFormSet, self)._construct_form(i, **kwargs)
         if self.save_as_new:
             # Remove the primary key from the form's data, we are only
             # creating new instances
@@ -182,17 +187,30 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
     #def get_default_prefix(self):
     #    return self.dotpath.rsplit('.', 1)[-1]
     #get_default_prefix = classmethod(get_default_prefix)
-
+    
     def save_new(self, form, commit=True):
-        # Use commit=False so we can assign the parent key afterwards, then
-        # save the object.
-        obj = form.save(commit=False)
+        """Saves and returns a new model instance for the given form."""
+        return form._inner_save()
+
+    def save_existing(self, form, instance, commit=True):
+        """Saves and returns an existing model instance for the given form."""
+        return form._inner_save()
+    
+    def save(self, commit=True):
+        """Saves model instances for every form, adding and changing instances
+        as necessary, and returns the list of instances.
+        """
+        if not commit:
+            self.saved_forms = []
+            def save_m2m():
+                for form in self.saved_forms:
+                    form.save_m2m()
+            self.save_m2m = save_m2m
+        new_list = self.save_existing_objects(commit) + self.save_new_objects(commit)
         if commit:
-            obj.save()
-        # form.save_m2m() can be called via the formset later on if commit=False
-        if commit and hasattr(form, 'save_m2m'):
-            form.save_m2m()
-        return obj
+            self.instance.dot_notation_set_value(self.base_dotpath, new_list)
+        return new_list
+
 
 def inlinedocumentformset_factory(document, dotpath, form=DocumentForm,
                           formset=BaseInlineFormSet,
@@ -216,7 +234,7 @@ def inlinedocumentformset_factory(document, dotpath, form=DocumentForm,
         'exclude': exclude,
         'max_num': max_num,
         'schema': schema,
-        'dotpath': dotpath,
+        'dotpath': dotpath + '.*',
     }
     FormSet = documentformset_factory(document, **kwargs)
     #FormSet.fk = fk

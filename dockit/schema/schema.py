@@ -200,8 +200,8 @@ class Schema(object):
         for key, value in kwargs.iteritems():
             #TODO check that key is a field or _data
             setattr(self, key, value)
-        assert self._primitive_data is not None
-        assert self._python_data is not None
+        assert isinstance(self._primitive_data, dict), str(type(self._primitive_data))
+        assert isinstance(self._python_data, dict), str(type(self._python_data))
         post_init.send(sender=self.__class__, instance=self)
     
     @classmethod

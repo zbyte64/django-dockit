@@ -278,7 +278,8 @@ class FormsetTestCase(unittest.TestCase):
         from dockit.forms.formsets import documentformset_factory
         
         formset = documentformset_factory(ComplexObject)
-        print formset()
+        form = formset()
+        self.assertFalse(form.is_valid())
     
     def test_inline_formset_factory(self):
         from dockit.forms.formsets import inlinedocumentformset_factory
@@ -286,7 +287,37 @@ class FormsetTestCase(unittest.TestCase):
         instance = ComplexObject(field1='field1')
         instance.save()
         
-        formset = inlinedocumentformset_factory(ComplexObject, dotpath='addresses.*')
-        print formset(instance=instance)
-
+        formset = inlinedocumentformset_factory(ComplexObject, dotpath='addresses')
+        form = formset(instance=instance)
+        self.assertFalse(form.is_valid())
+        
+        addr = {'street_1': '10533 Mesane Rd',
+                'city': 'San Diego',
+                'postal_code': '92126',
+                'country': 'US',
+                'region': 'CA',}
+        data = {'form-TOTAL_FORMS': 1,
+                'form-INITIAL_FORMS': 0,}
+        #for i in range(1, 11):
+        #    data['form-%i-DELETE' % i] = 'checked'
+        for key, value in addr.iteritems():
+            data['form-0-%s' % key] = value
+        
+        form = formset(instance=instance, data=data)
+        self.assertTrue(form.is_valid(), str(form.errors))
+        form.save()
+        
+        self.assertEqual(len(instance.addresses), 1)
+        
+        data = {'form-TOTAL_FORMS': 2,
+                'form-INITIAL_FORMS': 1,
+                'form-0-DELETE': 'checked',}
+        for key, value in addr.iteritems():
+            data['form-1-%s' % key] = value
+        
+        form = formset(instance=instance, data=data)
+        self.assertTrue(form.is_valid(), str(form.errors))
+        form.save()
+        
+        self.assertEqual(len(instance.addresses), 1)
 

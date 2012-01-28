@@ -405,7 +405,9 @@ class ListField(BaseComplexField):
                 return ret
             #TODO pass in parent
             for item in val:
-                ret.append(self.subfield.to_python(item))
+                if not self.subfield.is_instance(item):
+                    item = self.subfield.to_python(item)
+                ret.append(item)
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_python(ret)
         return PRIMITIVE_PROCESSOR.to_python(val)
@@ -425,12 +427,12 @@ class ListField(BaseComplexField):
         if traverser.remaining_paths:
             new_value = None
             value = traverser.current_value
-            if value:
-                name = traverser.next_part
+            name = traverser.next_part
+            if value and name != '*':
                 try:
                     new_value = value[int(name)]
                 except ValueError:
-                    raise DotPathNotFound("Invalid index given, must be an integer")
+                    raise DotPathNotFound(u"Invalid index given, must be an integer (%s)" % name)
                 except IndexError:
                     pass
             traverser.next(field=self.subfield, value=new_value)
@@ -475,9 +477,11 @@ class DictField(BaseComplexField):
             return ret
         for key, value in val.iteritems():
             if self.value_subfield:
-                value = self.value_subfield.to_python(value)
+                if not self.value_subfield.is_instance(value):
+                    value = self.value_subfield.to_python(value)
             if self.key_subfield:
-                key = self.key_subfield.to_python(key)
+                if not self.key_subfield.is_instance(key):
+                    key = self.key_subfield.to_python(key)
             ret[key] = value
         #TODO run data through the primitive processor
         ret = PRIMITIVE_PROCESSOR.to_python(ret)
@@ -501,9 +505,9 @@ class DictField(BaseComplexField):
     def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             value = traverser.current_value
+            name = traverser.next_part
             new_value = None
-            if value:
-                name = traverser.next_part
+            if value and name != '*':
                 try:
                     new_value = value[name]
                 except KeyError:
