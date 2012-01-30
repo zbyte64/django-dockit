@@ -25,6 +25,15 @@ class HiddenJSONField(Field):
             return json.dumps(type(value).to_primitive(value))
         return Field.prepare_value(self, value)
 
+class HiddenSchemaField(HiddenJSONField):
+    pass
+
+class HiddenListField(HiddenJSONField):
+    pass
+
+class HiddenDictField(HiddenJSONField):
+    pass
+
 class SchemaChoiceIterator(object):
     def __init__(self, field):
         self.field = field

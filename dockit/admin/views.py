@@ -247,7 +247,7 @@ class BaseFragmentViewMixin(DocumentViewMixin):
             if self.next_dotpath():
                 kwargs['required'] = False
             return field(**kwargs)
-        if field == HiddenJSONField:
+        if issubclass(field, HiddenJSONField):
             field = DotPathField
             kwargs['dotpath'] = self.dotpath()
             if self.next_dotpath():

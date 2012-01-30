@@ -10,7 +10,7 @@ import datetime
 from serializer import PRIMITIVE_PROCESSOR
 from exceptions import DotPathNotFound
 from common import get_schema, DotPathList, DotPathDict, UnSet
-from dockit.forms.fields import HiddenJSONField, SchemaChoiceField
+from dockit.forms.fields import HiddenSchemaField, HiddenListField, HiddenDictField, SchemaChoiceField
 
 class NOT_PROVIDED:
     pass
@@ -252,12 +252,9 @@ class TimeField(BaseTypedField):
 #TODO URLField
 #TODO XMLField
 
-class BaseComplexField(BaseField):
-    def formfield(self, form_class=HiddenJSONField, **kwargs):
-        defaults = self.formfield_kwargs(**kwargs)
-        return form_class(**defaults)
-
-class SchemaField(BaseComplexField):
+class SchemaField(BaseField):
+    form_field_class = HiddenSchemaField
+    
     def __init__(self, schema, *args, **kwargs):
         self.schema = schema
         super(SchemaField, self).__init__(*args, **kwargs)
@@ -297,7 +294,7 @@ class SchemaField(BaseComplexField):
         else:
             parent[attr] = value
 
-class GenericSchemaField(BaseComplexField):
+class GenericSchemaField(BaseField):
     def __init__(self, field_name='_type', **kwargs):
         self.type_field_name = field_name
         super(GenericSchemaField, self).__init__(**kwargs)
@@ -381,7 +378,9 @@ class TypedSchemaField(GenericSchemaField):
     #TODO what about a widget?
 
 #TODO need a more comprehensive form field and widget solution for these
-class ListField(BaseComplexField):
+class ListField(BaseField):
+    form_field_class = HiddenListField
+    
     def __init__(self, subfield=None, *args, **kwargs):
         self.subfield = subfield
         kwargs.setdefault('default', list)
@@ -451,7 +450,9 @@ class ListField(BaseComplexField):
             else:
                 parent[index] = value
 
-class DictField(BaseComplexField):
+class DictField(BaseField):
+    form_field_class = HiddenDictField
+    
     def __init__(self, key_subfield=None, value_subfield=None, **kwargs):
         self.key_subfield = key_subfield
         self.value_subfield = value_subfield
