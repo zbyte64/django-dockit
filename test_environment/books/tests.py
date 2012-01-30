@@ -4,7 +4,7 @@ from django.utils import unittest
 from django.contrib.auth.models import User
 from django.core.files import File
 
-from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOne, SubComplexTwo
+from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOne, SubComplexTwo, Publication, Newspaper, Magazine
 
 from dockit.forms import DocumentForm
 from dockit.models import TemporaryDocument, create_temporary_document_class
@@ -320,4 +320,28 @@ class FormsetTestCase(unittest.TestCase):
         form.save()
         
         self.assertEqual(len(instance.addresses), 1)
+
+class PolymorphismTestCase(unittest.TestCase):
+    def test_polymorphism_preserves_collection(self):
+        self.assertEqual(Newspaper._meta.collection, Publication._meta.collection)
+        self.assertEqual(Magazine._meta.collection, Publication._meta.collection)
+    
+    def test_poymorphism_save(self):
+        paper = Newspaper(name='UT', city='San Diego')
+        paper.save()
+        self.assertEqual(paper._type, Newspaper._meta.typed_key)
+        
+        mag = Magazine(name='SO', issue_number='50')
+        mag.save()
+        self.assertEqual(mag._type, Magazine._meta.typed_key)
+        
+        self.assertEqual(len(Publication.objects.all()), 2)
+        
+        for obj in Publication.objects.all():
+            if obj.name == 'SO':
+                self.assertEqual(obj._type, Magazine._meta.typed_key)
+                self.assertTrue(isinstance(obj, Magazine))
+            if obj.name == 'UT':
+                self.assertEqual(obj._type, Newspaper._meta.typed_key)
+                self.assertTrue(isinstance(obj, Newspaper))
 

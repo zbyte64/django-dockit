@@ -63,3 +63,23 @@ class ComplexObject(dockit.Document):
     
     class Meta:
         collection = 'complex_object'
+
+class Publication(dockit.Document):
+    name = dockit.CharField()
+    date = dockit.DateField()
+    
+    class Meta:
+        typed_field = '_type'
+
+class Newspaper(Publication):
+    city = dockit.CharField()
+    
+    class Meta:
+        typed_key = 'newspaper'
+
+class Magazine(Publication):
+    issue_number = dockit.CharField()
+    
+    class Meta:
+        typed_key = 'magazine'
+

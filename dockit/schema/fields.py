@@ -252,6 +252,22 @@ class TimeField(BaseTypedField):
 #TODO URLField
 #TODO XMLField
 
+class SchemaTypeField(CharField):
+    form_widget_class = forms.HiddenInput
+    
+    def __init__(self, schemas, *args, **kwargs):
+        self.schemas = schemas
+        super(SchemaTypeField, self).__init__(*args, **kwargs)
+    
+    def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH):
+        """Returns choices with a default blank choices included, for use
+        as SelectField choices for this field."""
+        first_choice = include_blank and blank_choice or []
+        if self.schemas:
+            return first_choice + list(zip(self.schemas.keys(), self.schemas.keys()))
+            #TODO allow schema to have a display label, perhaps verbose name?
+        return first_choice
+
 class SchemaField(BaseField):
     form_field_class = HiddenSchemaField
     

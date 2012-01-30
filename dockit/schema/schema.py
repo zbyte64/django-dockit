@@ -22,7 +22,8 @@ class Options(object):
     ordering = ['_id']
     
     DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering', 'schema_key',
-                     'app_label', 'collection', 'virtual', 'proxy')
+                     'app_label', 'collection', 'virtual', 'proxy',
+                     'typed_field', 'typed_key')
     
     def __init__(self, meta, app_label=None):
         self.module_name, self.verbose_name = None, None
@@ -35,6 +36,8 @@ class Options(object):
         self.virtual = False
         self.proxy = False
         self._document = None
+        self.typed_field = None
+        self.typed_key = None
     
     def contribute_to_class(self, cls, name):
         cls._meta = self
@@ -72,6 +75,25 @@ class Options(object):
             del self.meta
         else:
             self.verbose_name_plural = string_concat(self.verbose_name, 's')
+        
+        if self.typed_field:
+            if self.typed_key:
+                if self.virtual:
+                    raise TypeError("Virtual Schemas may not have a typed_key")
+                #CONSIDER this will break if fields are registered after the meta, gennerally have the virtual create the field for you
+                if self.typed_field not in self.fields:
+                    raise TypeError("Non-virtual Schemas that specify a typed field and a typed key must have that typed field defined.")
+                self.fields[self.typed_field].schemas[self.typed_key] = cls
+                self.proxy = True
+            else:
+                #if not self.virtual:
+                #    raise TypeError("Schemas that specify a typed_field and not a typed_key must be virtual.")
+                if self.typed_field not in self.fields:
+                    print 'adding field', cls
+                    from fields import SchemaTypeField
+                    self.polymorphic_schemas = dict()
+                    field = SchemaTypeField(self.polymorphic_schemas)
+                    field.contribute_to_class(cls, self.typed_field)
     
     def default_schema_key(self):
         return "%s.%s" % (smart_str(self.app_label), smart_str(self.module_name))
@@ -147,7 +169,7 @@ class SchemaBase(type):
             meta = getattr(new_class, 'Meta', None)
         else:
             meta = attr_meta
-            if getattr(meta, 'proxy', False):
+            if getattr(meta, 'proxy', False) or getattr(meta, 'typed_key', False):
                 if not hasattr(new_class, '_meta'):
                     raise ValueError('Proxy schemas must inherit from another schema')
                 parent_meta = getattr(new_class, '_meta')
@@ -165,16 +187,19 @@ class SchemaBase(type):
             if hasattr(base, '_meta') and hasattr(base._meta, 'fields'):
                 attrs.update(base._meta.fields)
         
-        new_class.add_to_class('_meta', Options(meta, app_label=app_label))
-        
         fields = [(field_name, attrs.pop(field_name)) for field_name, obj in attrs.items() if hasattr(obj, 'creation_counter')]
         fields.sort(key=lambda x: x[1].creation_counter)
+        
+        options = Options(meta, app_label=app_label)
+        setattr(new_class, '_meta', options)
         
         for field_name, obj in fields:
             new_class.add_to_class(field_name, obj)
         
         for obj_name, obj in attrs.items():
             new_class.add_to_class(obj_name, obj)
+        
+        new_class.add_to_class('_meta', options)
         
         if not new_class._meta.virtual:
             register_schema(new_class._meta.schema_key, new_class)
@@ -207,6 +232,8 @@ class Schema(object):
     @classmethod
     def to_primitive(cls, val):
         #CONSIDER shouldn't val be a schema?
+        if cls._meta.typed_field and cls._meta.typed_key:
+            val[cls._meta.typed_field] = cls._meta.typed_key
         if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
             #we've cached python values on access, we need to pump these back to the primitive dictionary
             for name, entry in val._python_data.iteritems():
@@ -227,6 +254,11 @@ class Schema(object):
     def to_python(cls, val, parent=None):
         if val is None:
             val = dict()
+        if cls._meta.typed_field:
+            field = cls._meta.fields[cls._meta.typed_field]
+            key = val.get(cls._meta.typed_field, None)
+            if key:
+                cls = field.schemas[key]
         return cls(_primitive_data=val, _parent=parent)
     
     def __getattribute__(self, name):
