@@ -4,7 +4,7 @@ from django.utils import unittest
 from django.contrib.auth.models import User
 from django.core.files import File
 
-from models import Author, Book, Publisher, Address, ComplexObject, SubComplexOne, SubComplexTwo, Publication, Newspaper, Magazine
+from models import *
 
 from dockit.forms import DocumentForm
 from dockit.models import TemporaryDocument, create_temporary_document_class
@@ -344,4 +344,11 @@ class PolymorphismTestCase(unittest.TestCase):
             if obj.name == 'UT':
                 self.assertEqual(obj._type, Newspaper._meta.typed_key)
                 self.assertTrue(isinstance(obj, Newspaper))
+    
+    def test_nested_polymorphism(self):
+        brand = Brand(name='foobur')
+        brand.products.append(Shoes(name='shoes'))
+        brand.products.append(Shirt(name='shirt'))
+        brand.save()
+        
 

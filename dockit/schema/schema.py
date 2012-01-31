@@ -91,7 +91,7 @@ class Options(object):
                 if self.typed_field not in self.fields:
                     from fields import SchemaTypeField
                     self.polymorphic_schemas = dict()
-                    field = SchemaTypeField(self.polymorphic_schemas)
+                    field = SchemaTypeField(self.polymorphic_schemas, editable=False)
                     field.contribute_to_class(cls, self.typed_field)
     
     def default_schema_key(self):
@@ -208,7 +208,10 @@ class SchemaBase(type):
     
     def add_to_class(cls, name, value):
         if hasattr(value, 'contribute_to_class'):
-            value.contribute_to_class(cls, name)
+            try:
+                value.contribute_to_class(cls, name)
+            except TypeError:
+                setattr(cls, name, value)
         else:
             setattr(cls, name, value)
 

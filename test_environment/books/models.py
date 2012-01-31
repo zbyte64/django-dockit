@@ -83,3 +83,21 @@ class Magazine(Publication):
     class Meta:
         typed_key = 'magazine'
 
+class BaseProduct(dockit.Document):
+    name = dockit.CharField()
+    
+    class Meta:
+        typed_field = '_type'
+
+class Brand(dockit.Document):
+    name = dockit.CharField()
+    products = dockit.ListField(dockit.SchemaField(BaseProduct))
+
+class Shoes(BaseProduct):
+    class Meta:
+        typed_key = 'shoes'
+
+class Shirt(BaseProduct):
+    class Meta:
+        typed_key = 'shirt'
+

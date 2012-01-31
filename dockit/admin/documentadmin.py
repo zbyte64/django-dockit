@@ -62,7 +62,7 @@ class SchemaAdmin(object):
     
     schema = None
 
-    def __init__(self, model, admin_site, schema=None):
+    def __init__(self, model, admin_site, schema=None, documentadmin=None):
         self.model = model
         self.admin_site = admin_site
         self.app_name = (model._meta.app_label +'-'+ model._meta.object_name).lower()
@@ -70,6 +70,7 @@ class SchemaAdmin(object):
         overrides.update(self.formfield_overrides)
         self.formfield_overrides = overrides
         self.schema = schema
+        self.documentadmin = documentadmin
     
     def get_view_kwargs(self):
         return {'admin':self,
@@ -81,8 +82,8 @@ class SchemaAdmin(object):
 
         js = ['js/core.js', 'js/admin/RelatedObjectLookups.js',
               'js/jquery.min.js', 'js/jquery.init.js']
-        if self.actions is not None:
-            js.extend(['js/actions.min.js'])
+        #if self.actions is not None:
+        #    js.extend(['js/actions.min.js'])
         if self.prepopulated_fields:
             js.append('js/urlify.js')
             js.append('js/prepopulate.min.js')
@@ -105,13 +106,17 @@ class SchemaAdmin(object):
         return self.admin_site.admin_view(view, cacheable)
     
     def get_create_view(self):
-        return self.as_view(self.create)
+        kwargs = self.get_view_kwargs()
+        return self.as_view(self.create.as_view(**kwargs))
     
     def get_update_view(self):
-        return self.as_view(self.update)
+        kwargs = self.get_view_kwargs()
+        return self.as_view(self.update.as_view(**kwargs))
     
     def get_select_schema_view(self):
-        return self.as_view(self.select_schema)
+        kwargs = self.get_view_kwargs()
+        kwargs['schema'] = self.schema
+        return self.as_view(self.select_schema.as_view(**kwargs))
     
     def get_model_perms(self, request):
         return {
@@ -144,7 +149,19 @@ class SchemaAdmin(object):
             field = opts.pop('form_class', field)
             kwargs = dict(opts, **kwargs)
         return field(**kwargs)
-
+    
+    def log_addition(self, request, object):
+        return self.documentadmin.log_addition(request, object)
+    
+    def log_change(self, request, object, message):
+        return self.documentadmin.log_change(request, object, message)
+    
+    def log_deletion(self, request, object, object_repr):
+        return self.documentadmin.log_deletion(request, object, object_repr)
+    
+    def reverse(self, name, *args, **kwargs):
+        return self.documentadmin.reverse(name, *args, **kwargs)
+    
 class DocumentAdmin(SchemaAdmin):
     list_display = ('__str__',)
     list_display_links = ()
@@ -230,6 +247,19 @@ class DocumentAdmin(SchemaAdmin):
     def get_paginator(self, request, query_set, paginate_by):
         return self.paginator(query_set, paginate_by)
     
+    def reverse(self, name, *args, **kwargs):
+        from django.core.urlresolvers import get_urlconf, get_resolver
+        urlconf = get_urlconf()
+        resolver = get_resolver(urlconf)
+        app_list = resolver.app_dict['admin']
+        return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
+    
+    def create_admin_for_schema(self, schema):
+        for cls, admin_class in self.schema_inlines:
+            if schema == cls:
+                admin_class(self.model, self.admin_site, schema, self)
+        return self.default_schema_admin(self.model, self.admin_site, schema, self)
+    
     def log_addition(self, request, object):
         """
         Log that an object has been successfully added.
@@ -279,19 +309,6 @@ class DocumentAdmin(SchemaAdmin):
             object_repr     = object_repr,
             action_flag     = DELETION
         )
-    
-    def reverse(self, name, *args, **kwargs):
-        from django.core.urlresolvers import get_urlconf, get_resolver
-        urlconf = get_urlconf()
-        resolver = get_resolver(urlconf)
-        app_list = resolver.app_dict['admin']
-        return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
-    
-    def create_admin_for_schema(self, schema):
-        for cls, admin_class in self.schema_inlines:
-            if schema == cls:
-                admin_class(self.model, self.admin_site, schema)
-        return self.default_schema_admin(self.model, self.admin_site, schema)
 
 '''
 bring back inlines with a vengance

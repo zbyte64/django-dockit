@@ -35,7 +35,9 @@
     </p>
     {{ form.non_field_errors }}
 {% endif %}
-
+{% for field in adminform.form.hidden_fields %}
+{{field}}
+{% endfor %}
 {% for fieldset in adminform %}
   {% include "admin/includes/fieldset.html" %}
 {% endfor %}

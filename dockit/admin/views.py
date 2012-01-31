@@ -74,8 +74,36 @@ class SchemaTypeSelectionView(DocumentViewMixin, TemplateView):
     form_class = TypeSelectionForm
     schema = None
     
+    def get_form_class(self):
+        return self.form_class
+    
     def get_form_kwargs(self):
-        return {'schema': self.schema}
+        return {'schema': self.schema,
+                'initial':self.request.GET}
+    
+    def get_form(self, form_cls):
+        return form_cls(**self.get_form_kwargs())
+    
+    def get_admin_form_kwargs(self):
+        return {
+            'fieldsets': [(None, {'fields': [self.schema._meta.typed_field]})],
+            'prepopulated_fields': dict(),
+            'readonly_fields': [],
+            'model_admin': self.admin,
+        }
+    
+    def create_admin_form(self):
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        admin_form = helpers.AdminForm(form, **self.get_admin_form_kwargs())
+        return admin_form
+    
+    def get_context_data(self, **kwargs):
+        context = DocumentViewMixin.get_context_data(self, **kwargs)
+        context.update(TemplateView.get_context_data(self, **kwargs))
+        context['adminform'] = self.create_admin_form()
+        context['form_url'] = self.request.get_full_path()
+        return context
 
 class FragmentViewMixin(DocumentViewMixin):
     obj_template_suffix = 'change_form'
@@ -90,7 +118,7 @@ class FragmentViewMixin(DocumentViewMixin):
         return {
             'fieldsets': self.get_fieldsets(),
             'prepopulated_fields': self.get_prepopulated_fields(),
-            'readonly_fields': self.get_readonly_fields(),
+            'readonly_fields': [], #self.get_readonly_fields(),
             'model_admin': self.admin,
         }
     
@@ -133,18 +161,12 @@ class FragmentViewMixin(DocumentViewMixin):
         return 'change_form'
     
     def get_readonly_fields(self):
-        if self.dotpath():
-            return []
-            '''
-            ro_fields = list()
-            form = self.get_form_class()
-            for key, field in form.base_fields.iteritems():
-                if isinstance(field, DotPathField):
-                    ro_fields.append(key)
-            return ro_fields
-            '''
-        else:
-            return self.admin.get_readonly_fields(self.request)
+        schema = self.get_schema()
+        read_only = list()
+        for key, field in schema._meta.fields.iteritems():
+            if not field.editable:
+                read_only.append(key)
+        return read_only
     
     def get_fieldsets(self, obj=None):
         "Hook for specifying fieldsets for the add form."
@@ -155,8 +177,8 @@ class FragmentViewMixin(DocumentViewMixin):
         else:
             return list(self.admin.get_fieldsets(self.request))
     
-    def get_propulated_fields(self):
-        return self.admin.propulated_fields
+    def get_prepopulated_fields(self):
+        return self.admin.prepopulated_fields
     
     def get_context_data(self, **kwargs):
         context = AdminViewMixin.get_context_data(self, **kwargs)
@@ -257,9 +279,18 @@ class FragmentViewMixin(DocumentViewMixin):
     
     def get_schema(self):
         schema = self.get_base_schema()
-        if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
+        if schema._meta.typed_field:
             field = schema._meta.fields[schema._meta.typed_field]
-            schema = field.schemas[self.request.GET[schema._meta.typed_field]]
+            if schema._meta.typed_field in self.request.GET:
+                
+                schema = field.schemas[self.request.GET[schema._meta.typed_field]]
+            else:
+                obj = self.get_active_object()
+                try:
+                    schema = field.schemas[obj[schema._meta.typed_field]]
+                except KeyError:
+                    pass
+        
         return schema
     
     def _generate_form_class(self):
@@ -269,6 +300,7 @@ class FragmentViewMixin(DocumentViewMixin):
                 schema = self.get_schema()
                 form_field_callback = self.formfield_for_field
                 dotpath = self.dotpath() or None
+                exclude = self.get_readonly_fields()
         return CustomDocumentForm
     
     def get_temporary_store(self):
@@ -419,7 +451,13 @@ class DocumentProxyView(FragmentViewMixin, View):
                 if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
                     key = self.request.GET[schema._meta.typed_field]
                     field = schema._meta.fields[schema._meta.typed_field]
-                    return field.schemas[key]
+                    try:
+                        return field.schemas[key]
+                    except KeyError:
+                        schemas = field.schemas
+                        print field.name
+                        print schemas
+                        raise
                 return schema
             assert False
         return self.document

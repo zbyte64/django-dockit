@@ -1,6 +1,10 @@
 from django import forms
 
 class TypeSelectionForm(forms.Form):
+    _tempdoc = forms.CharField(widget=forms.HiddenInput)
+    _dotpath = forms.CharField(widget=forms.HiddenInput)
+    _parent_dotpath = forms.CharField(widget=forms.HiddenInput)
+    
     def __init__(self, schema, *args, **kwargs):
         super(TypeSelectionForm, self).__init__(*args, **kwargs)
         self.populate_type_field(schema)
