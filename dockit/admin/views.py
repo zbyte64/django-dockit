@@ -3,6 +3,7 @@ from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext as _
 from django.utils.html import escape, escapejs
 from django.contrib.admin import helpers
+from django.views.generic import TemplateView, View
 
 from base import AdminViewMixin
 from fields import DotPathField
@@ -27,6 +28,10 @@ class DocumentViewMixin(AdminViewMixin):
     @property
     def document(self):
         return self.admin.model
+    
+    @property
+    def schema(self):
+        return self.admin.schema
     
     def get_template_names(self):
         if self.template_name:
@@ -61,6 +66,19 @@ class DocumentViewMixin(AdminViewMixin):
                         'save_as': self.admin.save_as,
                         'save_on_top': self.admin.save_on_top,})
         return context
+
+from forms import TypeSelectionForm
+
+class SchemaTypeSelectionView(DocumentViewMixin, TemplateView):
+    template_name = 'admin/type_selection_form.html'
+    form_class = TypeSelectionForm
+    schema = None
+    
+    def get_form_kwargs(self):
+        return {'schema': self.schema}
+
+class FragmentViewMixin(DocumentViewMixin):
+    obj_template_suffix = 'change_form'
     
     def create_admin_form(self):
         form_class = self.get_form_class()
@@ -70,9 +88,9 @@ class DocumentViewMixin(AdminViewMixin):
     
     def get_admin_form_kwargs(self):
         return {
-            'fieldsets': list(self.admin.get_fieldsets(self.request)),
-            'prepopulated_fields': self.admin.prepopulated_fields,
-            'readonly_fields': self.admin.get_readonly_fields(self.request),
+            'fieldsets': self.get_fieldsets(),
+            'prepopulated_fields': self.get_prepopulated_fields(),
+            'readonly_fields': self.get_readonly_fields(),
             'model_admin': self.admin,
         }
     
@@ -87,66 +105,32 @@ class DocumentViewMixin(AdminViewMixin):
         else:
             return self._generate_form_class()
     
-    def _generate_form_class(self):
-        if self.document is not None:
-            # If a document has been explicitly provided, use it
-            the_document = self.document
-        elif hasattr(self, 'object') and self.object is not None:
-            # If this view is operating on a single object, use
-            # the class of that object
-            the_document = self.object.__class__
-        else:
-            # Try to get a queryset and extract the document class
-            # from that
-            the_document = self.get_queryset().document
-        #fields = fields_for_document(document)
-        class CustomDocumentForm(DocumentForm):
-            class Meta:
-                document = the_document
-                form_field_callback = self.admin.formfield_for_field
-        #CustomDocumentForm.base_fields.update(fields)
-        return CustomDocumentForm
-    
-    def is_polymorphic(self, schema):
+    def is_polymorphic(self):
+        schema = self.get_base_schema()
         return bool(schema._meta.typed_field)
     
-    def should_prompt_polymorphic_type(self, schema, obj=None):
-        if self.is_polymorphic(schema):
-            return obj is None
+    def should_prompt_polymorphic_type(self, obj=None):
+        if self.is_polymorphic():
+            schema = self.get_base_schema()
+            return obj is None or not getattr(obj, schema._meta.typed_field, None)
         return False
-
-from forms import TypeSelectionForm
-
-class DocumentTypeSelection(DocumentViewMixin, views.TemplateView):
-    template_name = 'admin/type_selection_form.html'
-    form_class = TypeSelectionForm
-    schema = None
     
-    def get_form_kwargs(self):
-        return {'schema': self.schema}
-
-class BaseFragmentViewMixin(DocumentViewMixin):
-    obj_template_suffix = 'change_form'
+    def get_active_object(self):
+        if self.dotpath():
+            val = self.get_temporary_store()
+            return val.dot_notation_to_value(self.dotpath())
+        return self.get_temporary_store()
+    
+    def needs_typed_selection(self):
+        schema = self.get_base_schema()
+        if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
+            return False
+        obj = self.get_active_object()
+        return self.should_prompt_polymorphic_type(obj)
     
     @property
     def template_suffix(self):
         return 'change_form'
-    
-    def get_admin_form_kwargs(self):
-        if self.dotpath():
-            return {
-                'fieldsets': self.get_fieldsets(),
-                'model_admin': self.admin,
-                'prepopulated_fields': dict(),
-                'readonly_fields': self.get_readonly_fields(),
-            }
-        
-        return {
-            'fieldsets': self.get_fieldsets(),
-            'prepopulated_fields': self.admin.prepopulated_fields,
-            'readonly_fields': self.get_readonly_fields(),
-            'model_admin': self.admin,
-        }
     
     def get_readonly_fields(self):
         if self.dotpath():
@@ -170,6 +154,9 @@ class BaseFragmentViewMixin(DocumentViewMixin):
             return [(None, {'fields': fields})]
         else:
             return list(self.admin.get_fieldsets(self.request))
+    
+    def get_propulated_fields(self):
+        return self.admin.propulated_fields
     
     def get_context_data(self, **kwargs):
         context = AdminViewMixin.get_context_data(self, **kwargs)
@@ -245,15 +232,6 @@ class BaseFragmentViewMixin(DocumentViewMixin):
     def temporary_document_id(self):
         return self.request.GET.get('_tempdoc', None)
     
-    def get_form_class(self):
-        """
-        Returns the form class to use in this view
-        """
-        if self.form_class:
-            return self.form_class
-        else:
-            return self._generate_form_class()
-    
     def formfield_for_field(self, prop, field, **kwargs):
         import dockit
         if ((isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField)) or
@@ -274,38 +252,15 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         else:
             return self.admin.formfield_for_field(prop, field, **kwargs)
     
+    def get_base_schema(self):
+        return self.admin.schema
+    
     def get_schema(self):
-        if self.dotpath():
-            val = self.get_temporary_store()
-            field = val.dot_notation_to_field(self.dotpath())
-            if hasattr(field, 'schema'):
-                schema = field.schema
-                if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
-                    key = self.request.GET[schema._meta.typed_field]
-                    field = schema._meta.fields[schema._meta.typed_field]
-                    return field.schemas[key]
-                return schema
-            assert False
-        return
-    
-    def get_active_object(self):
-        if self.dotpath():
-            val = self.get_temporary_store()
-            return val.dot_notation_to_value(self.dotpath())
-        return self.get_temporary_store()
-    
-    def needs_typed_selection(self):
-        schema = self.get_schema()
+        schema = self.get_base_schema()
         if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
-            return False
-        obj = self.get_active_object()
-        return self.should_prompt_polymorphic_type(schema, obj)
-    
-    def render_type_selection(self):
-        context = self.get_context_data(**self.kwargs)
-        form = None #TODO
-        context['form'] = admin_form = helpers.AdminForm(form)
-        return self.render_to_response(context)
+            field = schema._meta.fields[schema._meta.typed_field]
+            schema = field.schemas[self.request.GET[schema._meta.typed_field]]
+        return schema
     
     def _generate_form_class(self):
         class CustomDocumentForm(DocumentForm):
@@ -350,6 +305,8 @@ class BaseFragmentViewMixin(DocumentViewMixin):
             return self.form_invalid(form)
         
         obj = form.save() #CONSIDER this would normally be done in form_valid
+        
+        #TODO delete functionality
         
         if self.next_dotpath():
             temp = self.get_temporary_store()
@@ -408,43 +365,6 @@ class BaseFragmentViewMixin(DocumentViewMixin):
             return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
         return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
 
-class SingleObjectFragmentView(BaseFragmentViewMixin, views.UpdateView):
-    template_suffix = 'fragment_change_form'
-    
-    def get_object(self):
-        if not hasattr(self, 'object'):
-            if 'pk' in self.kwargs:
-                self.object = views.UpdateView.get_object(self)
-            else:
-                self.object = None
-        return self.object
-    
-    def get_context_data(self, **kwargs):
-        context = views.UpdateView.get_context_data(self, **kwargs)
-        context.update(BaseFragmentViewMixin.get_context_data(self, **kwargs))
-        
-        obj = self.get_object()
-        opts = self.document._meta
-        context.update({'title':_('Change %s') % force_unicode(opts.verbose_name),
-                        'show_delete': False,
-                        'add_another': False,
-                        'object_id': obj and obj.get_id or None,
-                        'original': obj,
-                        'change': True,
-                        'add': False,
-                        'delete': False, #TODO true if field allows null
-                        'adminform':self.create_admin_form(),})
-        context['media'] += context['adminform'].form.media
-        return context
-    
-    def form_valid(self, form):
-        self.admin.log_change(self.request, self.object, '')
-        return BaseFragmentViewMixin.form_valid(self, form)
-
-class FragmentViewMixin(BaseFragmentViewMixin):
-    def lookup_view_for_dotpath(self):
-        return self.admin.lookup_view_for_dotpath(self.dotpath())
-
 class IndexView(DocumentViewMixin, views.ListView):
     template_suffix = 'change_list'
     
@@ -478,6 +398,32 @@ class IndexView(DocumentViewMixin, views.ListView):
         cl = self.get_changelist()
         return cl.get_query_set()
 
+class DocumentProxyView(FragmentViewMixin, View):
+    def dispatch(self, request, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        self.request = request
+        schema = self.get_schema()
+        admin = self.admin.create_admin_for_schema(schema)
+        if 'pk' in kwargs:
+            return admin.get_update_view()(request, *args, **kwargs)
+        else:
+            return admin.get_create_view()(request, *args, **kwargs)
+    
+    def get_schema(self):
+        if self.dotpath():
+            val = self.get_temporary_store()
+            field = val.dot_notation_to_field(self.dotpath())
+            if hasattr(field, 'schema'):
+                schema = field.schema
+                if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
+                    key = self.request.GET[schema._meta.typed_field]
+                    field = schema._meta.fields[schema._meta.typed_field]
+                    return field.schemas[key]
+                return schema
+            assert False
+        return self.document
+
 class CreateView(FragmentViewMixin, views.CreateView):
     template_suffix = 'change_form'
     
@@ -485,9 +431,8 @@ class CreateView(FragmentViewMixin, views.CreateView):
         self.request = request
         self.args = args
         self.kwargs = kwargs
-        view = self.lookup_view_for_dotpath()
-        if view:
-            return view(request, *args, **kwargs)
+        if self.needs_typed_selection():
+            return self.admin.get_select_schema_view()(request, *args, **kwargs)
         return super(CreateView, self).dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
@@ -514,9 +459,8 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         self.request = request
         self.args = args
         self.kwargs = kwargs
-        view = self.lookup_view_for_dotpath()
-        if view:
-            return view(request, *args, **kwargs)
+        if self.needs_typed_selection():
+            return self.admin.get_select_schema_view()(request, *args, **kwargs)
         return super(UpdateView, self).dispatch(request, *args, **kwargs)
     
     def get_object(self):

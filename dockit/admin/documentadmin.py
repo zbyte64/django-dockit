@@ -30,6 +30,7 @@ class SchemaAdmin(object):
     create = views.CreateView
     update = views.UpdateView
     delete = views.DeleteView
+    select_schema = views.SchemaTypeSelectionView
     
     raw_id_fields = ()
     fields = None
@@ -103,6 +104,15 @@ class SchemaAdmin(object):
     def as_view(self, view, cacheable=False):
         return self.admin_site.admin_view(view, cacheable)
     
+    def get_create_view(self):
+        return self.as_view(self.create)
+    
+    def get_update_view(self):
+        return self.as_view(self.update)
+    
+    def get_select_schema_view(self):
+        return self.as_view(self.select_schema)
+    
     def get_model_perms(self, request):
         return {
             'add': self.has_add_permission(request),
@@ -120,7 +130,7 @@ class SchemaAdmin(object):
         #form = self.get_form(request, obj)
         #fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
         fields = list()
-        for key, field in self.model._meta.fields.iteritems():
+        for key, field in self.schema._meta.fields.iteritems():
             fields.append(key) #TODO handle exclude
         return [(None, {'fields': fields})]
     
@@ -134,8 +144,6 @@ class SchemaAdmin(object):
             field = opts.pop('form_class', field)
             kwargs = dict(opts, **kwargs)
         return field(**kwargs)
-
-import re
 
 class DocumentAdmin(SchemaAdmin):
     list_display = ('__str__',)
@@ -155,15 +163,16 @@ class DocumentAdmin(SchemaAdmin):
     actions_on_bottom = False
     actions_selection_counter = True
     
-    create = views.CreateView
-    update = views.UpdateView
+    #the following proxy to the proper schema admin
+    create = views.DocumentProxyView
+    update = views.DocumentProxyView
+    
     delete = views.DeleteView
     index = views.IndexView
     history = views.HistoryView
-    default_fragment = views.SingleObjectFragmentView
     detail_views = [views.HistoryView, views.DeleteView]
-    inline_views = [] #TODO deprecate
-    schema_inlines = []
+    default_schema_admin = SchemaAdmin
+    schema_inlines = [] # [(Schema, SchemaAdminCls),]
     
     def get_urls(self):
         def wrap(view, cacheable=False):
@@ -278,26 +287,11 @@ class DocumentAdmin(SchemaAdmin):
         app_list = resolver.app_dict['admin']
         return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
     
-    def lookup_view_class_for_dotpath(self, dotpath):
-        if dotpath and self.inline_views:
-            for match, view_class in self.inline_views:
-                match = re.compile(match)
-                if match.search(dotpath):
-                    return view_class
-        if dotpath:
-            return self.default_fragment
-    
-    def lookup_view_for_dotpath(self, dotpath):
-        view_class = self.lookup_view_class_for_dotpath(dotpath)
-        if view_class:
-            init = self.get_view_kwargs()
-            return view_class.as_view(**init)
-    
-    def lookup_view_for_schema(self, schema):
-        for cls, view_class in self.schema_inlines:
+    def create_admin_for_schema(self, schema):
+        for cls, admin_class in self.schema_inlines:
             if schema == cls:
-                init = self.get_view_kwargs()
-                return view_class.as_view(**init)
+                admin_class(self.model, self.admin_site, schema)
+        return self.default_schema_admin(self.model, self.admin_site, schema)
 
 '''
 bring back inlines with a vengance
