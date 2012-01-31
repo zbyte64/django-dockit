@@ -351,4 +351,10 @@ class PolymorphismTestCase(unittest.TestCase):
         brand.products.append(Shirt(name='shirt'))
         brand.save()
         
+        brand = Brand.objects.get(brand.pk)
+        self.assertTrue(isinstance(brand.products[0], Shoes))
+        
+        shirt = brand.dot_notation_to_value('products.1')
+        self.assertTrue(isinstance(shirt, Shirt))
+        
 

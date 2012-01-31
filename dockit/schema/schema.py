@@ -229,6 +229,10 @@ class Schema(object):
             setattr(self, key, value)
         assert isinstance(self._primitive_data, dict), str(type(self._primitive_data))
         assert isinstance(self._python_data, dict), str(type(self._python_data))
+        
+        if self._meta.typed_field and self._meta.typed_key:
+            self[self._meta.typed_field] = self._meta.typed_key
+        
         post_init.send(sender=self.__class__, instance=self)
     
     @classmethod

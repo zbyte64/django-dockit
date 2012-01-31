@@ -290,7 +290,6 @@ class FragmentViewMixin(DocumentViewMixin):
                     schema = field.schemas[obj[schema._meta.typed_field]]
                 except KeyError:
                     pass
-        
         return schema
     
     def _generate_form_class(self):
