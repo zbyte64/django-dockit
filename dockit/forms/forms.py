@@ -259,12 +259,13 @@ class BaseDocumentForm(BaseForm):
             if obj is None:
                 obj = opts.schema()
         else:
-            obj = self.instance
+            data = self.instance.to_primitive(self.instance)
+            obj = opts.schema.to_python(data)
         
         for prop_name in self.serialized_fields:
             if prop_name in cleaned_data.keys():
                 value = cleaned_data.pop(prop_name)
-                setattr(obj, prop_name, value)
+                obj[prop_name] = value
         
         if dynamic:
             for attr_name in cleaned_data.iterkeys():
@@ -272,7 +273,7 @@ class BaseDocumentForm(BaseForm):
                     continue
                 value = cleaned_data[attr_name]
                 if value is not None:
-                    setattr(obj, attr_name, value)
+                    obj[attr_name] = value
         return obj
     
     def save(self, commit=True, dynamic=True):
@@ -288,6 +289,8 @@ class BaseDocumentForm(BaseForm):
         
         if self.dotpath:
             self.instance.dot_notation_set_value(self.dotpath, obj)
+        else:
+            self.instance = obj
         
         if commit:
             self.instance.save()

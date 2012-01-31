@@ -286,7 +286,8 @@ class FragmentViewMixin(DocumentViewMixin):
                 schema = field.schemas[key]
                 obj = self.get_active_object()
                 attr = schema._meta.typed_field
-                if getattr(obj, attr, None) != key:
+                #TODO we need a better method
+                if obj and getattr(obj, attr, None) != key:
                     obj[attr] = key
                     #obj.save()
             else:
@@ -386,6 +387,8 @@ class FragmentViewMixin(DocumentViewMixin):
             else:
                 instance = None
             self.object = obj.commit_changes(instance)
+        else:
+            self.object = obj
         if self.temporary_document_id():
             self.get_temporary_store().delete()
         return self.form_valid(form)
