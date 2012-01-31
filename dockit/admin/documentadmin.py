@@ -7,6 +7,8 @@ from django import forms
 
 from dockit.paginator import Paginator
 
+import views
+
 FORMFIELD_FOR_FIELD_DEFAULTS = {
     forms.DateTimeField: {
         'form_class': forms.SplitDateTimeField,
@@ -23,13 +25,11 @@ FORMFIELD_FOR_FIELD_DEFAULTS = {
     forms.FileField:       {'widget': widgets.AdminFileWidget},
 }
 
-class BaseAdmin(object):
+class SchemaAdmin(object):
     #class based views
-    create = None
-    update = None
-    delete = None
-    index = None
-    history = None
+    create = views.CreateView
+    update = views.UpdateView
+    delete = views.DeleteView
     
     raw_id_fields = ()
     fields = None
@@ -43,19 +43,9 @@ class BaseAdmin(object):
     prepopulated_fields = {}
     formfield_overrides = {}
     readonly_fields = ()
-    ordering = None
     declared_fieldsets = None
     form_class = None #can't use form because of Django Admin
     
-    
-    list_display = ('__str__',)
-    list_display_links = ()
-    list_filter = ()
-    list_select_related = False
-    list_per_page = 100
-    list_editable = ()
-    search_fields = ()
-    date_hierarchy = None
     save_as = False
     save_on_top = False
     paginator = Paginator
@@ -68,7 +58,96 @@ class BaseAdmin(object):
     delete_confirmation_template = None
     delete_selected_confirmation_template = None
     object_history_template = None
+    
+    schema = None
 
+    def __init__(self, model, admin_site, schema=None):
+        self.model = model
+        self.admin_site = admin_site
+        self.app_name = (model._meta.app_label +'-'+ model._meta.object_name).lower()
+        overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
+        overrides.update(self.formfield_overrides)
+        self.formfield_overrides = overrides
+        self.schema = schema
+    
+    def get_view_kwargs(self):
+        return {'admin':self,
+                'admin_site':self.admin_site,}
+    
+    def _media(self):
+        from django.conf import settings
+        from django import forms
+
+        js = ['js/core.js', 'js/admin/RelatedObjectLookups.js',
+              'js/jquery.min.js', 'js/jquery.init.js']
+        if self.actions is not None:
+            js.extend(['js/actions.min.js'])
+        if self.prepopulated_fields:
+            js.append('js/urlify.js')
+            js.append('js/prepopulate.min.js')
+        #if self.opts.get_ordered_objects():
+        #    js.extend(['js/getElementsBySelector.js', 'js/dom-drag.js' , 'js/admin/ordering.js'])
+
+        return forms.Media(js=['%s%s' % (settings.ADMIN_MEDIA_PREFIX, url_s) for url_s in js])
+    media = property(_media)
+    
+    def has_add_permission(self, request):
+        return True
+    
+    def has_change_permission(self, request, obj=None):
+        return True
+    
+    def has_delete_permission(self, request, obj=None):
+        return True
+    
+    def as_view(self, view, cacheable=False):
+        return self.admin_site.admin_view(view, cacheable)
+    
+    def get_model_perms(self, request):
+        return {
+            'add': self.has_add_permission(request),
+            'change': self.has_change_permission(request),
+            'delete': self.has_delete_permission(request),
+        }
+    
+    def queryset(self, request):
+        return self.model.objects.all()
+    
+    def get_fieldsets(self, request, obj=None):
+        "Hook for specifying fieldsets for the add form."
+        if self.declared_fieldsets:
+            return self.declared_fieldsets
+        #form = self.get_form(request, obj)
+        #fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
+        fields = list()
+        for key, field in self.model._meta.fields.iteritems():
+            fields.append(key) #TODO handle exclude
+        return [(None, {'fields': fields})]
+    
+    def get_readonly_fields(self, request):
+        return []
+    
+    def formfield_for_field(self, prop, field, **kwargs):
+        #TODO fix file fields to display file if uploaded
+        if field in self.formfield_overrides:
+            opts = dict(self.formfield_overrides[field])
+            field = opts.pop('form_class', field)
+            kwargs = dict(opts, **kwargs)
+        return field(**kwargs)
+
+import re
+
+class DocumentAdmin(SchemaAdmin):
+    list_display = ('__str__',)
+    list_display_links = ()
+    list_filter = ()
+    list_select_related = False
+    list_per_page = 100
+    list_editable = ()
+    search_fields = ()
+    date_hierarchy = None
+    ordering = None
+    
     # Actions
     actions = []
     #action_form = helpers.ActionForm
@@ -76,19 +155,15 @@ class BaseAdmin(object):
     actions_on_bottom = False
     actions_selection_counter = True
     
-    detail_views = []
-    
-    def __init__(self, model, admin_site):
-        self.model = model
-        self.admin_site = admin_site
-        self.app_name = (model._meta.app_label +'-'+ model._meta.object_name).lower()
-        overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
-        overrides.update(self.formfield_overrides)
-        self.formfield_overrides = overrides
-    
-    def get_view_kwargs(self):
-        return {'admin':self,
-                'admin_site':self.admin_site,}
+    create = views.CreateView
+    update = views.UpdateView
+    delete = views.DeleteView
+    index = views.IndexView
+    history = views.HistoryView
+    default_fragment = views.SingleObjectFragmentView
+    detail_views = [views.HistoryView, views.DeleteView]
+    inline_views = [] #TODO deprecate
+    schema_inlines = []
     
     def get_urls(self):
         def wrap(view, cacheable=False):
@@ -133,40 +208,18 @@ class BaseAdmin(object):
     def get_extra_urls(self):
         return patterns('',)
     
-    def _media(self):
-        from django.conf import settings
-        from django import forms
-
-        js = ['js/core.js', 'js/admin/RelatedObjectLookups.js',
-              'js/jquery.min.js', 'js/jquery.init.js']
-        if self.actions is not None:
-            js.extend(['js/actions.min.js'])
-        if self.prepopulated_fields:
-            js.append('js/urlify.js')
-            js.append('js/prepopulate.min.js')
-        #if self.opts.get_ordered_objects():
-        #    js.extend(['js/getElementsBySelector.js', 'js/dom-drag.js' , 'js/admin/ordering.js'])
-
-        return forms.Media(js=['%s%s' % (settings.ADMIN_MEDIA_PREFIX, url) for url in js])
-    media = property(_media)
-    
-    def has_add_permission(self, request):
-        return True
-    
-    def has_change_permission(self, request, obj=None):
-        return True
-    
-    def has_delete_permission(self, request, obj=None):
-        return True
-    
-    def as_view(self, view, cacheable=False):
-        return self.admin_site.admin_view(view, cacheable)
-    
     def get_detail_views(self):
         ret = dict()
         for detail_view in self.detail_views:
             ret[detail_view.key] = detail_view
         return ret
+    
+    def get_changelist(self, request):
+        from changelist import ChangeList
+        return ChangeList
+    
+    def get_paginator(self, request, query_set, paginate_by):
+        return self.paginator(query_set, paginate_by)
     
     def log_addition(self, request, object):
         """
@@ -218,64 +271,12 @@ class BaseAdmin(object):
             action_flag     = DELETION
         )
     
-    def get_model_perms(self, request):
-        return {
-            'add': self.has_add_permission(request),
-            'change': self.has_change_permission(request),
-            'delete': self.has_delete_permission(request),
-        }
-    
-    def get_changelist(self, request):
-        from changelist import ChangeList
-        return ChangeList
-    
-    def queryset(self, request):
-        return self.model.objects.all()
-    
-    def get_paginator(self, request, query_set, paginate_by):
-        return self.paginator(query_set, paginate_by)
-    
-    def get_fieldsets(self, request, obj=None):
-        "Hook for specifying fieldsets for the add form."
-        if self.declared_fieldsets:
-            return self.declared_fieldsets
-        #form = self.get_form(request, obj)
-        #fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
-        fields = list()
-        for key, field in self.model._meta.fields.iteritems():
-            fields.append(key) #TODO handle exclude
-        return [(None, {'fields': fields})]
-    
-    def get_readonly_fields(self, request):
-        return []
-    
     def reverse(self, name, *args, **kwargs):
         from django.core.urlresolvers import get_urlconf, get_resolver
         urlconf = get_urlconf()
         resolver = get_resolver(urlconf)
         app_list = resolver.app_dict['admin']
         return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
-    
-    def formfield_for_field(self, prop, field, **kwargs):
-        #TODO fix file fields to display file if uploaded
-        if field in self.formfield_overrides:
-            opts = dict(self.formfield_overrides[field])
-            field = opts.pop('form_class', field)
-            kwargs = dict(opts, **kwargs)
-        return field(**kwargs)
-
-import views
-import re
-
-class DocumentAdmin(BaseAdmin):
-    create = views.CreateView
-    update = views.UpdateView
-    delete = views.DeleteView
-    index = views.IndexView
-    history = views.HistoryView
-    default_fragment = views.SingleObjectFragmentView
-    detail_views = [views.HistoryView, views.DeleteView]
-    inline_views = []
     
     def lookup_view_class_for_dotpath(self, dotpath):
         if dotpath and self.inline_views:
@@ -291,6 +292,12 @@ class DocumentAdmin(BaseAdmin):
         if view_class:
             init = self.get_view_kwargs()
             return view_class.as_view(**init)
+    
+    def lookup_view_for_schema(self, schema):
+        for cls, view_class in self.schema_inlines:
+            if schema == cls:
+                init = self.get_view_kwargs()
+                return view_class.as_view(**init)
 
 '''
 bring back inlines with a vengance

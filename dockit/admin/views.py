@@ -106,6 +106,24 @@ class DocumentViewMixin(AdminViewMixin):
                 form_field_callback = self.admin.formfield_for_field
         #CustomDocumentForm.base_fields.update(fields)
         return CustomDocumentForm
+    
+    def is_polymorphic(self, schema):
+        return bool(schema._meta.typed_field)
+    
+    def should_prompt_polymorphic_type(self, schema, obj=None):
+        if self.is_polymorphic(schema):
+            return obj is None
+        return False
+
+from forms import TypeSelectionForm
+
+class DocumentTypeSelection(DocumentViewMixin, views.TemplateView):
+    template_name = 'admin/type_selection_form.html'
+    form_class = TypeSelectionForm
+    schema = None
+    
+    def get_form_kwargs(self):
+        return {'schema': self.schema}
 
 class BaseFragmentViewMixin(DocumentViewMixin):
     obj_template_suffix = 'change_form'
@@ -261,9 +279,33 @@ class BaseFragmentViewMixin(DocumentViewMixin):
             val = self.get_temporary_store()
             field = val.dot_notation_to_field(self.dotpath())
             if hasattr(field, 'schema'):
-                return field.schema
+                schema = field.schema
+                if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
+                    key = self.request.GET[schema._meta.typed_field]
+                    field = schema._meta.fields[schema._meta.typed_field]
+                    return field.schemas[key]
+                return schema
             assert False
         return
+    
+    def get_active_object(self):
+        if self.dotpath():
+            val = self.get_temporary_store()
+            return val.dot_notation_to_value(self.dotpath())
+        return self.get_temporary_store()
+    
+    def needs_typed_selection(self):
+        schema = self.get_schema()
+        if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
+            return False
+        obj = self.get_active_object()
+        return self.should_prompt_polymorphic_type(schema, obj)
+    
+    def render_type_selection(self):
+        context = self.get_context_data(**self.kwargs)
+        form = None #TODO
+        context['form'] = admin_form = helpers.AdminForm(form)
+        return self.render_to_response(context)
     
     def _generate_form_class(self):
         class CustomDocumentForm(DocumentForm):

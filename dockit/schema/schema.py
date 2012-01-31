@@ -89,7 +89,6 @@ class Options(object):
                 #if not self.virtual:
                 #    raise TypeError("Schemas that specify a typed_field and not a typed_key must be virtual.")
                 if self.typed_field not in self.fields:
-                    print 'adding field', cls
                     from fields import SchemaTypeField
                     self.polymorphic_schemas = dict()
                     field = SchemaTypeField(self.polymorphic_schemas)
