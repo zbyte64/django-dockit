@@ -170,12 +170,12 @@ class FragmentViewMixin(DocumentViewMixin):
     
     def get_fieldsets(self, obj=None):
         "Hook for specifying fieldsets for the add form."
-        if self.dotpath():
-            form = self.get_form_class()
-            fields = form.base_fields.keys()
-            return [(None, {'fields': fields})]
-        else:
-            return list(self.admin.get_fieldsets(self.request))
+        form = self.get_form_class()
+        fields = form.base_fields.keys()
+        for key in self.get_readonly_fields():
+            if key in fields:
+                fields.remove(key)
+        return [(None, {'fields': fields})]
     
     def get_prepopulated_fields(self):
         return self.admin.prepopulated_fields
@@ -282,8 +282,13 @@ class FragmentViewMixin(DocumentViewMixin):
         if schema._meta.typed_field:
             field = schema._meta.fields[schema._meta.typed_field]
             if schema._meta.typed_field in self.request.GET:
-                
-                schema = field.schemas[self.request.GET[schema._meta.typed_field]]
+                key = self.request.GET[schema._meta.typed_field]
+                schema = field.schemas[key]
+                obj = self.get_active_object()
+                attr = schema._meta.typed_field
+                if getattr(obj, attr, None) != key:
+                    obj[attr] = key
+                    #obj.save()
             else:
                 obj = self.get_active_object()
                 try:
@@ -324,6 +329,8 @@ class FragmentViewMixin(DocumentViewMixin):
         if self.temporary_document_id() or 'pk' not in self.kwargs:
             kwargs['instance'] = self.get_temporary_store()
         else:
+            if hasattr(self, 'object'):
+                del self.object
             kwargs['instance'] = self.get_object()
         if self.dotpath():
             kwargs['dotpath'] = self.dotpath()
@@ -372,7 +379,6 @@ class FragmentViewMixin(DocumentViewMixin):
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
         
         #now to create the object!
-        
         if obj._meta.collection != self.document._meta.collection:
             if 'pk' in self.kwargs:
                 instance = self.get_object()
@@ -454,8 +460,6 @@ class DocumentProxyView(FragmentViewMixin, View):
                         return field.schemas[key]
                     except KeyError:
                         schemas = field.schemas
-                        print field.name
-                        print schemas
                         raise
                 return schema
             assert False

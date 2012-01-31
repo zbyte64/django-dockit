@@ -290,6 +290,7 @@ class Schema(object):
             super(Schema, self).__setattr__(name, val)
     
     def __getitem__(self, key):
+        assert isinstance(key, basestring)
         if key in self._meta.fields:
             return getattr(self, key)
         if key in self._primitive_data and key not in self._python_data:

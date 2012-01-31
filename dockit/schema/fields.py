@@ -10,7 +10,7 @@ import datetime
 from serializer import PRIMITIVE_PROCESSOR
 from exceptions import DotPathNotFound
 from common import get_schema, DotPathList, DotPathDict, UnSet
-from dockit.forms.fields import HiddenSchemaField, HiddenListField, HiddenDictField, SchemaChoiceField
+from dockit.forms.fields import HiddenSchemaField, HiddenListField, HiddenDictField, SchemaChoiceField, PrimitiveListField
 
 class NOT_PROVIDED:
     pass
@@ -101,12 +101,15 @@ class BaseField(object):
     def to_python(self, val, parent=None):
         return val
     
+    def get_form_field_class(self):
+        if self.choices:
+            return forms.ChoiceField
+        else:
+            return self.form_field_class
+    
     def formfield(self, **kwargs):
         "Returns a django.forms.Field instance for this database Field."
-        if self.choices:
-            default = forms.ChoiceField
-        else:
-            default = self.form_field_class
+        default = self.get_form_field_class()
         form_class = kwargs.pop('form_class', default)
         defaults = self.formfield_kwargs(**kwargs)
         return form_class(**defaults)
@@ -401,6 +404,18 @@ class ListField(BaseField):
         self.subfield = subfield
         kwargs.setdefault('default', list)
         super(ListField, self).__init__(*args, **kwargs)
+    
+    def get_form_field_class(self):
+        if not hasattr(self.subfield, 'schema'):
+            return PrimitiveListField
+        else:
+            return self.form_field_class
+    
+    def formfield_kwargs(self, **kwargs):
+        kwargs = super(ListField, self).formfield_kwargs(**kwargs)
+        if not hasattr(self.subfield, 'schema'):
+            kwargs['subwidget'] = self.subfield.form_widget_class or forms.TextInput
+        return kwargs
     
     def to_primitive(self, val):
         if self.subfield:

@@ -22,7 +22,8 @@ def create_temporary_document_class(document_cls):
             if instance is None:
                 instance = document_cls()
             
-            data = dict(self._primitive_data)
+            data = self.to_primitive(self)
+            
             #remove id field
             backend = get_document_backend()
             data.pop(backend.get_id_field_name(), None)
@@ -34,7 +35,9 @@ def create_temporary_document_class(document_cls):
             return instance
         
         def copy_from_instance(self, instance):
-            data = dict(instance._primitive_data)
+            backend = get_document_backend()
+            data = instance.to_primitive(instance)
+            data.pop(backend.get_id_field_name())
             
             backend = get_document_backend()
             data.pop(backend.get_id_field_name(), None)

@@ -6,6 +6,8 @@ from django.utils.encoding import force_unicode, smart_unicode
 
 from django.utils import simplejson as json
 
+from widgets import PrimitiveListWidget
+
 class HiddenJSONField(Field):
     widget = HiddenInput
     
@@ -33,6 +35,17 @@ class HiddenListField(HiddenJSONField):
 
 class HiddenDictField(HiddenJSONField):
     pass
+
+class PrimitiveListField(Field):
+    widget = PrimitiveListWidget
+    
+    def __init__(self, subwidget, *args, **kwargs):
+        self.subwidget = subwidget
+        widget = kwargs.get('widget', self.widget)
+        if isinstance(widget, type):
+            widget = widget(subwidget)
+        kwargs['widget'] = widget
+        super(PrimitiveListField, self).__init__(*args, **kwargs)
 
 class SchemaChoiceIterator(object):
     def __init__(self, field):
