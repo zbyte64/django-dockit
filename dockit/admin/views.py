@@ -39,6 +39,7 @@ class DocumentViewMixin(AdminViewMixin):
         opts = self.document._meta
         app_label = opts.app_label
         object_name = opts.object_name.lower()
+        print self.template_suffix
         return ['admin/%s/%s/%s.html' % (app_label, object_name, self.template_suffix),
                 'admin/%s/%s.html' % (app_label, self.template_suffix),
                 'admin/%s.html' % self.template_suffix]
@@ -106,7 +107,7 @@ class SchemaTypeSelectionView(DocumentViewMixin, TemplateView):
         return context
 
 class FragmentViewMixin(DocumentViewMixin):
-    obj_template_suffix = 'change_form'
+    template_suffix = 'schema_form'
     
     def create_admin_form(self):
         form_class = self.get_form_class()
@@ -155,10 +156,6 @@ class FragmentViewMixin(DocumentViewMixin):
             return False
         obj = self.get_active_object()
         return self.should_prompt_polymorphic_type(obj)
-    
-    @property
-    def template_suffix(self):
-        return 'change_form'
     
     def get_readonly_fields(self):
         schema = self.get_schema()
@@ -336,7 +333,34 @@ class FragmentViewMixin(DocumentViewMixin):
             kwargs['dotpath'] = self.dotpath()
         return kwargs
     
+    def delete_subobject(self):
+        temp = self.get_temporary_store()
+        params = {'_tempdoc':temp.get_id(),}
+        
+        #TODO in FragmentViewMixin, get_effective_parent_dotpath()
+        next_dotpath = self.parent_dotpath()
+        if next_dotpath is None:
+            dotpath = self.dotpath()
+            if '.' in dotpath:
+                next_dotpath = dotpath[:dotpath.rfind('.')]
+            field = temp.dot_notation_to_field(next_dotpath)
+            if isinstance(field, ListField):
+                if '.' in next_dotpath:
+                    next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
+                else:
+                    next_dotpath = None
+        
+        if next_dotpath:
+            params['_dotpath'] = next_dotpath
+        #TODO make this a blessed function
+        temp.dot_notation_set_value(self.dotpath(), UnSet)
+        temp.save()
+        return HttpResponseRedirect('%s?%s' % (self.admin.reverse(self.admin.app_name+'_change', self.kwargs['pk']), urlencode(params)))
+    
     def post(self, request, *args, **kwargs):
+        if self.dotpath() and "_delete" in self.request.POST:
+            return self.delete_subobject()
+        
         form_class = self.get_form_class()
         form = self.get_form(form_class)
         if not form.is_valid():
@@ -346,32 +370,7 @@ class FragmentViewMixin(DocumentViewMixin):
         if form.instance:
             assert type(form.instance) == self.temp_document
         obj = form.save() #CONSIDER this would normally be done in form_valid
-        #TODO delete functionality
-        '''
-        if self.dotpath():
-            temp = self.get_temporary_store()
-            params = {'_tempdoc':temp.get_id(),}
-            
-            #TODO in FragmentViewMixin, get_effective_parent_dotpath()
-            next_dotpath = self.parent_dotpath()
-            if next_dotpath is None:
-                dotpath = self.dotpath()
-                if '.' in dotpath:
-                    next_dotpath = dotpath[:dotpath.rfind('.')]
-                field = temp.dot_notation_to_field(next_dotpath)
-                if isinstance(field, ListField):
-                    if '.' in next_dotpath:
-                        next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
-                    else:
-                        next_dotpath = None
-            
-            if next_dotpath:
-                params['_dotpath'] = next_dotpath
-            #TODO make this a blessed function
-            temp.dot_notation_set_value(self.dotpath(), UnSet)
-            temp.save()
-            return HttpResponseRedirect('%s?%s' % (self.admin.reverse(self.admin.app_name+'_change', self.kwargs['pk']), urlencode(params)))
-        '''
+        
         
         if self.next_dotpath():
             info = self.fragment_info()
@@ -490,8 +489,6 @@ class DocumentProxyView(FragmentViewMixin, View):
         return self.document
 
 class CreateView(FragmentViewMixin, views.CreateView):
-    template_suffix = 'change_form'
-    
     def dispatch(self, request, *args, **kwargs):
         self.request = request
         self.args = args
@@ -518,8 +515,6 @@ class CreateView(FragmentViewMixin, views.CreateView):
         return FragmentViewMixin.form_valid(self, form)
     
 class UpdateView(FragmentViewMixin, views.UpdateView):
-    template_suffix = 'change_form'
-    
     def dispatch(self, request, *args, **kwargs):
         self.request = request
         self.args = args
