@@ -12,7 +12,7 @@ class FactoryMeta(object):
             setattr(self, key, value)
 
 def create_temporary_document_class(document_cls):
-    
+    #TODO refactor to something that simply copies the fields and handles dynamic typing
     class TempDocument(document_cls):
         class Meta:
             virtual = True

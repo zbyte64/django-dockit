@@ -58,6 +58,8 @@ class BaseField(object):
     
     def contribute_to_class(self, cls, name):
         self.name = name
+        if not self.verbose_name:
+            self.verbose_name = name
         cls._meta.fields[name] = self
         setattr(cls, name, self)
     

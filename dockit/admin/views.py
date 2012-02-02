@@ -39,7 +39,6 @@ class DocumentViewMixin(AdminViewMixin):
         opts = self.document._meta
         app_label = opts.app_label
         object_name = opts.object_name.lower()
-        print self.template_suffix
         return ['admin/%s/%s/%s.html' % (app_label, object_name, self.template_suffix),
                 'admin/%s/%s.html' % (app_label, self.template_suffix),
                 'admin/%s.html' % self.template_suffix]

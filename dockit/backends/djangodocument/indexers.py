@@ -77,7 +77,7 @@ class ExactIndexer(BaseIndexer):
         self.index_functions['map'](instance)
     
     def on_document_delete(self, instance):
-        self.index_functions['clear'](instance)
+        self.index_functions['clear'](instance.pk)
         
     def filter(self, value):
         qs = DocumentStore.objects.filter(collection=self.collection)
