@@ -42,7 +42,8 @@ class SingleObjectMixin(detailview.SingleObjectMixin):
 class BaseDetailView(SingleObjectMixin, detailview.BaseDetailView):
     pass
 
-class DetailView(detailview.SingleObjectTemplateResponseMixin, BaseDetailView):
+class DetailView(BaseDetailView, detailview.SingleObjectTemplateResponseMixin):
     pass
 
-SingleObjectTemplateResponseMixin = detailview.SingleObjectTemplateResponseMixin
+class SingleObjectTemplateResponseMixin(SingleObjectMixin, detailview.SingleObjectTemplateResponseMixin):
+    pass

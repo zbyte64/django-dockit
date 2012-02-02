@@ -301,7 +301,7 @@ class FragmentViewMixin(DocumentViewMixin):
     def _generate_form_class(self):
         class CustomDocumentForm(DocumentForm):
             class Meta:
-                document = self.document
+                document = self.temp_document
                 schema = self.get_schema()
                 form_field_callback = self.formfield_for_field
                 dotpath = self.dotpath() or None
@@ -310,29 +310,28 @@ class FragmentViewMixin(DocumentViewMixin):
     
     def get_temporary_store(self):
         if not hasattr(self, '_temporary_store'):
-            TempDocument = create_temporary_document_class(self.document)
             temp_doc_id = self.temporary_document_id()
             if temp_doc_id:
-                storage = TempDocument.objects.get(temp_doc_id)
+                storage = self.temp_document.objects.get(temp_doc_id)
             else:
-                storage = TempDocument()
-                if 'pk' in self.kwargs:
-                    instance = self.get_object()
-                    storage.copy_from_instance(instance)
-                storage.save()
+                storage = self.temp_document()
+                if hasattr(self, 'object'):
+                    storage.copy_from_instance(self.object)
+            storage._original_id = self.kwargs.get('pk', None)
             self._temporary_store = storage
         return self._temporary_store
     
+    @property
+    def temp_document(self):
+        if not hasattr(self, '_temp_document'):
+            self._temp_document = create_temporary_document_class(self.document)
+        return self._temp_document
+    
     def get_form_kwargs(self, **kwargs):
+        kwargs['instance'] = self.get_temporary_store()
         if self.request.method.upper() in ('POST', 'PUT'):
             kwargs['data'] = self.request.POST
             kwargs['files'] = self.request.FILES
-        if self.temporary_document_id() or 'pk' not in self.kwargs:
-            kwargs['instance'] = self.get_temporary_store()
-        else:
-            if hasattr(self, 'object'):
-                del self.object
-            kwargs['instance'] = self.get_object()
         if self.dotpath():
             kwargs['dotpath'] = self.dotpath()
         return kwargs
@@ -343,22 +342,47 @@ class FragmentViewMixin(DocumentViewMixin):
         if not form.is_valid():
             return self.form_invalid(form)
         
+        assert form._meta.document == self.temp_document
+        if form.instance:
+            assert type(form.instance) == self.temp_document
         obj = form.save() #CONSIDER this would normally be done in form_valid
-        
         #TODO delete functionality
+        '''
+        if self.dotpath():
+            temp = self.get_temporary_store()
+            params = {'_tempdoc':temp.get_id(),}
+            
+            #TODO in FragmentViewMixin, get_effective_parent_dotpath()
+            next_dotpath = self.parent_dotpath()
+            if next_dotpath is None:
+                dotpath = self.dotpath()
+                if '.' in dotpath:
+                    next_dotpath = dotpath[:dotpath.rfind('.')]
+                field = temp.dot_notation_to_field(next_dotpath)
+                if isinstance(field, ListField):
+                    if '.' in next_dotpath:
+                        next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
+                    else:
+                        next_dotpath = None
+            
+            if next_dotpath:
+                params['_dotpath'] = next_dotpath
+            #TODO make this a blessed function
+            temp.dot_notation_set_value(self.dotpath(), UnSet)
+            temp.save()
+            return HttpResponseRedirect('%s?%s' % (self.admin.reverse(self.admin.app_name+'_change', self.kwargs['pk']), urlencode(params)))
+        '''
         
         if self.next_dotpath():
-            temp = self.get_temporary_store()
             info = self.fragment_info()
             passthrough = self.fragment_passthrough()
             params = {'_dotpath': self.next_dotpath(),
                       '_parent_dotpath': self.dotpath() or '',
-                      '_tempdoc': temp.get_id(),}
+                      '_tempdoc': obj.get_id(),}
             params.update(passthrough)
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
         if self.dotpath():
-            temp = self.get_temporary_store()
-            params = {'_tempdoc':temp.get_id(),}
+            params = {'_tempdoc':obj.get_id(),}
             
             #if they signaled to continue editing
             if self.request.POST.get('_continue', False):
@@ -369,7 +393,7 @@ class FragmentViewMixin(DocumentViewMixin):
                     dotpath = self.dotpath()
                     if '.' in dotpath:
                         next_dotpath = dotpath[:dotpath.rfind('.')]
-                    field = temp.dot_notation_to_field(next_dotpath)
+                    field = obj.dot_notation_to_field(next_dotpath)
                     if isinstance(field, ListField):
                         if '.' in next_dotpath:
                             next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
@@ -381,14 +405,11 @@ class FragmentViewMixin(DocumentViewMixin):
         
         #now to create the object!
         if obj._meta.collection != self.document._meta.collection:
-            if 'pk' in self.kwargs:
-                instance = self.get_object()
-                assert instance._meta.collection == self.document._meta.collection
-            else:
-                instance = None
-            self.object = obj.commit_changes(instance)
+            self.object = obj.commit_changes(self.kwargs.get('pk', None))
         else:
             self.object = obj
+        if 'pk' in self.kwargs:
+            assert str(self.object.pk) == self.kwargs['pk']
         if self.temporary_document_id():
             self.get_temporary_store().delete()
         return self.form_valid(form)
@@ -503,20 +524,16 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         self.request = request
         self.args = args
         self.kwargs = kwargs
+        self.object = self.get_object()
         if self.needs_typed_selection():
             return self.admin.get_select_schema_view()(request, *args, **kwargs)
         return super(UpdateView, self).dispatch(request, *args, **kwargs)
-    
-    def get_object(self):
-        if not hasattr(self, 'object'):
-            self.object = views.UpdateView.get_object(self)
-        return self.object
     
     def get_context_data(self, **kwargs):
         context = views.UpdateView.get_context_data(self, **kwargs)
         context.update(FragmentViewMixin.get_context_data(self, **kwargs))
         
-        obj = self.get_object()
+        obj = self.object
         opts = self.document._meta
         context.update({'title':_('Change %s') % force_unicode(opts.verbose_name),
                         'object_id': obj.get_id,
@@ -532,7 +549,7 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         self.admin.log_change(self.request, self.object, '')
         return FragmentViewMixin.form_valid(self, form)
 
-class DeleteView(FragmentViewMixin, views.DetailView):
+class DeleteView(DocumentViewMixin, views.DetailView):
     template_suffix = 'delete_selected_confirmation'
     title = _('Delete')
     key = 'delete'
@@ -544,35 +561,11 @@ class DeleteView(FragmentViewMixin, views.DetailView):
         return context
     
     def post(self, request, *args, **kwargs):
-        if self.dotpath():
-            temp = self.get_temporary_store()
-            params = {'_tempdoc':temp.get_id(),}
-            
-            #TODO in FragmentViewMixin, get_effective_parent_dotpath()
-            next_dotpath = self.parent_dotpath()
-            if next_dotpath is None:
-                dotpath = self.dotpath()
-                if '.' in dotpath:
-                    next_dotpath = dotpath[:dotpath.rfind('.')]
-                field = temp.dot_notation_to_field(next_dotpath)
-                if isinstance(field, ListField):
-                    if '.' in next_dotpath:
-                        next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
-                    else:
-                        next_dotpath = None
-            
-            if next_dotpath:
-                params['_dotpath'] = next_dotpath
-            #TODO make this a blessed function
-            temp.dot_notation_set_value(self.dotpath(), UnSet)
-            temp.save()
-            return HttpResponseRedirect('%s?%s' % (self.admin.reverse(self.admin.app_name+'_change', self.kwargs['pk']), urlencode(params)))
-        else:
-            obj = self.get_object()
-            object_repr = unicode(obj)
-            obj.delete()
-            self.admin.log_deletion(request, obj, object_repr)
-            return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
+        self.object = self.get_object()
+        object_repr = unicode(self.object)
+        self.object.delete()
+        self.admin.log_deletion(request, self.object, object_repr)
+        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
 
 class HistoryView(DocumentViewMixin, views.ListView):
     title = _('History')

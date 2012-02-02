@@ -255,10 +255,14 @@ class DocumentAdmin(SchemaAdmin):
         return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
     
     def create_admin_for_schema(self, schema):
+        admin_class = self.get_admin_class_for_schema(schema)
+        return admin_class(self.model, self.admin_site, schema, self)
+    
+    def get_admin_class_for_schema(self, schema):
         for cls, admin_class in self.schema_inlines:
             if schema == cls:
-                admin_class(self.model, self.admin_site, schema, self)
-        return self.default_schema_admin(self.model, self.admin_site, schema, self)
+                return admin_class
+        return self.default_schema_admin
     
     def log_addition(self, request, object):
         """

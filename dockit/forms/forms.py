@@ -284,13 +284,16 @@ class BaseDocumentForm(BaseForm):
         If commit=True, then the changes to ``instance`` will be saved to the
         database. Returns ``instance``.
         """
-        
+        #_inner_save wraps it in the schema while we wrap it in the document
         obj = self._inner_save(dynamic)
         
         if self.dotpath:
             self.instance.dot_notation_set_value(self.dotpath, obj)
         else:
             self.instance = obj
+        
+        data = self.instance.to_primitive(self.instance)
+        self.instance = self._meta.document.to_python(data)
         
         if commit:
             self.instance.save()
