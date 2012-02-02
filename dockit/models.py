@@ -42,6 +42,18 @@ def create_temporary_document_class(document_cls):
             self._primitive_data = data
             self._python_data = dict()
         
+        @classmethod
+        def to_python(cls, val, parent=None):
+            if val is None:
+                val = dict()
+            if cls._meta.typed_field:
+                field = cls._meta.fields[cls._meta.typed_field]
+                key = val.get(cls._meta.typed_field, None)
+                if key:
+                    cls = field.schemas[key]
+                    cls = create_temporary_document_class(cls)
+            return cls(_primitive_data=val, _parent=parent)
+        
         def save(self, *args, **kwargs):
             assert self._meta.collection == TemporaryDocument._meta.collection
             return dockit.Document.save(self, *args, **kwargs)

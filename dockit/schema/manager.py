@@ -1,5 +1,4 @@
 from copy import copy
-from dockit.backends import get_document_backend
 
 class MethodProxy(object):
     def __init__(self, obj, attribute):
@@ -20,13 +19,33 @@ class DictObjectMethodProxy(object):
             return MethodProxy(dct[key], object.__getattribute__(self, '_attribute'))
         return object.__getattribute__(self, key)
 
-class Manager(object):
-    def __init__(self):
+class IndexManager(object):
+    def __init__(self, schema):
+        self.schema = schema
         self._indexes = dict()
         self.filter = DictObjectMethodProxy(self._indexes, 'filter')
         self.values = DictObjectMethodProxy(self._indexes, 'values')
-        super(Manager, self).__init__()
     
+    @property
+    def backend(self):
+        return self.schema._meta.get_backend()
+    
+    @property
+    def collection(self):
+        return self.schema._meta.collection
+    
+    def enable_index(self, index_cls_name, index_name, params):
+        #TODO lazy load
+        index_cls = self.backend.get_indexer(index_cls_name)
+        indexer = index_cls(self.schema, index_name, params)
+        self._indexes[index_name] = indexer
+    
+    def get_indexes(self):
+        return self._indexes
+
+COLLECTION_INDEXES = dict()
+
+class Manager(object):
     def contribute_to_class(self, cls, name):
         new = copy(self)
         new.schema = cls
@@ -40,6 +59,20 @@ class Manager(object):
     def collection(self):
         return self.schema._meta.collection
     
+    @property
+    def index_manager(self):
+        if self.collection not in COLLECTION_INDEXES:
+            COLLECTION_INDEXES[self.collection] = IndexManager(self.schema)
+        return COLLECTION_INDEXES[self.collection]
+    
+    @property
+    def filter(self):
+        return self.index_manager.filter
+    
+    @property
+    def values(self):
+        return self.index_manager.values
+    
     def all(self):
         return self.backend.all(self.schema, self.collection)
     
@@ -48,13 +81,10 @@ class Manager(object):
         return self.schema.to_python(data)
     
     def enable_index(self, index_cls_name, index_name, params):
-        #TODO lazy load
-        index_cls = self.backend.get_indexer(index_cls_name)
-        indexer = index_cls(self.schema, index_name, params)
-        self._indexes[index_name] = indexer
+        return self.index_manager.enable_index(index_cls_name, index_name, params)
     
     def get_indexes(self):
-        return self._indexes
+        return self.index_manager.get_indexes()
 
 '''
 register_indexer(backend, "equals", index_cls)

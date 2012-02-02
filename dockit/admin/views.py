@@ -275,6 +275,9 @@ class FragmentViewMixin(DocumentViewMixin):
         return self.admin.schema
     
     def get_schema(self):
+        '''
+        Retrieves the currently active schema, taking into account dynamic typing
+        '''
         schema = self.get_base_schema()
         if schema._meta.typed_field:
             field = schema._meta.fields[schema._meta.typed_field]
@@ -312,7 +315,7 @@ class FragmentViewMixin(DocumentViewMixin):
                 storage = self.temp_document.objects.get(temp_doc_id)
             else:
                 storage = self.temp_document()
-                if hasattr(self, 'object'):
+                if getattr(self, 'object', None):
                     storage.copy_from_instance(self.object)
             storage._original_id = self.kwargs.get('pk', None)
             self._temporary_store = storage
@@ -366,10 +369,8 @@ class FragmentViewMixin(DocumentViewMixin):
         if not form.is_valid():
             return self.form_invalid(form)
         
-        assert form._meta.document == self.temp_document
-        if form.instance:
-            assert type(form.instance) == self.temp_document
         obj = form.save() #CONSIDER this would normally be done in form_valid
+        assert obj._meta.collection == self.temp_document._meta.collection
         
         
         if self.next_dotpath():

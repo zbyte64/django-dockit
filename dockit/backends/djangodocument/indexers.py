@@ -85,7 +85,7 @@ class ExactIndexer(BaseIndexer):
         return DocumentQuery(qs, self.document)
     
     def values(self):
-        return self.indexes[self.collection][self.dotpath]['unique_values']()
+        return self.index_functions['unique_values'](self.name)
 
 ModelDocumentStorage.register_indexer("equals", ExactIndexer)
 
