@@ -34,3 +34,22 @@ class BaseDocumentStorage(object):
     def get_id_field_name(self):
         raise NotImplementedError
 
+class BaseDocumentQuerySet(object):
+    def __len__(self):
+        raise NotImplementedError
+    
+    def count(self):
+        return self.__len__()
+    
+    def __getitem__(self, val):
+        raise NotImplementedError
+    
+    def __nonzero__(self):
+        raise NotImplementedError
+    
+    def __and__(self, other):
+        raise NotImplementedError
+    
+    def __or__(self, order):
+        raise NotImplementedError
+

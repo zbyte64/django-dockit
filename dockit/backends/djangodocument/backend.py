@@ -1,15 +1,15 @@
 from django.utils import simplejson
 from django.core.serializers.json import DjangoJSONEncoder
 
-from dockit.backends.base import BaseDocumentStorage
-from dockit.schema import fields#, Document
+from dockit.backends.base import BaseDocumentStorage, BaseDocumentQuerySet
 
-from models import DocumentStore, StringIndex, IntegerIndex
+from models import DocumentStore
 
-class DocumentQuery(object):
+class DocumentQuery(BaseDocumentQuerySet):
     def __init__(self, queryset, doc_class):
         self.queryset = queryset
         self.doc_class = doc_class
+        super(DocumentQuery, self).__init__()
     
     def wrap(self, entry):
         data = simplejson.loads(entry.data)
@@ -17,10 +17,10 @@ class DocumentQuery(object):
         return self.doc_class.to_python(data)
     
     def __len__(self):
-        return len(self.queryset)
-    
-    def count(self):
         return self.queryset.count()
+    
+    def __nonzero__(self):
+        return bool(self.queryset)
     
     def __getitem__(self, val):
         if isinstance(val, slice):
@@ -30,6 +30,24 @@ class DocumentQuery(object):
             return results
         else:
             return self.wrap(self.queryset[val])
+    
+    def _check_for_operation(self, other):
+        if not isinstance(other, DocumentQuery):
+            raise TypeError, "operation may only be done against other Document Queries"
+        if self.doc_class != other.doc_class:
+            raise TypeError, "operation may only be done with the same document type"
+    
+    def __and__(self, other):
+        self._check_for_operation(other)
+        cls = type(self)
+        queryset = self.queryset & other.queryset
+        return cls(queryset, self.doc_class)
+    
+    def __or__(self, other):
+        self._check_for_operation(other)
+        cls = type(self)
+        queryset = self.queryset | other.queryset
+        return cls(queryset, self.doc_class)
 
 class ModelDocumentStorage(BaseDocumentStorage):
     name = "djangomodel"

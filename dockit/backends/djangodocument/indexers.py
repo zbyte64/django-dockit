@@ -35,6 +35,7 @@ class ExactIndexer(BaseIndexer):
     Book.objects.values.author_name()
     '''
     INDEXES = [(fields.TextField, StringIndex),
+           (fields.CharField, StringIndex),
            (fields.IntegerField, IntegerIndex),
            #(fields.SchemaField, TextIndex), #unsoported
            #(fields.ListField, None), #multi key index
@@ -56,6 +57,9 @@ class ExactIndexer(BaseIndexer):
         subindex = self._lookup_index(field)
         if subindex is None and hasattr(field, 'subfield'):
             subindex = self._lookup_index(field.subfield)
+        
+        if subindex is None:
+            raise TypeError("Could not identify an apropriate index for: %s" % field)
         
         func = Indexer(self.document, subindex.objects.db_index, self.dotpath)
         filt = subindex.objects.filter_kwargs_for_value

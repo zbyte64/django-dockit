@@ -209,6 +209,11 @@ class DateTimeField(BaseTypedField):
 class DecimalField(BaseField):
     form_field_class = forms.DecimalField
     
+    def __init__(self, *args, **kwargs):
+        self.max_digits = kwargs.pop('max_digits', None)
+        self.decimal_places = kwargs.pop('decimal_places', None)
+        super(DecimalField, self).__init__(*args, **kwargs)
+    
     def to_primitive(self, val):
         return str(val)
     
