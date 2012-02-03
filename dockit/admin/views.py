@@ -313,10 +313,10 @@ class FragmentViewMixin(DocumentViewMixin):
             if temp_doc_id:
                 storage = self.temp_document.objects.get(temp_doc_id)
             else:
-                storage = self.temp_document()
                 if getattr(self, 'object', None):
-                    storage.copy_from_instance(self.object)
-            storage._original_id = self.kwargs.get('pk', None)
+                    storage = self.temp_document.create_from_instance(self.object)
+                else:
+                    storage = self.temp_document()
             self._temporary_store = storage
         return self._temporary_store
     

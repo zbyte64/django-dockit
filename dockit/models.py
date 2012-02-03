@@ -48,12 +48,14 @@ class TemporaryDocument(dockit.Document):
         instance.save()
         return instance
     
-    def copy_from_instance(self, instance):
+    @classmethod
+    def create_from_instance(cls, instance):
         backend = get_document_backend()
         data = instance.to_primitive(instance)
-        self._original_id = data.pop(backend.get_id_field_name(), None)
-        self._primitive_data = data
-        self._python_data = dict()
+        instance_id = data.pop(backend.get_id_field_name(), None)
+        obj = cls.to_python(data)
+        obj._original_id = instance_id
+        return obj
 
 class FactoryMeta(object):
     def __init__(self, attributes):
