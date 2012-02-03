@@ -423,7 +423,7 @@ class FragmentViewMixin(DocumentViewMixin):
             return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_change', self.object.get_id()))
         if '_addanother' in self.request.POST:
             return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
-        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
+        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_changelist'))
 
 class IndexView(DocumentViewMixin, views.ListView):
     template_suffix = 'change_list'
@@ -560,7 +560,7 @@ class DeleteView(DocumentViewMixin, views.DetailView):
         object_repr = unicode(self.object)
         self.object.delete()
         self.admin.log_deletion(request, self.object, object_repr)
-        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_index'))
+        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_changelist'))
 
 class HistoryView(DocumentViewMixin, views.ListView):
     title = _('History')

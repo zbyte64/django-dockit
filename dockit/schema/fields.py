@@ -587,9 +587,13 @@ class ReferenceField(BaseField):
     def to_primitive(self, val):
         if isinstance(val, basestring): #CONSIDER, should this happen?
             return val
+        if val is None:
+            return val
         return val.get_id()
     
     def to_python(self, val, parent=None):
+        if val is None:
+            return
         try:
             return self.document.objects.get(val)
         except ObjectDoesNotExist:
