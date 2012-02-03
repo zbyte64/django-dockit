@@ -256,6 +256,11 @@ class FragmentViewMixin(DocumentViewMixin):
             field = val.dot_notation_to_field(self.dotpath())
             if getattr(field, 'schema'):
                 schema = field.schema
+                if schema._meta.typed_field:
+                    field = schema._meta.fields[schema._meta.typed_field]
+                    if schema._meta.typed_field in self.request.GET:
+                        key = self.request.GET[schema._meta.typed_field]
+                        schema = field.schemas[key]
             else:
                 assert False
         return schema
