@@ -6,11 +6,9 @@ from django.contrib.admin import helpers
 from django.views.generic import TemplateView, View
 
 from base import AdminViewMixin
-from fields import DotPathField
 
 from dockit import views
 from dockit.forms import DocumentForm
-from dockit.forms.fields import HiddenJSONField
 from dockit.models import create_temporary_document_class
 from dockit.schema.fields import ListField
 from dockit.schema.common import UnSet
@@ -78,6 +76,7 @@ class SchemaTypeSelectionView(DocumentViewMixin, TemplateView):
         return self.form_class
     
     def get_form_kwargs(self):
+        assert self.schema
         return {'schema': self.schema,
                 'initial':self.request.GET}
     
@@ -133,36 +132,26 @@ class FragmentViewMixin(DocumentViewMixin):
         else:
             return self._generate_form_class()
     
-    def is_polymorphic(self):
-        schema = self.get_base_schema()
+    def is_polymorphic(self, schema):
+        #schema = self.get_schema()
         return bool(schema._meta.typed_field)
     
-    def should_prompt_polymorphic_type(self, obj=None):
-        if self.is_polymorphic():
-            schema = self.get_base_schema()
+    def should_prompt_polymorphic_type(self, schema, obj=None):
+        if self.is_polymorphic(schema):
+            #schema = self.get_schema()
+            foo = schema._meta.typed_field
             return obj is None or not getattr(obj, schema._meta.typed_field, None)
         return False
     
-    def get_active_object(self):
-        if self.dotpath():
-            val = self.get_temporary_store()
-            return val.dot_notation_to_value(self.dotpath())
-        return self.get_temporary_store()
-    
-    def needs_typed_selection(self):
-        schema = self.get_base_schema()
+    def needs_typed_selection(self, schema, obj=None):
+        #schema = self.get_schema()
         if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
             return False
-        obj = self.get_active_object()
-        return self.should_prompt_polymorphic_type(obj)
+        #obj = self.get_active_object()
+        return self.should_prompt_polymorphic_type(schema, obj)
     
     def get_readonly_fields(self):
-        schema = self.get_schema()
-        read_only = list()
-        for key, field in schema._meta.fields.iteritems():
-            if not field.editable:
-                read_only.append(key)
-        return read_only
+        return self.admin.get_readonly_fields(self.request)
     
     def get_fieldsets(self, obj=None):
         "Hook for specifying fieldsets for the add form."
@@ -251,24 +240,7 @@ class FragmentViewMixin(DocumentViewMixin):
         return self.request.GET.get('_tempdoc', None)
     
     def formfield_for_field(self, prop, field, **kwargs):
-        import dockit
-        if ((isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField)) or
-             isinstance(prop, dockit.TypedSchemaField)):
-            from fields import TypedSchemaField
-            field = TypedSchemaField
-            kwargs['dotpath'] = self.dotpath()
-            kwargs['schema_property'] = prop
-            if self.next_dotpath():
-                kwargs['required'] = False
-            return field(**kwargs)
-        if issubclass(field, HiddenJSONField):
-            field = DotPathField
-            kwargs['dotpath'] = self.dotpath()
-            if self.next_dotpath():
-                kwargs['required'] = False
-            return field(**kwargs)
-        else:
-            return self.admin.formfield_for_field(prop, field, **kwargs)
+        return self.admin.formfield_for_field(prop, field, self, **kwargs)
     
     def get_base_schema(self):
         return self.admin.schema
@@ -278,23 +250,14 @@ class FragmentViewMixin(DocumentViewMixin):
         Retrieves the currently active schema, taking into account dynamic typing
         '''
         schema = self.get_base_schema()
-        if schema._meta.typed_field:
-            field = schema._meta.fields[schema._meta.typed_field]
-            if schema._meta.typed_field in self.request.GET:
-                key = self.request.GET[schema._meta.typed_field]
-                schema = field.schemas[key]
-                obj = self.get_active_object()
-                attr = schema._meta.typed_field
-                #TODO we need a better method
-                if obj and getattr(obj, attr, None) != key:
-                    obj[attr] = key
-                    #obj.save()
+        
+        if self.dotpath():
+            val = self.get_temporary_store()
+            field = val.dot_notation_to_field(self.dotpath())
+            if getattr(field, 'schema'):
+                schema = field.schema
             else:
-                obj = self.get_active_object()
-                try:
-                    schema = field.schemas[obj[schema._meta.typed_field]]
-                except KeyError:
-                    pass
+                assert False
         return schema
     
     def _generate_form_class(self):
@@ -319,6 +282,12 @@ class FragmentViewMixin(DocumentViewMixin):
                     storage = self.temp_document()
             self._temporary_store = storage
         return self._temporary_store
+    
+    def get_active_object(self):
+        if self.dotpath():
+            val = self.get_temporary_store()
+            return val.dot_notation_to_value(self.dotpath())
+        return self.get_temporary_store()
     
     @property
     def temp_document(self):
@@ -463,37 +432,57 @@ class DocumentProxyView(FragmentViewMixin, View):
         self.args = args
         self.kwargs = kwargs
         self.request = request
+        self.object = self.get_object()
+        schema = self.get_base_schema()
+        
+        if not self.dotpath() and self.needs_typed_selection(schema, self.get_temporary_store()):
+            admin = self.admin.create_admin_for_schema(schema)
+            return admin.get_select_schema_view()(request, *args, **kwargs)
+        
         schema = self.get_schema()
         admin = self.admin.create_admin_for_schema(schema)
+        
         if 'pk' in kwargs:
             return admin.get_update_view()(request, *args, **kwargs)
         else:
             return admin.get_create_view()(request, *args, **kwargs)
     
-    def get_schema(self):
-        if self.dotpath():
-            val = self.get_temporary_store()
-            field = val.dot_notation_to_field(self.dotpath())
-            if hasattr(field, 'schema'):
-                schema = field.schema
-                if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
-                    key = self.request.GET[schema._meta.typed_field]
-                    field = schema._meta.fields[schema._meta.typed_field]
+    def get_base_schema(self):
+        '''
+        Retrieves the currently active schema, taking into account dynamic typing
+        '''
+        schema = self.admin.model
+        if schema._meta.typed_field:
+            field = schema._meta.fields[schema._meta.typed_field]
+            if schema._meta.typed_field in self.request.GET:
+                key = self.request.GET[schema._meta.typed_field]
+                schema = field.schemas[key]
+            else:
+                if self.temporary_document_id():
+                    obj = self.get_temporary_store()
+                else:
+                    obj = self.object
+                if obj:
                     try:
-                        return field.schemas[key]
+                        schema = field.schemas[obj[schema._meta.typed_field]]
                     except KeyError:
-                        schemas = field.schemas
+                        pass
                         raise
-                return schema
-            assert False
-        return self.document
+        return schema
+    
+    def get_object(self):
+        if 'pk' in self.kwargs:
+            return self.document.objects.get(self.kwargs['pk'])
+        return None
 
 class CreateView(FragmentViewMixin, views.CreateView):
     def dispatch(self, request, *args, **kwargs):
         self.request = request
         self.args = args
         self.kwargs = kwargs
-        if self.needs_typed_selection():
+        schema = self.get_schema()
+        obj = self.get_active_object()
+        if self.needs_typed_selection(schema, obj):
             return self.admin.get_select_schema_view()(request, *args, **kwargs)
         return super(CreateView, self).dispatch(request, *args, **kwargs)
     
@@ -520,7 +509,9 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         self.args = args
         self.kwargs = kwargs
         self.object = self.get_object()
-        if self.needs_typed_selection():
+        schema = self.get_schema()
+        obj = self.get_active_object()
+        if self.needs_typed_selection(schema, obj):
             return self.admin.get_select_schema_view()(request, *args, **kwargs)
         return super(UpdateView, self).dispatch(request, *args, **kwargs)
     

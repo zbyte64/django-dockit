@@ -139,11 +139,25 @@ class SchemaAdmin(object):
             fields.append(key) #TODO handle exclude
         return [(None, {'fields': fields})]
     
-    def get_readonly_fields(self, request):
-        return []
-    
-    def formfield_for_field(self, prop, field, **kwargs):
-        #TODO fix file fields to display file if uploaded
+    def formfield_for_field(self, prop, field, view, **kwargs):
+        import dockit
+        from fields import DotPathField
+        from dockit.forms.fields import HiddenJSONField
+        if ((isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField)) or
+             isinstance(prop, dockit.TypedSchemaField)):
+            from fields import TypedSchemaField
+            field = TypedSchemaField
+            kwargs['dotpath'] = view.dotpath()
+            kwargs['schema_property'] = prop
+            if self.next_dotpath():
+                kwargs['required'] = False
+            return field(**kwargs)
+        if issubclass(field, HiddenJSONField):
+            field = DotPathField
+            kwargs['dotpath'] = view.dotpath()
+            if view.next_dotpath():
+                kwargs['required'] = False
+            return field(**kwargs)
         if field in self.formfield_overrides:
             opts = dict(self.formfield_overrides[field])
             field = opts.pop('form_class', field)
@@ -161,6 +175,14 @@ class SchemaAdmin(object):
     
     def reverse(self, name, *args, **kwargs):
         return self.documentadmin.reverse(name, *args, **kwargs)
+    
+    def get_readonly_fields(self, request, schema=None):
+        schema = schema or self.schema
+        read_only = list()
+        for key, field in schema._meta.fields.iteritems():
+            if not field.editable:
+                read_only.append(key)
+        return read_only
     
 class DocumentAdmin(SchemaAdmin):
     list_display = ('__str__',)
@@ -262,6 +284,9 @@ class DocumentAdmin(SchemaAdmin):
         for cls, admin_class in self.schema_inlines:
             if schema == cls:
                 return admin_class
+        #CONSIDER is there a better way?
+        if hasattr(schema, 'get_admin_class'):
+            return schema.get_admin_class()
         return self.default_schema_admin
     
     def log_addition(self, request, object):
@@ -313,6 +338,13 @@ class DocumentAdmin(SchemaAdmin):
             object_repr     = object_repr,
             action_flag     = DELETION
         )
+
+
+'''
+crud request -> DocumentAdmin
+DocumentAdmin -> DocumentProxyView
+DocumentProxyView
+'''
 
 '''
 bring back inlines with a vengance

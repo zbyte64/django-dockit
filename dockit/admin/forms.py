@@ -5,7 +5,8 @@ class TypeSelectionForm(forms.Form):
     _dotpath = forms.CharField(widget=forms.HiddenInput)
     _parent_dotpath = forms.CharField(widget=forms.HiddenInput)
     
-    def __init__(self, schema, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        schema = kwargs.pop('schema')
         super(TypeSelectionForm, self).__init__(*args, **kwargs)
         self.populate_type_field(schema)
     
