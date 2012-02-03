@@ -20,7 +20,6 @@ class Indexer(object):
         
         if isinstance(value, list):
             for val in value:
-                print val
                 self.index_creator(document.pk, self.dotpath, val)
         else:
             self.index_creator(document.pk, self.dotpath, value)

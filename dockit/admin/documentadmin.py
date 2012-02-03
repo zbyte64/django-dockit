@@ -65,7 +65,7 @@ class SchemaAdmin(object):
     def __init__(self, model, admin_site, schema=None, documentadmin=None):
         self.model = model
         self.admin_site = admin_site
-        self.app_name = (model._meta.app_label +'-'+ model._meta.object_name).lower()
+        self.app_name = (model._meta.app_label +'_'+ model._meta.object_name).lower()
         overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
         overrides.update(self.formfield_overrides)
         self.formfield_overrides = overrides
@@ -204,7 +204,7 @@ class DocumentAdmin(SchemaAdmin):
         urlpatterns += patterns('',
             url(r'^$',
                 wrap(self.index.as_view(**init)),
-                name=self.app_name+'_index'),
+                name=self.app_name+'_changelist'),
             url(r'^add/$',
                 wrap(self.create.as_view(**init)),
                 name=self.app_name+'_add'),
