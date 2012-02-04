@@ -173,15 +173,17 @@ class FragmentViewMixin(DocumentViewMixin):
         return formsets
     
     def get_formset_kwargs(self):
-        return self.get_form_kwargs()
+        kwargs = self.get_form_kwargs()
+        kwargs.pop('initial', None)
+        return kwargs
     
     def get_inline_admin_formsets(self):
         formsets = self.get_formsets()
         obj = self.get_active_object()
         inline_admin_formsets = []
         for inline, formset in zip(self.admin.inline_instances, formsets):
-            fieldsets = list(inline.get_fieldsets(self.request, obj))
-            readonly = list(inline.get_readonly_fields(self.request, obj))
+            fieldsets = list(inline.get_fieldsets(self.request))
+            readonly = list(inline.get_readonly_fields(self.request))
             inline_admin_formset = helpers.InlineAdminFormSet(inline, formset,
                 fieldsets, readonly, model_admin=self)
             inline_admin_formsets.append(inline_admin_formset)

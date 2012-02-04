@@ -18,7 +18,7 @@ class InlineSchemaAdmin(SchemaAdmin):
     can_delete = True
 
     def __init__(self, model, admin_site, schema=None, documentadmin=None):
-        super(InlineSchemaAdmin, self).__init__(model, admin_site, schema, documentadmin)
+        super(InlineSchemaAdmin, self).__init__(model, admin_site, self.schema, documentadmin)
         self.opts = self.schema._meta
         if self.verbose_name is None:
             self.verbose_name = self.schema._meta.verbose_name

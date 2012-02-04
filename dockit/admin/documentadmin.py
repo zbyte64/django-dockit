@@ -74,7 +74,7 @@ class SchemaAdmin(object):
         
         self.inline_instances = []
         for inline_class in self.inlines:
-            inline_instance = inline_class(self.model, self.admin_site, schema, documentadmin)
+            inline_instance = inline_class(self.model, self.admin_site, None, documentadmin)
             self.inline_instances.append(inline_instance)
     
     def get_view_kwargs(self):
