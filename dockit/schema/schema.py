@@ -152,6 +152,9 @@ class Options(object):
         traverser = DotPathTraverser(notation)
         traverser.resolve_for_schema(self._document)
         return traverser.current['field']
+    
+    def is_dynamic(self):
+        return bool(self.typed_field)
 
 class SchemaBase(type):
     """

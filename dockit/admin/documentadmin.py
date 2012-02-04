@@ -72,14 +72,6 @@ class SchemaAdmin(object):
         self.schema = schema
         self.documentadmin = documentadmin
         
-        self.inline_instances = []
-        for inline_class in self.inlines:
-            inline_instance = inline_class(self.model, self.admin_site, None, documentadmin)
-            if inline_instance.dotpath is None: #TODO make inlines a dictionary
-                raise TypeError('Inlines must specify a dotpath')
-            self.inline_instances.append(inline_instance)
-            self.exclude.append(inline_instance.dotpath)
-    
     def get_view_kwargs(self):
         return {'admin':self,
                 'admin_site':self.admin_site,}
@@ -145,8 +137,50 @@ class SchemaAdmin(object):
         else:
             return DocumentForm
     
+    def _get_schema_fields(self):
+        for field in self.schema._meta.fields.itervalues():
+            if getattr(field, 'schema', None):
+                yield (field, field.schema, False)
+            elif getattr(field, 'subfield', None) and getattr(field.subfield, 'schema', None):
+                yield (field, field.subfield.schema, True)
+    
+    def _get_static_schema_fields(self):
+        fields = list()
+        for field, schema, many in self._get_schema_fields():
+            if not schema._meta.is_dynamic():
+                fields.append((field, schema, many))
+        return fields
+    
+    def get_excludes(self):
+        excludes = set(self.exclude)
+        excludes.update([inline.dotpath for inline in self.inlines])
+        excludes.update([field.name for field, schema, many in self._get_static_schema_fields()])
+        return list(excludes)
+    
+    def get_inline_instances(self):
+        inline_instances = list()
+        seen = set()
+        for inline_class in self.inlines:
+            inline_instance = inline_class(self.model, self.admin_site, None, self.documentadmin)
+            inline_instances.append(inline_instance)
+            seen.add(inline_instane.dotpath)
+        
+        #TODO how to overide?
+        from inlines import StackedInline
+        for field, schema, many in self._get_static_schema_fields():
+            if field.name in seen:
+                continue
+            kwargs = {'dotpath':field.name}
+            if not many:
+                kwargs['max_num'] = 1
+            inline_instance = StackedInline(self.model, self.admin_site, schema, self.documentadmin, **kwargs)
+            inline_instances.append(inline_instance)
+        
+        return inline_instances
+    
     def get_formsets(self, request, obj=None):
-        for inline in self.inline_instances:
+        inline_instances = self.get_inline_instances()
+        for inline in inline_instances:
             yield inline.get_formset(request, obj)
     
     def get_fieldsets(self, request, obj=None):

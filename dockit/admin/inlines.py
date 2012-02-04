@@ -8,7 +8,6 @@ from dockit.forms.formsets import BaseInlineFormSet, inlinedocumentformset_facto
 
 class InlineSchemaAdmin(SchemaAdmin):
     schema = None
-    dotpath = None
     formset = BaseInlineFormSet
     extra = 3
     max_num = None
@@ -17,9 +16,10 @@ class InlineSchemaAdmin(SchemaAdmin):
     verbose_name_plural = None
     can_delete = True
 
-    def __init__(self, model, admin_site, schema=None, documentadmin=None):
-        super(InlineSchemaAdmin, self).__init__(model, admin_site, self.schema, documentadmin)
+    def __init__(self, model, admin_site, schema=None, documentadmin=None, dotpath=None):
+        super(InlineSchemaAdmin, self).__init__(model, admin_site, schema or self.schema, documentadmin)
         self.opts = self.schema._meta
+        self.dotpath = dotpath
         if self.verbose_name is None:
             self.verbose_name = self.schema._meta.verbose_name
         if self.verbose_name_plural is None:

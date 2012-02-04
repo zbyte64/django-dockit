@@ -161,13 +161,14 @@ class FragmentViewMixin(DocumentViewMixin):
         prefixes = {}
         formsets = list()
         for FormSet, inline in zip(formsets_cls,
-                                   self.admin.inline_instances):
+                                   self.admin.get_inline_instances()):
                 prefix = FormSet.get_default_prefix()
                 prefixes[prefix] = prefixes.get(prefix, 0) + 1
                 if prefixes[prefix] != 1:
                     prefix = "%s-%s" % (prefix, prefixes[prefix])
                 kwargs = self.get_formset_kwargs()
                 kwargs['prefix'] = prefix
+                kwargs['dotpath'] = inline.dotpath
                 formset = FormSet(**kwargs)
                 formsets.append(formset)
         return formsets
@@ -181,7 +182,7 @@ class FragmentViewMixin(DocumentViewMixin):
         formsets = self.get_formsets()
         obj = self.get_active_object()
         inline_admin_formsets = []
-        for inline, formset in zip(self.admin.inline_instances, formsets):
+        for inline, formset in zip(self.admin.get_inline_instances(), formsets):
             fieldsets = list(inline.get_fieldsets(self.request))
             readonly = list(inline.get_readonly_fields(self.request))
             inline_admin_formset = helpers.InlineAdminFormSet(inline, formset,
@@ -306,7 +307,7 @@ class FragmentViewMixin(DocumentViewMixin):
                 schema = self.get_schema()
                 form_field_callback = self.formfield_for_field
                 dotpath = self.dotpath() or None
-                exclude = self.admin.exclude + self.get_readonly_fields()
+                exclude = self.admin.get_excludes() + self.get_readonly_fields()
                 #TODO fix readonly field behavior
         return CustomDocumentForm
     
