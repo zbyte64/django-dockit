@@ -151,7 +151,7 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
         self.save_as_new = save_as_new
         self.dotpath = dotpath or self.form._meta.dotpath
         # is there a better way to get the object descriptor?
-        qs = self.instance.dot_notation(self.base_dotpath)
+        qs = self.instance.dot_notation(self.base_dotpath) or []
         super(BaseInlineFormSet, self).__init__(data, files, prefix=prefix,
                                                 queryset=qs)
     

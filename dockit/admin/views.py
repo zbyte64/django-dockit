@@ -193,7 +193,7 @@ class FragmentViewMixin(DocumentViewMixin):
     
     def get_context_data(self, **kwargs):
         context = AdminViewMixin.get_context_data(self, **kwargs)
-        opts = self.document._meta
+        opts = self.schema._meta
         context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
                         'show_save': True,
                         'show_delete_link': bool(self.dotpath()), #TODO is it a new subobject?
@@ -278,25 +278,7 @@ class FragmentViewMixin(DocumentViewMixin):
         '''
         Retrieves the currently active schema, taking into account dynamic typing
         '''
-        schema = self.get_base_schema()
-        
-        if self.dotpath():
-            val = self.get_temporary_store()
-            field = val.dot_notation_to_field(self.dotpath())
-            if getattr(field, 'schema'):
-                schema = field.schema
-                if schema._meta.typed_field:
-                    field = schema._meta.fields[schema._meta.typed_field]
-                    if schema._meta.typed_field in self.request.GET:
-                        key = self.request.GET[schema._meta.typed_field]
-                        schema = field.schemas[key]
-                    else:
-                        obj = self.get_active_object()
-                        if obj is not None:
-                            schema = type(obj)
-            else:
-                assert False
-        return schema
+        return self.get_base_schema()
     
     def _generate_form_class(self):
         form_cls = self.admin.get_form_class(self.request)
@@ -531,6 +513,39 @@ class DocumentProxyView(FragmentViewMixin, View):
             #KeyErrors cause the base schema to return, this should cause needs_typed_selection to return true
         return schema
     
+    def get_schema(self):
+        '''
+        Retrieves the currently active schema, taking into account dynamic typing
+        '''
+        schema = self.get_base_schema()
+        
+        if self.dotpath():
+            val = self.get_temporary_store()
+            field = val.dot_notation_to_field(self.dotpath())
+            if field is None:
+                field_name = self.dotpath().rsplit('.',1)[1]
+                field = schema._meta.dot_notation_to_field(field_name)
+                if field is None: #lists are tricky
+                    field_name = self.dotpath().rsplit('.',2)[1]
+                    field = schema._meta.dot_notation_to_field(field_name)
+            if getattr(field, 'subfield', None):
+                foo = field
+                field = field.subfield
+            if getattr(field, 'schema'):
+                schema = field.schema
+                if schema._meta.typed_field:
+                    field = schema._meta.fields[schema._meta.typed_field]
+                    if schema._meta.typed_field in self.request.GET:
+                        key = self.request.GET[schema._meta.typed_field]
+                        schema = field.schemas[key]
+                    else:
+                        obj = self.get_active_object()
+                        if obj is not None:
+                            schema = type(obj)
+            else:
+                assert False
+        return schema
+    
     def get_object(self):
         if 'pk' in self.kwargs:
             return self.document.objects.get(self.kwargs['pk'])
@@ -550,7 +565,7 @@ class CreateView(FragmentViewMixin, views.CreateView):
     def get_context_data(self, **kwargs):
         context = views.CreateView.get_context_data(self, **kwargs)
         context.update(FragmentViewMixin.get_context_data(self, **kwargs))
-        opts = self.document._meta
+        opts = self.schema._meta
         context.update({'title': _('Add %s') % force_unicode(opts.verbose_name),
                         'show_delete': False,
                         'add': True,
@@ -581,7 +596,7 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         context.update(FragmentViewMixin.get_context_data(self, **kwargs))
         
         obj = self.object
-        opts = self.document._meta
+        opts = self.schema._meta
         context.update({'title':_('Change %s') % force_unicode(opts.verbose_name),
                         'object_id': obj.get_id,
                         'original': obj,

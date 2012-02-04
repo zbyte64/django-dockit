@@ -99,7 +99,7 @@ class DotPathTraverser(object):
         part = self.current['part']
         if parent_entry['field']:
             parent_entry['field'].set_value(parent_entry['value'], part, value)
-        elif parent_entry['value']:
+        elif parent_entry['value'] is not None:
             parent_entry['value'].set_value(part, value)
         else:
             assert False
