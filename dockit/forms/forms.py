@@ -237,7 +237,6 @@ class BaseDocumentForm(BaseForm):
             self.instance = instance
             object_data = document_to_dict(self._meta.document, instance, opts.properties, 
                                         opts.exclude, dotpath=self.dotpath)
-    
         if initial is not None:
             object_data.update(initial)
             

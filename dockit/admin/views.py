@@ -116,7 +116,7 @@ class FragmentViewMixin(DocumentViewMixin):
         return {
             'fieldsets': self.get_fieldsets(),
             'prepopulated_fields': self.get_prepopulated_fields(),
-            'readonly_fields': [], #self.get_readonly_fields(),
+            'readonly_fields': self.get_readonly_fields(),
             'model_admin': self.admin,
         }
     
@@ -150,9 +150,6 @@ class FragmentViewMixin(DocumentViewMixin):
         "Hook for specifying fieldsets for the add form."
         form = self.get_form_class()
         fields = form.base_fields.keys()
-        for key in self.get_readonly_fields():
-            if key in fields:
-                fields.remove(key)
         return [(None, {'fields': fields})]
     
     def get_prepopulated_fields(self):
@@ -179,15 +176,12 @@ class FragmentViewMixin(DocumentViewMixin):
         return self.get_form_kwargs()
     
     def get_inline_admin_formsets(self):
-        #return []
-        
         formsets = self.get_formsets()
         obj = self.get_active_object()
         inline_admin_formsets = []
         for inline, formset in zip(self.admin.inline_instances, formsets):
             fieldsets = list(inline.get_fieldsets(self.request, obj))
             readonly = list(inline.get_readonly_fields(self.request, obj))
-            #TODO different helper is needed
             inline_admin_formset = helpers.InlineAdminFormSet(inline, formset,
                 fieldsets, readonly, model_admin=self)
             inline_admin_formsets.append(inline_admin_formset)
@@ -310,7 +304,8 @@ class FragmentViewMixin(DocumentViewMixin):
                 schema = self.get_schema()
                 form_field_callback = self.formfield_for_field
                 dotpath = self.dotpath() or None
-                exclude = self.get_readonly_fields()
+                exclude = self.admin.exclude + self.get_readonly_fields()
+                #TODO fix readonly field behavior
         return CustomDocumentForm
     
     def get_temporary_store(self):
@@ -345,6 +340,12 @@ class FragmentViewMixin(DocumentViewMixin):
             kwargs['files'] = self.request.FILES
         if self.dotpath():
             kwargs['dotpath'] = self.dotpath()
+        
+        #populate typed field
+        schema = self.get_schema()
+        if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
+            kwargs.setdefault('initial', {})
+            kwargs['initial'][schema._meta.typed_field] = self.request.GET[schema._meta.typed_field]
         return kwargs
     
     def delete_subobject(self):

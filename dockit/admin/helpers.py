@@ -5,7 +5,10 @@ from django.utils.encoding import force_unicode, smart_unicode
 from django.utils.html import escape, conditional_escape
 from django.contrib.admin.util import (flatten_fieldsets, lookup_field,
     display_for_field, label_for_field, help_text_for_field)
+from django.forms.util import flatatt
+from django.template.defaultfilters import capfirst
 from django.utils.safestring import mark_safe
+from django.core.exceptions import ObjectDoesNotExist
 
 class AdminForm(object):
     def __init__(self, form, fieldsets, prepopulated_fields, readonly_fields=None, model_admin=None):

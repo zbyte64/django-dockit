@@ -35,7 +35,7 @@ class SchemaAdmin(object):
     
     raw_id_fields = ()
     fields = None
-    exclude = None
+    exclude = []
     fieldsets = None
     form = forms.ModelForm #only for legacy purposes, remove this and django admin complains
     form_class = None
