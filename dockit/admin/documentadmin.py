@@ -6,6 +6,7 @@ from django.contrib.admin import widgets
 from django import forms
 
 from dockit.paginator import Paginator
+from dockit.forms import DocumentForm
 
 import views
 
@@ -36,7 +37,7 @@ class SchemaAdmin(object):
     fields = None
     exclude = None
     fieldsets = None
-    form = forms.ModelForm
+    form = forms.ModelForm #only for legacy purposes, remove this and django admin complains
     form_class = None
     filter_vertical = ()
     filter_horizontal = ()
@@ -45,7 +46,6 @@ class SchemaAdmin(object):
     formfield_overrides = {}
     readonly_fields = ()
     declared_fieldsets = None
-    form_class = None #can't use form because of Django Admin
     
     save_as = False
     save_on_top = False
@@ -71,6 +71,11 @@ class SchemaAdmin(object):
         self.formfield_overrides = overrides
         self.schema = schema
         self.documentadmin = documentadmin
+        
+        self.inline_instances = []
+        for inline_class in self.inlines:
+            inline_instance = inline_class(self.model, self.admin_site, schema, documentadmin)
+            self.inline_instances.append(inline_instance)
     
     def get_view_kwargs(self):
         return {'admin':self,
@@ -128,6 +133,19 @@ class SchemaAdmin(object):
     def queryset(self, request):
         return self.model.objects.all()
     
+    def get_form_class(self, request, obj=None):
+        """
+        Returns the form class to use in this view
+        """
+        if self.form_class:
+            return self.form_class
+        else:
+            return DocumentForm
+    
+    def get_formsets(self, request, obj=None):
+        for inline in self.inline_instances:
+            yield inline.get_formset(request, obj)
+    
     def get_fieldsets(self, request, obj=None):
         "Hook for specifying fieldsets for the add form."
         if self.declared_fieldsets:
@@ -143,6 +161,7 @@ class SchemaAdmin(object):
         import dockit
         from fields import DotPathField
         from dockit.forms.fields import HiddenJSONField
+        request = kwargs.pop('request', None)
         if ((isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField)) or
              isinstance(prop, dockit.TypedSchemaField)):
             from fields import TypedSchemaField

@@ -5,8 +5,6 @@ from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 
 from forms import DocumentForm, documentform_factory
 
-# ModelFormSets ##############################################################
-
 class BaseDocumentFormSet(BaseFormSet):
     """
     A ``FormSet`` for editing a queryset and/or adding new objects to it.

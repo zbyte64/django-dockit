@@ -8,7 +8,6 @@ from django.views.generic import TemplateView, View
 from base import AdminViewMixin
 
 from dockit import views
-from dockit.forms import DocumentForm
 from dockit.models import create_temporary_document_class
 from dockit.schema.fields import ListField
 from dockit.schema.common import UnSet
@@ -127,27 +126,21 @@ class FragmentViewMixin(DocumentViewMixin):
         """
         if self.form_class:
             return self.form_class
-        if self.admin.form_class:
-            return self.admin.form_class
         else:
             return self._generate_form_class()
     
     def is_polymorphic(self, schema):
-        #schema = self.get_schema()
         return bool(schema._meta.typed_field)
     
     def should_prompt_polymorphic_type(self, schema, obj=None):
         if self.is_polymorphic(schema):
-            #schema = self.get_schema()
             foo = schema._meta.typed_field
             return obj is None or not getattr(obj, schema._meta.typed_field, None)
         return False
     
     def needs_typed_selection(self, schema, obj=None):
-        #schema = self.get_schema()
         if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
             return False
-        #obj = self.get_active_object()
         return self.should_prompt_polymorphic_type(schema, obj)
     
     def get_readonly_fields(self):
@@ -165,6 +158,42 @@ class FragmentViewMixin(DocumentViewMixin):
     def get_prepopulated_fields(self):
         return self.admin.prepopulated_fields
     
+    def get_formsets(self):
+        formsets_cls = self.admin.get_formsets(self.request, self.get_active_object())
+        
+        prefixes = {}
+        formsets = list()
+        for FormSet, inline in zip(formsets_cls,
+                                   self.admin.inline_instances):
+                prefix = FormSet.get_default_prefix()
+                prefixes[prefix] = prefixes.get(prefix, 0) + 1
+                if prefixes[prefix] != 1:
+                    prefix = "%s-%s" % (prefix, prefixes[prefix])
+                kwargs = self.get_formset_kwargs()
+                kwargs['prefix'] = prefix
+                formset = FormSet(**kwargs)
+                formsets.append(formset)
+        return formsets
+    
+    def get_formset_kwargs(self):
+        return self.get_form_kwargs()
+    
+    def get_inline_admin_formsets(self):
+        #return []
+        
+        formsets = self.get_formsets()
+        obj = self.get_active_object()
+        inline_admin_formsets = []
+        for inline, formset in zip(self.admin.inline_instances, formsets):
+            fieldsets = list(inline.get_fieldsets(self.request, obj))
+            readonly = list(inline.get_readonly_fields(self.request, obj))
+            #TODO different helper is needed
+            inline_admin_formset = helpers.InlineAdminFormSet(inline, formset,
+                fieldsets, readonly, model_admin=self)
+            inline_admin_formsets.append(inline_admin_formset)
+        
+        return inline_admin_formsets
+    
     def get_context_data(self, **kwargs):
         context = AdminViewMixin.get_context_data(self, **kwargs)
         opts = self.document._meta
@@ -180,8 +209,11 @@ class FragmentViewMixin(DocumentViewMixin):
                         'delete': False,
                         'dotpath': self.dotpath(),
                         'tempdoc': self.get_temporary_store(),
-                        'adminform':self.create_admin_form(),})
+                        'adminform':self.create_admin_form(),
+                        'inline_admin_formsets': self.get_inline_admin_formsets(),})
         context['media'] += context['adminform'].form.media
+        for inline in context['inline_admin_formsets']:
+            context['media'] += inline.media
         
         obj = None
         if hasattr(self, 'object'):
@@ -261,12 +293,18 @@ class FragmentViewMixin(DocumentViewMixin):
                     if schema._meta.typed_field in self.request.GET:
                         key = self.request.GET[schema._meta.typed_field]
                         schema = field.schemas[key]
+                    else:
+                        obj = self.get_active_object()
+                        if obj is not None:
+                            schema = type(obj)
             else:
                 assert False
         return schema
     
     def _generate_form_class(self):
-        class CustomDocumentForm(DocumentForm):
+        form_cls = self.admin.get_form_class(self.request)
+        
+        class CustomDocumentForm(form_cls):
             class Meta:
                 document = self.temp_document
                 schema = self.get_schema()
