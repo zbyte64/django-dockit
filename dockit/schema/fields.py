@@ -1,5 +1,6 @@
 from django.utils.encoding import smart_unicode, force_unicode, smart_str
 from django.utils.text import capfirst
+from django.utils import formats
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields import BLANK_CHOICE_DASH
 from django import forms
@@ -200,13 +201,55 @@ class BooleanField(BaseTypedField):
         super(BooleanField, self).__init__(*args, **kwargs)
         self.blank = True
 
-class DateField(BaseTypedField):
-    coerce_function = datetime.date
+class DateField(BaseField):
     form_field_class = forms.DateField
+    
+    def __init__(self, *args, **kwargs):
+        self.input_formats = kwargs.pop('input_formats', list())
+        super(DateField, self).__init__(*args, **kwargs)
+    
+    def to_python(self, value, parent=None):
+        """
+        Validates that the input can be converted to a date. Returns a Python
+        datetime.date object.
+        """
+        if value is None:
+            return None
+        if isinstance(value, datetime.datetime):
+            return value.date()
+        if isinstance(value, datetime.date):
+            return value
+        for format in self.input_formats or formats.get_format('DATE_INPUT_FORMATS'):
+            try:
+                return datetime.datetime.strptime(value, format).date()
+            except ValueError:
+                continue
+        raise ValueError
 
-class DateTimeField(BaseTypedField):
-    coerce_function = datetime.datetime
+class DateTimeField(BaseField):
     form_field_class = forms.DateTimeField
+    
+    def __init__(self, *args, **kwargs):
+        self.input_formats = kwargs.pop('input_formats', list())
+        super(DateField, self).__init__(*args, **kwargs)
+    
+    def to_python(self, value, parent=None):
+        """
+        Validates that the input can be converted to a date. Returns a Python
+        datetime.date object.
+        """
+        if value is None:
+            return None
+        if isinstance(value, datetime.datetime):
+            return value
+        if isinstance(value, datetime.date):
+            return value
+        for format in self.input_formats or formats.get_format('DATE_INPUT_FORMATS'):
+            try:
+                return datetime.datetime.strptime(value, format)
+            except ValueError:
+                continue
+        raise ValueError
 
 class DecimalField(BaseField):
     form_field_class = forms.DecimalField
