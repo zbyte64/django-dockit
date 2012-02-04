@@ -380,10 +380,19 @@ class FragmentViewMixin(DocumentViewMixin):
         
         form_class = self.get_form_class()
         form = self.get_form(form_class)
+        formsets = self.get_formsets()
         if not form.is_valid():
-            return self.form_invalid(form)
+            return self.form_invalid(form)#, formsets)
+        
+        for formset in formsets:
+            if formset.is_valid():
+                pass
+            else:
+                return self.form_invalid(form)#, formsets)
         
         obj = form.save() #CONSIDER this would normally be done in form_valid
+        for formset in formsets:
+            formset.save(instance=obj)
         assert obj._meta.collection == self.temp_document._meta.collection
         
         

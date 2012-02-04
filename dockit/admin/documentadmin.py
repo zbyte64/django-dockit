@@ -75,7 +75,10 @@ class SchemaAdmin(object):
         self.inline_instances = []
         for inline_class in self.inlines:
             inline_instance = inline_class(self.model, self.admin_site, None, documentadmin)
+            if inline_instance.dotpath is None: #TODO make inlines a dictionary
+                raise TypeError('Inlines must specify a dotpath')
             self.inline_instances.append(inline_instance)
+            self.exclude.append(inline_instance.dotpath)
     
     def get_view_kwargs(self):
         return {'admin':self,

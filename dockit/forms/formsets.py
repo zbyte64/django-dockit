@@ -194,10 +194,12 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
         """Saves and returns an existing model instance for the given form."""
         return form._inner_save()
     
-    def save(self, commit=True):
+    def save(self, commit=True, instance=None):
         """Saves model instances for every form, adding and changing instances
         as necessary, and returns the list of instances.
         """
+        if instance:
+            self.instance = instance
         if not commit:
             self.saved_forms = []
             def save_m2m():
