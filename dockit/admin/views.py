@@ -2,10 +2,10 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext as _
 from django.utils.html import escape, escapejs
-from django.contrib.admin import helpers
 from django.views.generic import TemplateView, View
 
 from base import AdminViewMixin
+import helpers
 
 from dockit import views
 from dockit.models import create_temporary_document_class
@@ -499,7 +499,11 @@ class DocumentProxyView(FragmentViewMixin, View):
             field = schema._meta.fields[schema._meta.typed_field]
             if schema._meta.typed_field in self.request.GET:
                 key = self.request.GET[schema._meta.typed_field]
-                schema = field.schemas[key]
+                try:
+                    schema = field.schemas[key]
+                except KeyError:
+                    #TODO emit a warning
+                    pass
             else:
                 if self.temporary_document_id():
                     obj = self.get_temporary_store()
@@ -509,8 +513,9 @@ class DocumentProxyView(FragmentViewMixin, View):
                     try:
                         schema = field.schemas[obj[schema._meta.typed_field]]
                     except KeyError:
+                        #TODO emit a warning
                         pass
-                        raise
+            #KeyErrors cause the base schema to return, this should cause needs_typed_selection to return true
         return schema
     
     def get_object(self):

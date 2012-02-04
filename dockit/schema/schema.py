@@ -264,7 +264,11 @@ class Schema(object):
             field = cls._meta.fields[cls._meta.typed_field]
             key = val.get(cls._meta.typed_field, None)
             if key:
-                cls = field.schemas[key]
+                try:
+                    cls = field.schemas[key]
+                except KeyError:
+                    #TODO emit a warning
+                    pass
         return cls(_primitive_data=val, _parent=parent)
     
     def __getattribute__(self, name):
