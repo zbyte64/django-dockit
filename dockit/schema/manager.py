@@ -77,7 +77,7 @@ class Manager(object):
         return self.backend.all(self.schema, self.collection)
     
     def get(self, doc_id):
-        data = self.backend.get(self.collection, doc_id)
+        data = self.backend.get(self.schema, self.collection, doc_id)
         return self.schema.to_python(data)
     
     def enable_index(self, index_cls_name, index_name, params):

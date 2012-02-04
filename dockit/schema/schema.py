@@ -9,10 +9,14 @@ from django.utils.translation import activate, deactivate_all, get_language, str
 from django.utils.encoding import smart_str, force_unicode
 from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from manager import Manager
 from common import register_schema, DotPathTraverser, UnSet
 from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
+
+def subclass_exception(name, parents, module):
+    return type(name, parents, {'__module__': module})
 
 class Options(object):
     """ class based on django.db.models.options. We only keep
@@ -162,6 +166,7 @@ class SchemaBase(type):
     """
     def __new__(cls, name, bases, attrs):
         super_new = super(SchemaBase, cls).__new__
+        parents = [b for b in bases if isinstance(b, SchemaBase)]
         
         module = attrs.pop('__module__')
         new_class = super_new(cls, name, bases, {'__module__': module})
@@ -171,6 +176,7 @@ class SchemaBase(type):
             meta = getattr(new_class, 'Meta', None)
         else:
             meta = attr_meta
+            #TODO collect meta from parents
             if getattr(meta, 'proxy', False) or getattr(meta, 'typed_key', False):
                 if not hasattr(new_class, '_meta'):
                     raise ValueError('Proxy schemas must inherit from another schema')
@@ -382,6 +388,20 @@ class DocumentBase(SchemaBase):
         if not new_class._meta.virtual and not new_class._meta.proxy:
             backend = get_document_backend()
             backend.register_document(new_class)
+        
+        parents = [b for b in bases if isinstance(b, DocumentBase)]
+        module = new_class.__module__
+        
+        if not new_class._meta.virtual:
+            new_class.add_to_class('DoesNotExist', subclass_exception('DoesNotExist',
+                    tuple(x.DoesNotExist
+                            for x in parents if hasattr(x, '_meta') and not x._meta.virtual)
+                                    or (ObjectDoesNotExist,), module))
+            new_class.add_to_class('MultipleObjectsReturned', subclass_exception('MultipleObjectsReturned',
+                    tuple(x.MultipleObjectsReturned
+                            for x in parents if hasattr(x, '_meta') and not x._meta.virtual)
+                                    or (MultipleObjectsReturned,), module))
+            
         return new_class
 
 class Document(Schema):
@@ -398,7 +418,7 @@ class Document(Schema):
         pre_save.send(sender=type(self), instance=self)
         backend = self._meta.get_backend()
         data = type(self).to_primitive(self)
-        backend.save(self._meta.collection, data)
+        backend.save(type(self), self._meta.collection, data)
         for value in self.objects.get_indexes().itervalues():
             value.on_document_save(self)
         post_save.send(sender=type(self), instance=self, created=created)
@@ -406,7 +426,7 @@ class Document(Schema):
     def delete(self):
         pre_delete.send(sender=type(self), instance=self)
         backend = self._meta.get_backend()
-        backend.delete(self._meta.collection, self.get_id())
+        backend.delete(type(self), self._meta.collection, self.get_id())
         for value in self.objects.get_indexes().itervalues():
             value.on_document_delete(self)
         post_delete.send(sender=type(self), instance=self)

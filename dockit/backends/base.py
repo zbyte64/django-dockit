@@ -16,13 +16,16 @@ class BaseDocumentStorage(object):
         #    if getattr(field, 'db_index', False):
         #        document.objects.enable_index("equals", key, {'field_name':key})
     
-    def save(self, collection, data):
+    def save(self, doc_class, collection, data):
         raise NotImplementedError
     
-    def get(self, collection, doc_id):
+    def get(self, doc_class, collection, doc_id):
+        '''
+        Returns the primitive data for that doc_id
+        '''
         raise NotImplementedError
     
-    def delete(self, collection, doc_id):
+    def delete(self, doc_class, collection, doc_id):
         raise NotImplementedError
     
     def all(self, doc_class, collection):

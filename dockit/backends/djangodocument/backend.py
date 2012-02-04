@@ -58,7 +58,7 @@ class ModelDocumentStorage(BaseDocumentStorage):
     def get_id_field_name(self):
         return '_pk'
     
-    def save(self, collection, data):
+    def save(self, doc_class, collection, data):
         doc_id = self.get_id(data)
         encoded_data = simplejson.dumps(data, cls=DjangoJSONEncoder)
         document = DocumentStore(collection=collection, data=encoded_data)
@@ -68,16 +68,16 @@ class ModelDocumentStorage(BaseDocumentStorage):
         document.save()
         data[self.get_id_field_name()] = document.pk
     
-    def get(self, collection, doc_id):
+    def get(self, doc_class, collection, doc_id):
         try:
             document = DocumentStore.objects.get(collection=collection, pk=doc_id)
         except DocumentStore.DoesNotExist:
-            raise #TODO raise proper error
+            raise doc_class.DoesNotExist
         data = simplejson.loads(document.data)
         data[self.get_id_field_name()] = document.pk
         return data
     
-    def delete(self, collection, doc_id):
+    def delete(self, doc_class, collection, doc_id):
         return DocumentStore.objects.filter(collection=collection, pk=doc_id).delete()
     
     def all(self, doc_class, collection):
