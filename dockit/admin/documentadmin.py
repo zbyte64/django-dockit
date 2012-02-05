@@ -340,9 +340,6 @@ class DocumentAdmin(SchemaAdmin):
         for cls, admin_class in self.schema_inlines:
             if schema == cls:
                 return admin_class
-        #CONSIDER is there a better way?
-        if hasattr(schema, 'get_admin_class'):
-            return schema.get_admin_class()
         return self.default_schema_admin
     
     def log_addition(self, request, object):
