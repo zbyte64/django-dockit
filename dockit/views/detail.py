@@ -17,9 +17,18 @@ class SingleObjectMixin(detailview.SingleObjectMixin):
         # like DateDetailView
         if queryset is None:
             queryset = self.get_queryset()
+        
+        pk = self.kwargs.get('pk', None)
+        slug = self.kwargs.get('slug', None)
         try:
-            return queryset.get(self.kwargs['pk'])
-        except ObjectDoesNotExist:
+            if pk is not None:
+                return queryset.get(self.kwargs['pk'])
+            elif slug is not None:
+                #TODO this is horribly wrong, we need a real filter spec
+                slug_field = self.get_slug_field()
+                return getattr(queryset.filter, slug_field)(self.kwargs['slug'])[0]
+            
+        except (ObjectDoesNotExist, IndexError):
             raise Http404(_(u"No %(verbose_name)s found matching the query") %
                           {'verbose_name': self.document._meta.verbose_name})
     

@@ -6,6 +6,8 @@ from dockit.schema import fields#, Document
 from models import DocumentStore, StringIndex, IntegerIndex, DateIndex
 from backend import ModelDocumentStorage, DocumentQuery
 
+#TODO need a mechanism for back populating indexes, must be task based
+
 class Indexer(object):
     def __init__(self, doc_class, index_creator, dotpath):
         self.doc_class = doc_class
