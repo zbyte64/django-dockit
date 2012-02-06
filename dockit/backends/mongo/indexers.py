@@ -14,10 +14,12 @@ class ExactIndexer(BaseIndexer):
     
     def generate_index(self):
         mongo_collection = self.get_mongo_collection()
-        mongo_collection.ensureIndex({self.dotpath:1})
+        #docs claim it wants a dictionary but the api wants a list of tuples
+        param = [(self.dotpath, 1)]
+        mongo_collection.ensure_index(param)
     
     def filter(self, value):
-        param = {self.dotpath: value}
+        param = [(self.dotpath, value)]
         mongo_collection = self.get_mongo_collection()
         qs = mongo_collection.find(param)
         return DocumentQuery(qs, self.document)
@@ -32,14 +34,14 @@ class DateIndexer(ExactIndexer):
     def filter(self, *args, **kwargs):
         mongo_collection = self.get_mongo_collection()
         if args:
-            qs = mongo_collecion.find(args[0])
+            qs = mongo_collection.find(args[0])
         #for key, value in kwargs.iteritems():
         #    qs = qs.filter(**filter_func('%s__%s' % (self.name, key), value))
             
         return DocumentQuery(qs, self.document)
     
     def values(self, *args, **kwargs):
-        qs = DocumentStore.objects.filter(collection=self.collection)
+        qs = None
         filter_func = self.index_functions['filter']
         if args:
             qs = qs.filter(**filter_func('%s__in' % self.name, args))

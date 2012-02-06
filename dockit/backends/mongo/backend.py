@@ -13,7 +13,7 @@ class DocumentQuery(BaseDocumentQuerySet):
         return self.doc_class.to_python(entry)
     
     def __len__(self):
-        return len(self.queryset)
+        return self.queryset.count()
     
     def __nonzero__(self):
         return bool(self.queryset)
@@ -49,7 +49,7 @@ class MongoDocumentStorage(BaseDocumentStorage):
         return '_id'
     
     def all(self, doc_class, collection):
-        return DocumentQuery(self.db[collection], doc_class)
+        return DocumentQuery(self.db[collection].find(), doc_class)
     
     def filter(self, doc_class, collection, params):
         qs = self.db[collection].filter(params)
@@ -58,3 +58,4 @@ class MongoDocumentStorage(BaseDocumentStorage):
     #def generate_index(self, collection, dotpath):
     #    self.db[collection].ensureIndex({dotpath:1})
 
+import indexers
