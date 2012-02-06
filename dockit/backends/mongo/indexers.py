@@ -21,8 +21,7 @@ class ExactIndexer(BaseIndexer):
     def filter(self, value):
         param = [(self.dotpath, value)]
         mongo_collection = self.get_mongo_collection()
-        qs = mongo_collection.find(param)
-        return DocumentQuery(qs, self.document)
+        return DocumentQuery(mongo_collection, self.document, param)
     
     def values(self):
         mongo_collection = self.get_mongo_collection()
