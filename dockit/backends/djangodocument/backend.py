@@ -16,6 +16,9 @@ class DocumentQuery(BaseDocumentQuerySet):
         data['_pk'] = entry.pk
         return self.doc_class.to_python(data)
     
+    def delete(self):
+        return self.queryset.delete()
+    
     def __len__(self):
         return self.queryset.count()
     

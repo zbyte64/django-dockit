@@ -1,4 +1,6 @@
 from pymongo import Connection
+from pymongo.objectid import ObjectId
+
 from dockit.backends.base import BaseDocumentStorage, BaseDocumentQuerySet
 
 from django.conf import settings
@@ -10,17 +12,29 @@ class DocumentQuery(BaseDocumentQuerySet):
         self.params = params or list()
         super(DocumentQuery, self).__init__()
     
-    @property
-    def queryset(self):
+    def _build_params(self):
         if self.params:
             params = self.params
             if len(params) > 1:
                 params = dict(params)
+            return params
+        return None
+    
+    @property
+    def queryset(self):
+        params = self._build_params()
+        if params:
             return self.collection.find(params)
         return self.collection.find()
     
     def wrap(self, entry):
         return self.doc_class.to_python(entry)
+    
+    def delete(self):
+        params = self._build_params()
+        if params:
+            return self.collection.remove(params)
+        return self.collection.remove()
     
     def __len__(self):
         return self.queryset.count()
@@ -68,11 +82,10 @@ class MongoDocumentStorage(BaseDocumentStorage):
             self.db[collection].save(data)
     
     def get(self, doc_class, collection, doc_id):
-        from pymongo.objectid import ObjectId
         return self.db[collection].find_one({'_id':ObjectId(doc_id)})
     
     def delete(self, doc_class, collection, doc_id):
-        return self.db[collection].remove(doc_id)
+        return self.db[collection].remove({'_id':ObjectId(doc_id)})
     
     def get_id_field_name(self):
         return '_id'

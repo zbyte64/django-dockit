@@ -448,15 +448,15 @@ class UserMeta(object):
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
 
-def create_schema(name, fields, module='dockit.models'):
+def create_schema(name, fields, module='dockit.models', base=SchemaBase, parents=(Schema,)):
     attrs = SortedDict(fields)
     attrs['__module__'] = module
-    return SchemaBase.__new__(SchemaBase, name, (Schema,), attrs)
+    return SchemaBase.__new__(base, name, parents, attrs)
 
-def create_document(name, fields, module='dockit.models', collection=None):
+def create_document(name, fields, module='dockit.models', collection=None, base=DocumentBase, parents=(Document,)):
     attrs = SortedDict(fields)
     attrs['__module__'] = module
     if collection:
        attrs['Meta'] = UserMeta(collection=collection)
-    return DocumentBase.__new__(DocumentBase, name, (Document,), attrs)
+    return DocumentBase.__new__(base, name, parents, attrs)
 

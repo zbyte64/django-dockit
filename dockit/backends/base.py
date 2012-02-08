@@ -44,6 +44,9 @@ class BaseDocumentQuerySet(object):
     def count(self):
         return self.__len__()
     
+    def delete(self):
+        raise NotImplementedError
+    
     def __getitem__(self, val):
         raise NotImplementedError
     
