@@ -67,31 +67,29 @@ class DocumentQuery(BaseDocumentQuerySet):
 
 class MongoDocumentStorage(BaseDocumentStorage):
 
-    def __init__(self):
+    def __init__(self, host, port, db):
         #TODO be proper about this
-        self.connection = Connection(settings.MONGO_HOST, settings.MONGO_PORT)
-        self.db = self.connection[settings.MONGO_DB]
+        self.connection = Connection(host or settings.MONGO_HOST, port or settings.MONGO_PORT)
+        self.db = self.connection[db or settings.MONGO_DB]
     
     def save(self, doc_class, collection, data):
         id_field = self.get_id_field_name()
         if data.get(id_field, False) is None:
             del data[id_field]
-        if data.get(id_field, False):
-            self.db[collection].insert(data)
-        else:
-            self.db[collection].save(data)
+        self.db[collection].save(data, safe=True)
     
     def get(self, doc_class, collection, doc_id):
-        return self.db[collection].find_one({'_id':ObjectId(doc_id)})
+        ret = self.db[collection].find_one({'_id':ObjectId(doc_id)})
+        if ret is None:
+            raise doc_class.DoesNotExist
+        return ret
     
     def delete(self, doc_class, collection, doc_id):
-        return self.db[collection].remove({'_id':ObjectId(doc_id)})
+        return self.db[collection].remove(ObjectId(doc_id), safe=True)
     
     def get_id_field_name(self):
         return '_id'
     
     def all(self, doc_class, collection):
         return DocumentQuery(self.db[collection], doc_class)
-
-import indexers
 
