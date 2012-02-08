@@ -442,6 +442,15 @@ class Document(Schema):
         if hasattr(self, '__unicode__'):
             return force_unicode(self).encode('utf-8')
         return '%s object' % self.__class__.__name__
+    
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.pk == other.pk
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self._meta.collection, self.pk))
 
 class UserMeta(object):
     def __init__(self, **kwargs):
