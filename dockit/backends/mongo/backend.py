@@ -67,7 +67,7 @@ class DocumentQuery(BaseDocumentQuerySet):
 
 class MongoDocumentStorage(BaseDocumentStorage):
 
-    def __init__(self, host, port, db):
+    def __init__(self, host=None, port=None, db=None):
         #TODO be proper about this
         self.connection = Connection(host or settings.MONGO_HOST, port or settings.MONGO_PORT)
         self.db = self.connection[db or settings.MONGO_DB]
@@ -76,6 +76,8 @@ class MongoDocumentStorage(BaseDocumentStorage):
         id_field = self.get_id_field_name()
         if data.get(id_field, False) is None:
             del data[id_field]
+        elif id_field in data:
+            data[id_field] = ObjectId(data[id_field])
         self.db[collection].save(data, safe=True)
     
     def get(self, doc_class, collection, doc_id):

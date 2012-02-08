@@ -59,6 +59,7 @@ class MongoBackendTestCase(unittest.TestCase):
         doc = TestDocument(charfield='test')
         doc.save()
         
+        doc.charfield = 'test2'
         doc.listfield = ['a', 'b', 'c']
         doc.save()
         
