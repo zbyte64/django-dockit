@@ -67,10 +67,14 @@ class DocumentQuery(BaseDocumentQuerySet):
 
 class MongoDocumentStorage(BaseDocumentStorage):
 
-    def __init__(self, host=None, port=None, db=None):
+    def __init__(self, username=None, password=None, host=None, port=None, db=None):
         #TODO be proper about this
         self.connection = Connection(host or settings.MONGO_HOST, port or settings.MONGO_PORT)
         self.db = self.connection[db or settings.MONGO_DB]
+        username = getattr(settings, 'MONGO_USER', None)
+        password = getattr(settings, 'MONGO_PASSWORD', None)
+        if username:
+            self.db.authenticate(username, password)
     
     def save(self, doc_class, collection, data):
         id_field = self.get_id_field_name()
