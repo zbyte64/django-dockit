@@ -28,6 +28,7 @@ class DocumentQuery(BaseDocumentQuerySet):
         return self.collection.find()
     
     def wrap(self, entry):
+        entry['_id'] = unicode(entry['_id'])
         return self.doc_class.to_python(entry)
     
     def delete(self):
@@ -83,12 +84,15 @@ class MongoDocumentStorage(BaseDocumentStorage):
         elif id_field in data:
             data[id_field] = ObjectId(data[id_field])
         self.db[collection].save(data, safe=True)
+        data[id_field] = unicode(data[id_field])
     
     def get(self, doc_class, collection, doc_id):
-        ret = self.db[collection].find_one({'_id':ObjectId(doc_id)})
-        if ret is None:
+        data = self.db[collection].find_one({'_id':ObjectId(doc_id)})
+        if data is None:
             raise doc_class.DoesNotExist
-        return ret
+        id_field = self.get_id_field_name()
+        data[id_field] = unicode(data[id_field])
+        return data
     
     def delete(self, doc_class, collection, doc_id):
         return self.db[collection].remove(ObjectId(doc_id), safe=True)

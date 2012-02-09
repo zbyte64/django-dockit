@@ -642,11 +642,13 @@ class ReferenceField(BaseField):
         try:
             return self.document.objects.get(val)
         except ObjectDoesNotExist:
-            return None
+            if self.null:
+                return None
+            raise
     
     def formfield_kwargs(self, **kwargs):
         kwargs = BaseField.formfield_kwargs(self, **kwargs)
-        kwargs.setdefault('queryset', self.document.objects)
+        kwargs.setdefault('queryset', self.document.objects.all())
         return kwargs
     
     def traverse_dot_path(self, traverser):
