@@ -24,7 +24,11 @@ class DocumentQuery(BaseDocumentQuerySet):
     def queryset(self):
         params = self._build_params()
         if params:
-            return self.collection.find(params)
+            try:
+                return self.collection.find(params)
+            except TypeError:
+                #why is it pymongo wants tuples for some and dictionaries for others?
+                return self.collection.find(dict(params))
         return self.collection.find()
     
     def wrap(self, entry):
@@ -36,6 +40,15 @@ class DocumentQuery(BaseDocumentQuerySet):
         if params:
             return self.collection.remove(params)
         return self.collection.remove()
+    
+    def get(self, doc_id):
+        cls = type(self)
+        query = cls(self.collection, self.doc_class, [('_id', ObjectId(doc_id))])
+        final_query = query & self
+        try:
+            return final_query[0]
+        except IndexError:
+            raise self.doc_class.DoesNotExist
     
     def __len__(self):
         return self.queryset.count()

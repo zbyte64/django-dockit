@@ -147,3 +147,16 @@ class DotPathDict(dict):
         else:
             self[attr] = value
 
+class DotPathSet(set):
+    def traverse_dot_path(self, traverser):
+        if traverser.remaining_paths:
+            raise DotPathNotFound("Cannot traverse past a set")
+        else:
+            traverser.end(value=self)
+    
+    def set_value(self, attr, value):
+        if value is UnSet:
+            self.remove(attr)
+        else:
+            self.add(value)
+

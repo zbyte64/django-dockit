@@ -7,10 +7,11 @@ from django import forms
 
 from decimal import Decimal
 import datetime
+import copy
 
 from serializer import PRIMITIVE_PROCESSOR
 from exceptions import DotPathNotFound
-from common import get_schema, DotPathList, DotPathDict, UnSet
+from common import get_schema, DotPathList, DotPathDict, DotPathSet, UnSet
 from dockit.forms.fields import HiddenSchemaField, HiddenListField, HiddenDictField, SchemaChoiceField, PrimitiveListField
 
 class NOT_PROVIDED:
@@ -160,6 +161,11 @@ class BaseField(object):
     
     def set_value(self, parent, attr, value):
         raise DotPathNotFound
+    
+    def __deepcopy__(self, memodict):
+        obj = copy.copy(self)
+        memodict[id(self)] = obj
+        return obj
 
 class BaseTypedField(BaseField):
     coerce_function = None
@@ -533,6 +539,44 @@ class ListField(BaseField):
             else:
                 parent[index] = value
 
+class SetField(ListField):
+    #returns a MultipleChoiceField if there is a set of choices
+    def get_form_field_class(self):
+        if self.choices:
+            return forms.MultipleChoiceField
+        return ListField.get_form_field_class(self)
+    
+    def formfield_kwargs(self, **kwargs):
+        if self.choices:
+            return BaseField.formfield_kwargs(self, **kwargs)
+        else:
+            return ListField.formfield_kwargs(self, **kwargs)
+    
+    def to_python(self, val, parent=None):
+        if self.subfield:
+            ret = DotPathSet()
+            if val is None:
+                return ret
+            #TODO pass in parent
+            for item in val:
+                if not self.subfield.is_instance(item):
+                    item = self.subfield.to_python(item)
+                ret.add(item)
+            #run data through the primitive processor
+            return PRIMITIVE_PROCESSOR.to_python(ret)
+        return PRIMITIVE_PROCESSOR.to_python(val)
+    
+    def is_instance(self, val):
+        if val is None:
+            return True
+        if not isinstance(val, DotPathSet):
+            return False
+        if self.subfield:
+            for item in val:
+                if not self.subfield.is_instance(item):
+                    return False
+        return True
+
 class DictField(BaseField):
     form_field_class = HiddenDictField
     
@@ -672,6 +716,20 @@ class ReferenceField(BaseField):
     def set_value(self, parent, attr, value):
         parent[attr] = value
 
+class DocumentSetField(SetField):
+    def __init__(self, document, *args, **kwargs):
+        subfield = ReferenceField(document)
+        kwargs['subfield'] = subfield
+        super(DocumentSetField, self).__init__(*args, **kwargs)
+        self.choices = True
+        self.document = document
+        self.queryset = document.objects.all()
+    
+    def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH):
+        choices = list(include_blank and blank_choice or [])
+        lst = [(x.pk, smart_unicode(x)) for x in self.queryset]
+        return choices + lst
+
 class ModelReferenceField(BaseField):
     form_field_class = forms.ModelChoiceField
     
@@ -698,4 +756,18 @@ class ModelReferenceField(BaseField):
         kwargs = BaseField.formfield_kwargs(self, **kwargs)
         kwargs.setdefault('queryset', self.model.objects)
         return kwargs
+
+class ModelSetField(SetField):
+    def __init__(self, model, *args, **kwargs):
+        subfield = ModelReferenceField(model)
+        kwargs['subfield'] = subfield
+        super(ModelSetField, self).__init__(*args, **kwargs)
+        self.choices = True
+        self.model = model
+        self.queryset = model.objects.all()
+    
+    def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH):
+        choices = list(include_blank and blank_choice or [])
+        lst = [(x._get_pk_val(), smart_unicode(x)) for x in self.queryset]
+        return choices + lst
 

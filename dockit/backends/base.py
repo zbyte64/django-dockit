@@ -47,6 +47,13 @@ class BaseDocumentQuerySet(object):
     def delete(self):
         raise NotImplementedError
     
+    def all(self):
+        from copy import copy
+        return copy(self)
+    
+    def get(self, doc_id):
+        raise NotImplementedError
+    
     def __getitem__(self, val):
         raise NotImplementedError
     
