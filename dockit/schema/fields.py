@@ -12,13 +12,14 @@ import copy
 from serializer import PRIMITIVE_PROCESSOR
 from exceptions import DotPathNotFound
 from common import get_schema, DotPathList, DotPathDict, DotPathSet, UnSet
-from dockit.forms.fields import HiddenSchemaField, HiddenListField, HiddenDictField, SchemaChoiceField, PrimitiveListField
+from dockit.forms.fields import HiddenSchemaField, HiddenListField, HiddenDictField, SchemaChoiceField, PrimitiveListField, SchemaMultipleChoiceField
 
 class NOT_PROVIDED:
     pass
 
 class BaseField(object):
     form_field_class = forms.CharField
+    form_field_choices_class = forms.ChoiceField
     form_widget_class = None
     
     creation_counter = 0
@@ -107,7 +108,7 @@ class BaseField(object):
     
     def get_form_field_class(self):
         if self.choices:
-            return forms.ChoiceField
+            return self.form_field_choices_class
         else:
             return self.form_field_class
     
@@ -141,7 +142,6 @@ class BaseField(object):
             #defaults['coerce'] = self.to_python
             #if self.null:
             #    defaults['empty_value'] = None
-            form_class = forms.TypedChoiceField
             # Many of the subclass-specific formfield arguments (min_value,
             # max_value) don't apply for choice fields, so be sure to only pass
             # the values that TypedChoiceField will understand.
@@ -540,10 +540,12 @@ class ListField(BaseField):
                 parent[index] = value
 
 class SetField(ListField):
+    form_field_choices_class = forms.MultipleChoiceField
+    
     #returns a MultipleChoiceField if there is a set of choices
     def get_form_field_class(self):
         if self.choices:
-            return forms.MultipleChoiceField
+            return self.form_field_choices_class
         return ListField.get_form_field_class(self)
     
     def formfield_kwargs(self, **kwargs):
@@ -717,11 +719,13 @@ class ReferenceField(BaseField):
         parent[attr] = value
 
 class DocumentSetField(SetField):
+    form_field_choices_class = SchemaMultipleChoiceField
+    
     def __init__(self, document, *args, **kwargs):
         subfield = ReferenceField(document)
         kwargs['subfield'] = subfield
         super(DocumentSetField, self).__init__(*args, **kwargs)
-        self.choices = True
+        #self.choices = True
         self.document = document
         self.queryset = document.objects.all()
     
@@ -729,9 +733,18 @@ class DocumentSetField(SetField):
         choices = list(include_blank and blank_choice or [])
         lst = [(x.pk, smart_unicode(x)) for x in self.queryset]
         return choices + lst
+    
+    def formfield_kwargs(self, **kwargs):
+        kwargs = BaseField.formfield_kwargs(self, **kwargs)
+        kwargs.setdefault('queryset', self.queryset)
+        return kwargs
+    
+    def get_form_field_class(self):
+        return self.form_field_choices_class
 
 class ModelReferenceField(BaseField):
     form_field_class = forms.ModelChoiceField
+    form_field_choices_class = forms.ModelChoiceField
     
     def __init__(self, model, *args, **kwargs):
         self.model = model
@@ -758,13 +771,23 @@ class ModelReferenceField(BaseField):
         return kwargs
 
 class ModelSetField(SetField):
+    form_field_choices_class = forms.ModelMultipleChoiceField
+    
     def __init__(self, model, *args, **kwargs):
         subfield = ModelReferenceField(model)
         kwargs['subfield'] = subfield
         super(ModelSetField, self).__init__(*args, **kwargs)
-        self.choices = True
+        #self.choices = True
         self.model = model
         self.queryset = model.objects.all()
+    
+    def get_form_field_class(self):
+        return self.form_field_choices_class
+    
+    def formfield_kwargs(self, **kwargs):
+        kwargs = BaseField.formfield_kwargs(self, **kwargs)
+        kwargs.setdefault('queryset', self.model.objects)
+        return kwargs
     
     def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH):
         choices = list(include_blank and blank_choice or [])

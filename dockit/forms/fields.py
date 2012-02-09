@@ -1,5 +1,5 @@
 from django.forms.fields import ChoiceField, Field, EMPTY_VALUES
-from django.forms.widgets import HiddenInput
+from django.forms.widgets import HiddenInput, SelectMultiple, MultipleHiddenInput
 from django.forms import ValidationError
 from django.utils.translation import ugettext as _
 from django.utils.encoding import force_unicode, smart_unicode
@@ -159,3 +159,47 @@ class SchemaChoiceField(ChoiceField):
 
     def validate(self, value):
         return Field.validate(self, value)
+
+class SchemaMultipleChoiceField(SchemaChoiceField):
+    widget = SelectMultiple
+    hidden_widget = MultipleHiddenInput
+    default_error_messages = {
+        'list': _(u'Enter a list of values.'),
+        'invalid_choice': _(u'Select a valid choice. %s is not one of the'
+                            u' available choices.'),
+        'invalid_pk_value': _(u'"%s" is not a valid value for a primary key.')
+    }
+
+    def __init__(self, queryset, cache_choices=False, required=True,
+                 widget=None, label=None, initial=None,
+                 help_text=None, *args, **kwargs):
+        super(SchemaMultipleChoiceField, self).__init__(queryset, None,
+            cache_choices, required, widget, label, initial, help_text,
+            *args, **kwargs)
+
+    def clean(self, value):
+        if self.required and not value:
+            raise ValidationError(self.error_messages['required'])
+        elif not self.required and not value:
+            return []
+        if not isinstance(value, (list, tuple, set)):
+            raise ValidationError(self.error_messages['list'])
+        
+        #TODO validate the pk values
+        '''
+        qs = self.queryset.filter(**{'%s__in' % key: value})
+        pks = set([force_unicode(getattr(o, key)) for o in qs])
+        for val in value:
+            if force_unicode(val) not in pks:
+                raise ValidationError(self.error_messages['invalid_choice'] % val)
+        '''
+        # Since this overrides the inherited ModelChoiceField.clean
+        # we run custom validators here
+        self.run_validators(value)
+        return value
+
+    def prepare_value(self, value):
+        if hasattr(value, '__iter__'):
+            return [super(SchemaMultipleChoiceField, self).prepare_value(v) for v in value]
+        return super(SchemaMultipleChoiceField, self).prepare_value(value)
+
