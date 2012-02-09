@@ -163,7 +163,7 @@ class SchemaAdmin(object):
         for inline_class in self.inlines:
             inline_instance = inline_class(self.model, self.admin_site, None, self.documentadmin)
             inline_instances.append(inline_instance)
-            seen.add(inline_instane.dotpath)
+            seen.add(inline_instance.dotpath)
         
         #TODO how to overide?
         from inlines import StackedInline
