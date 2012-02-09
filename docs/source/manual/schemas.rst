@@ -1,7 +1,7 @@
 Schemas
 =======
 
-.. module:: dockit.schemas
+.. module:: dockit.schema.schema
 
 The Schema Class
 ----------------

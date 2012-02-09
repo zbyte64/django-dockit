@@ -6,7 +6,12 @@ Welcome to Django Dockits's documentation!
    :glob:
    :maxdepth: 2
 
+   manual/admin
+   manual/backends
    manual/schemas
+   manual/fields
+   manual/forms
+   manual/views
    manual/indexers
 
 Download: http://github.com/zbyte64/django-dockit
