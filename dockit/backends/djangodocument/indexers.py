@@ -9,10 +9,11 @@ from backend import ModelDocumentStorage, DocumentQuery
 #TODO need a mechanism for back populating indexes, must be task based
 
 class Indexer(object):
-    def __init__(self, doc_class, index_creator, dotpath):
+    def __init__(self, doc_class, index_creator, dotpath, name):
         self.doc_class = doc_class
         self.index_creator = index_creator
         self.dotpath = dotpath
+        self.name = name
     
     def __call__(self, document):
         try:
@@ -22,9 +23,9 @@ class Indexer(object):
         
         if isinstance(value, list):
             for val in value:
-                self.index_creator(document.pk, self.dotpath, val)
+                self.index_creator(document.pk, self.name, val)
         else:
-            self.index_creator(document.pk, self.dotpath, value)
+            self.index_creator(document.pk, self.name, value)
 
 
 class ExactIndexer(BaseIndexer):
@@ -62,7 +63,7 @@ class ExactIndexer(BaseIndexer):
         if subindex is None:
             raise TypeError("Could not identify an apropriate index for: %s" % field)
         
-        func = Indexer(self.document, subindex.objects.db_index, self.dotpath)
+        func = Indexer(self.document, subindex.objects.db_index, self.dotpath, self.name)
         filt = subindex.objects.filter_kwargs_for_value
         unique_values = subindex.objects.unique_values
         clear = subindex.objects.clear_db_index
@@ -102,7 +103,7 @@ class DateIndexer(BaseIndexer):
         
         subindex = DateIndex
         
-        func = Indexer(self.document, subindex.objects.db_index, self.dotpath)
+        func = Indexer(self.document, subindex.objects.db_index, self.dotpath, self.name)
         filt = subindex.objects.filter_kwargs_for_value
         unique_values = subindex.objects.unique_values
         clear = subindex.objects.clear_db_index
