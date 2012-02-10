@@ -151,6 +151,14 @@ TODO
 
 TODO
 
+
+``SetField``
+------------
+
+.. class:: SetField
+
+TODO
+
 ``DictField``
 -------------
 
@@ -166,12 +174,29 @@ TODO
 TODO
 
 
+``DocumentSetField``
+--------------------
+
+.. class:: DocumentSetField
+
+TODO
+
+
 ``ModelReferenceField``
 -----------------------
 
 .. class:: ModelReferenceField
 
 TODO
+
+
+``ModelSetField``
+-----------------
+
+.. class:: ModelSetField
+
+TODO
+
 
 ``FileField``
 -------------

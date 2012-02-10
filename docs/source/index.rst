@@ -6,6 +6,7 @@ Welcome to Django Dockits's documentation!
    :glob:
    :maxdepth: 2
 
+   manual/installation
    manual/admin
    manual/backends
    manual/schemas
