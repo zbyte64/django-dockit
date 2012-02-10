@@ -7,6 +7,7 @@ from django import forms
 
 from dockit.paginator import Paginator
 from dockit.forms import DocumentForm
+from dockit.forms.fields import PrimitiveListField
 
 import views
 
@@ -214,6 +215,10 @@ class SchemaAdmin(object):
             if view.next_dotpath():
                 kwargs['required'] = False
             return field(**kwargs)
+        if issubclass(field, PrimitiveListField) and 'subfield' in kwargs:
+            subfield_kwargs = dict(kwargs)
+            subfield = self.formfield_for_field(prop, type(subfield_kwargs.pop('subfield')), view, **subfield_kwargs)
+            kwargs['subfield'] = subfield
         if field in self.formfield_overrides:
             opts = dict(self.formfield_overrides[field])
             field = opts.pop('form_class', field)

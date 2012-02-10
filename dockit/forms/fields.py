@@ -37,15 +37,43 @@ class HiddenDictField(HiddenJSONField):
     pass
 
 class PrimitiveListField(Field):
+    '''
+    Wraps around a subfield
+    The widget receives the subfield and is responsible for rendering multiple iterations of the subfield and collecting of data
+    '''
     widget = PrimitiveListWidget
     
-    def __init__(self, subwidget, *args, **kwargs):
-        self.subwidget = subwidget
+    def __init__(self, subfield, *args, **kwargs):
+        self.subfield = subfield
         widget = kwargs.get('widget', self.widget)
         if isinstance(widget, type):
-            widget = widget(subwidget)
+            widget = widget(subfield)
         kwargs['widget'] = widget
         super(PrimitiveListField, self).__init__(*args, **kwargs)
+    
+    def prepare_value(self, value):
+        if value is None:
+            return
+        ret = list()
+        for val in value:
+            ret.append(self.subfield.prepare_value(val))
+        return ret
+    
+    def bound_data(self, data, initial):
+        ret = list()
+        for data_item, initial_item in zip(data, initial):
+            ret.append(self.subfield.bound_data(data_item, initial_item))
+        return ret
+    
+    def clean(self, data, initial=None):
+        ret = list()
+        for i, data_item in enumerate(data):
+            if initial and len(initial) >= i:
+                initial_item = initial[i]
+            else:
+                initial_item = None
+            ret.append(self.subfield.clean(data_item, initial_item))
+        return ret
 
 class SchemaChoiceIterator(object):
     def __init__(self, field):

@@ -79,10 +79,12 @@ More fields types will be supported soon.
 
 from django.utils.datastructures import SortedDict
 from django.forms.util import ErrorList
-from django.forms.forms import BaseForm, get_declared_fields
+from django.forms.forms import BaseForm, get_declared_fields, ValidationError
 from django.forms.widgets import media_property
 
 from dockit.schema.exceptions import DotPathNotFound
+
+import inspect
 
 def document_to_dict(document, instance, properties=None, exclude=None, dotpath=None):
     """
@@ -239,11 +241,32 @@ class BaseDocumentForm(BaseForm):
                                         opts.exclude, dotpath=self.dotpath)
         if initial is not None:
             object_data.update(initial)
-            
         super(BaseDocumentForm, self).__init__(data, files, auto_id, prefix, 
                                             object_data, error_class, 
                                             label_suffix, empty_permitted)
         #print self.data, self.initial, self.instance._primitive_data, self.instance._python_data
+    
+    def _clean_fields(self):
+        for name, field in self.fields.items():
+            # value_from_datadict() gets the data from the data dictionaries.
+            # Each widget type knows how to retrieve its own data, because some
+            # widgets split data over several HTML fields.
+            value = field.widget.value_from_datadict(self.data, self.files, self.add_prefix(name))
+            try:
+                arg_spec = inspect.getargspec(field.clean)
+                if len(arg_spec.args) > 2:
+                    initial = self.initial.get(name, field.initial)
+                    value = field.clean(value, initial)
+                else:
+                    value = field.clean(value)
+                self.cleaned_data[name] = value
+                if hasattr(self, 'clean_%s' % name):
+                    value = getattr(self, 'clean_%s' % name)()
+                    self.cleaned_data[name] = value
+            except ValidationError, e:
+                self._errors[name] = self.error_class(e.messages)
+                if name in self.cleaned_data:
+                    del self.cleaned_data[name]
     
     def _inner_save(self, dynamic=True):
         opts = self._meta

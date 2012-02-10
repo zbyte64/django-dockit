@@ -470,9 +470,7 @@ class ListField(BaseField):
     def formfield_kwargs(self, **kwargs):
         kwargs = super(ListField, self).formfield_kwargs(**kwargs)
         if not hasattr(self.subfield, 'schema'):
-            kwargs['subwidget'] = (self.subfield.form_widget_class or 
-                                   (self.subfield.form_field_class and self.subfield.form_field_class.widget) or
-                                   forms.TextInput)
+            kwargs['subfield'] = self.subfield.formfield()
         return kwargs
     
     def to_primitive(self, val):
