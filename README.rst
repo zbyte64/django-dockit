@@ -10,10 +10,10 @@ Features
 * Mongodb support
 * Backend for using django models to store documents (see Django Document)
 * Integrates with the django admin
-** Supports inlines
-** List Field support (under progress)
-** Supports editing documents with deeply nested schemas
-** Robust design for customizing behavior on a per schema basis
+ * Supports inlines
+ * List Field support (under progress)
+ * Supports editing documents with deeply nested schemas
+ * Robust design for customizing behavior on a per schema basis
 * Class based views
 * Django forms support
 * Dynamically typed documents and schemas
