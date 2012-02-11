@@ -307,12 +307,12 @@ class BaseDocumentForm(BaseForm):
         database. Returns ``instance``.
         """
         #_inner_save wraps it in the schema while we wrap it in the document
-        obj = self._inner_save(dynamic)
+        self.target_object = self._inner_save(dynamic)
         
         if self.dotpath:
-            self.instance.dot_notation_set_value(self.dotpath, obj)
+            self.instance.dot_notation_set_value(self.dotpath, self.target_object)
         else:
-            self.instance = obj
+            self.instance = self.target_object
         
         data = self.instance.to_primitive(self.instance)
         self.instance = self._meta.document.to_python(data)

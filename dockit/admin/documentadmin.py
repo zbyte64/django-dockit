@@ -171,7 +171,7 @@ class SchemaAdmin(object):
         for field, schema, many in self._get_static_schema_fields():
             if field.name in seen:
                 continue
-            kwargs = {'dotpath':field.name}
+            kwargs = {'dotpath':field.name + '.*'}
             if not many:
                 kwargs['max_num'] = 1
             inline_instance = StackedInline(self.model, self.admin_site, schema, self.documentadmin, **kwargs)

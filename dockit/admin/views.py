@@ -168,7 +168,10 @@ class FragmentViewMixin(DocumentViewMixin):
                     prefix = "%s-%s" % (prefix, prefixes[prefix])
                 kwargs = self.get_formset_kwargs()
                 kwargs['prefix'] = prefix
-                kwargs['dotpath'] = inline.dotpath
+                if self.dotpath():
+                    kwargs['dotpath'] = self.dotpath() + '.' + inline.dotpath
+                else:
+                    kwargs['dotpath'] = inline.dotpath
                 formset = FormSet(**kwargs)
                 formsets.append(formset)
         return formsets
@@ -368,14 +371,13 @@ class FragmentViewMixin(DocumentViewMixin):
             return self.form_invalid(form)#, formsets)
         
         for formset in formsets:
-            if formset.is_valid():
-                pass
-            else:
+            if not formset.is_valid():
                 return self.form_invalid(form)#, formsets)
         
-        obj = form.save() #CONSIDER this would normally be done in form_valid
+        obj = form.save(commit=False) #CONSIDER this would normally be done in form_valid
         for formset in formsets:
-            formset.save(instance=obj)
+            formset.save(instance=obj)#form.target_object)
+        obj.save()
         assert obj._meta.collection == self.temp_document._meta.collection
         
         
