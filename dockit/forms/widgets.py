@@ -21,7 +21,7 @@ class PrimitiveListWidget(Widget):
         output = []
         final_attrs = self.build_attrs(attrs)
         id_ = final_attrs.get('id', None)
-        i = 0
+        i = -1
         for i, widget_value in enumerate(value):
             if id_:
                 final_attrs = dict(final_attrs, id='%s_%s' % (id_, i))
