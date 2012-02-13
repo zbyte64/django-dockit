@@ -21,6 +21,8 @@ class Indexer(object):
         except (KeyError, IndexError):
             return
         
+        if value is None:
+            return #TODO proper handling
         if isinstance(value, list):
             for val in value:
                 self.index_creator(document.pk, self.name, val)

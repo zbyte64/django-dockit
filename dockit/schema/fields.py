@@ -173,7 +173,7 @@ class BaseTypedField(BaseField):
     def to_primitive(self, val):
         if isinstance(self.coerce_function, type) and isinstance(val, self.coerce_function):
             return val
-        if self.null and val is None:
+        if val is None:
             return val
         return self.coerce_function(val)
     
@@ -521,6 +521,8 @@ class ListField(BaseField):
                     raise DotPathNotFound(u"Invalid index given, must be an integer (%s)" % name)
                 except IndexError:
                     pass
+            elif value and name == '*':
+                new_value = value #requested a list of values
             traverser.next(field=self.subfield, value=new_value)
         else:
             traverser.end(field=self)
@@ -659,14 +661,23 @@ class ReferenceField(BaseField):
     form_field_class = SchemaChoiceField
     
     def __init__(self, document, *args, **kwargs):
-        assert hasattr(document, 'objects')
-        assert hasattr(document, 'get_id')
+        if document == 'self':
+            document = None
+        else:
+            assert hasattr(document, 'objects')
+            assert hasattr(document, 'get_id')
         self.document = document
         super(ReferenceField, self).__init__(*args, **kwargs)
     
     @property
     def _meta(self):
         return self.document._meta
+    
+    def contribute_to_class(self, cls, name):
+        new_field = copy.copy(self)
+        if new_field.document is None:
+            new_field.document = cls
+        BaseField.contribute_to_class(new_field, cls, name)
     
     def is_instance(self, val):
         if val is None:
@@ -681,8 +692,8 @@ class ReferenceField(BaseField):
         return val.get_id()
     
     def to_python(self, val, parent=None):
-        if val is None:
-            return
+        if self.is_instance(val):
+            return val
         try:
             return self.document.objects.get(val)
         except ObjectDoesNotExist:

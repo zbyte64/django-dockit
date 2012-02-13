@@ -19,6 +19,13 @@ class DocumentQuery(BaseDocumentQuerySet):
     def delete(self):
         return self.queryset.delete()
     
+    def get(self, pk):
+        try:
+            return self.wrap(self.queryset.get(pk=pk))
+        except DocumentStore.DoesNotExist:
+            raise self.doc_class.DoesNotExist
+        #TODO handle multiple objects returned
+    
     def __len__(self):
         return self.queryset.count()
     

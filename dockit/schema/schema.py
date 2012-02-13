@@ -460,12 +460,12 @@ class UserMeta(object):
 def create_schema(name, fields, module='dockit.models', base=SchemaBase, parents=(Schema,)):
     attrs = SortedDict(fields)
     attrs['__module__'] = module
-    return SchemaBase.__new__(base, name, parents, attrs)
+    return base.__new__(base, name, parents, attrs)
 
-def create_document(name, fields, module='dockit.models', collection=None, base=DocumentBase, parents=(Document,)):
+def create_document(name, fields, module='dockit.models', collection=None, virtual=False, base=DocumentBase, parents=(Document,)):
     attrs = SortedDict(fields)
     attrs['__module__'] = module
     if collection:
        attrs['Meta'] = UserMeta(collection=collection)
-    return DocumentBase.__new__(base, name, parents, attrs)
+    return base.__new__(base, name, parents, attrs)
 
