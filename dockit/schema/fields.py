@@ -662,8 +662,10 @@ class ReferenceField(BaseField):
     
     def __init__(self, document, *args, **kwargs):
         if document == 'self':
+            self.self_reference = True
             document = None
         else:
+            self.self_reference = False
             assert hasattr(document, 'objects')
             assert hasattr(document, 'get_id')
         self.document = document
@@ -675,7 +677,7 @@ class ReferenceField(BaseField):
     
     def contribute_to_class(self, cls, name):
         new_field = copy.copy(self)
-        if new_field.document is None:
+        if self.self_reference:
             new_field.document = cls
         BaseField.contribute_to_class(new_field, cls, name)
     

@@ -14,7 +14,7 @@ class DocumentQuery(BaseDocumentQuerySet):
     
     def _build_params(self):
         if self.params:
-            params = self.params
+            params = [(key.endswith('.*') and key[:-2] or key, value) for key, value in self.params]
             if len(params) > 1:
                 params = dict(params)
             return params
