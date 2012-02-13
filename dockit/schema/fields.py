@@ -677,8 +677,9 @@ class ReferenceField(BaseField):
     
     def contribute_to_class(self, cls, name):
         new_field = copy.copy(self)
-        if self.self_reference:
+        if self.self_reference and not cls._meta.virtual:
             new_field.document = cls
+            new_field.self_reference = False
         BaseField.contribute_to_class(new_field, cls, name)
     
     def is_instance(self, val):

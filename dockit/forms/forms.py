@@ -241,6 +241,7 @@ class BaseDocumentForm(BaseForm):
                                         opts.exclude, dotpath=self.dotpath)
         if initial is not None:
             object_data.update(initial)
+        
         super(BaseDocumentForm, self).__init__(data, files, auto_id, prefix, 
                                             object_data, error_class, 
                                             label_suffix, empty_permitted)

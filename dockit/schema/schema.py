@@ -37,13 +37,13 @@ class Options(object):
         self.fields = SortedDict()
         self.collection = None
         self.schema_key = None
-        self.virtual = False
+        self.virtual = False #TODO all schemas are virtual
         self.proxy = False
         self._document = None
         self.typed_field = None
         self.typed_key = None
     
-    def contribute_to_class(self, cls, name):
+    def process_values(self, cls):
         cls._meta = self
         self._document = cls
         self.installed = re.sub('\.models$', '', cls.__module__) in settings.INSTALLED_APPS
@@ -79,7 +79,9 @@ class Options(object):
             del self.meta
         else:
             self.verbose_name_plural = string_concat(self.verbose_name, 's')
-        
+    
+    def contribute_to_class(self, cls, name):
+        #the following needs to happen after fields are populated
         if self.typed_field:
             if self.typed_key:
                 if self.virtual:
@@ -199,6 +201,7 @@ class SchemaBase(type):
         fields.sort(key=lambda x: x[1].creation_counter)
         
         options = Options(meta, app_label=app_label)
+        options.process_values(new_class)
         setattr(new_class, '_meta', options)
         
         for field_name, obj in fields:
