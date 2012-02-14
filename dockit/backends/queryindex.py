@@ -26,6 +26,7 @@ class QueryIndex(object):
         self._queryset = None
     
     def _parse_key(self, key):
+        #TODO detect and handle dotpath notation
         operation = 'exact'
         if '__' in key:
             key, operation = key.rsplit('__', 1)

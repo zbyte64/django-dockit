@@ -16,6 +16,8 @@ class Indexer(object):
         self.name = name
     
     def __call__(self, document):
+        if self.dotpath in ('pk', '_pk'):
+            return
         try:
             value = document.dot_notation(self.dotpath)
         except (KeyError, IndexError):

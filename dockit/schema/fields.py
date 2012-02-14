@@ -698,7 +698,7 @@ class ReferenceField(BaseField):
         if self.is_instance(val):
             return val
         try:
-            return self.document.objects.get(val)
+            return self.document.objects.get(pk=val)
         except ObjectDoesNotExist:
             if self.null:
                 return None

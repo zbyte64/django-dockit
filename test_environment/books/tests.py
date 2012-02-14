@@ -31,7 +31,7 @@ class BookTestCase(unittest.TestCase):
         book.tags.append('historical')
         book.save()
 
-        book = Book.objects.get(book.get_id())
+        book = Book.objects.get(pk=book.get_id())
         assert 'historical' in book.tags
         self.assertEqual(book.title, 'Of Mice and Men')
         self.assertEqual(book.publisher.name, 'Books etc')
@@ -42,7 +42,7 @@ class BookTestCase(unittest.TestCase):
         publisher.address.street_2 = 'Apt 1'
         publisher.save()
         
-        publisher = Publisher.objects.get(publisher.get_id())
+        publisher = Publisher.objects.get(pk=publisher.get_id())
         
         self.assertEqual(publisher.address.street_2, 'Apt 1')
         
@@ -120,7 +120,7 @@ class DotNotationTestCase(unittest.TestCase):
         self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0]['internal_id'], '1')
         co.save()
         
-        co = ComplexObject.objects.get(co.get_id())
+        co = ComplexObject.objects.get(pk=co.get_id())
         self.assertEqual(co.addresses[1].extra_data['complexdict']['inception']['partners'][0]['internal_id'], '1')
         
         self.assertEqual(co.dot_notation('addresses.0'), co.addresses[0])
@@ -185,7 +185,7 @@ class FormTestCase(unittest.TestCase):
         self.assertTrue(isinstance(instance, TempDoc))
         
         complex_obj = instance.commit_changes()
-        ComplexObject.objects.get(complex_obj.pk)
+        ComplexObject.objects.get(pk=complex_obj.pk)
         
         class CustomDocumentAddressForm(DocumentForm):
             class Meta:
@@ -204,7 +204,7 @@ class FormTestCase(unittest.TestCase):
         self.assertTrue(isinstance(instance, TempDoc))
         
         complex_obj = instance.commit_changes(instance=complex_obj)
-        ComplexObject.objects.get(complex_obj.pk)
+        ComplexObject.objects.get(pk=complex_obj.pk)
         
         complex_obj.field1 = 'hello3'
         complex_obj.save()
@@ -240,7 +240,7 @@ class FormTestCase(unittest.TestCase):
         instance = form.save()
         self.assertEqual(instance.generic_objects[0].street_2, 'foo')
         
-        instance = ComplexObject.objects.get(instance.pk)
+        instance = ComplexObject.objects.get(pk=instance.pk)
         address = instance.dot_notation('generic_objects.0')
         self.assertTrue(isinstance(address, Address))
     
@@ -264,7 +264,7 @@ class FormTestCase(unittest.TestCase):
         self.assertEqual(instance.addresses[0].region, 'CA')
         
         form = CustomDocumentForm(instance=instance, dotpath='addresses.0')
-        instance = ComplexObject.objects.get(instance.pk)
+        instance = ComplexObject.objects.get(pk=instance.pk)
         form = CustomDocumentForm(instance=instance, dotpath='addresses.0')
         
         instance.dot_notation_set_value('addresses.0', data)
@@ -351,7 +351,7 @@ class PolymorphismTestCase(unittest.TestCase):
         brand.products.append(Shirt(name='shirt'))
         brand.save()
         
-        brand = Brand.objects.get(brand.pk)
+        brand = Brand.objects.get(pk=brand.pk)
         self.assertTrue(isinstance(brand.products[0], Shoes))
         
         shirt = brand.dot_notation_to_value('products.1')

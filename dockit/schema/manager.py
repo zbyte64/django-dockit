@@ -28,9 +28,8 @@ class Manager(object):
     def all(self):
         return QueryIndex(self.schema)
     
-    def get(self, doc_id):
-        data = self.backend.get(self.schema, self.collection, doc_id)
-        return self.schema.to_python(data)
+    def get(self, **kwargs):
+        return self.all().get(**kwargs)
 
 '''
 register_indexer(backend, "equals", index_cls)

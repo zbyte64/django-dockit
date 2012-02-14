@@ -23,10 +23,10 @@ class DocumentQuery(BaseDocumentQuery):
         queryset = self.queryset
         for op in filter_operations:
             indexer = self._get_indexer_for_operation(self.document, op)
-            queryset = queryset.filter(index.filter())
+            queryset = queryset.filter(indexer.filter())
         try:
             return self.wrap(queryset.get())
-        except self.queryset.models.DoesNotExist:
+        except self.queryset.model.DoesNotExist:
             raise self.document.DoesNotExist
     
     def values(self):
@@ -68,6 +68,7 @@ class ModelDocumentStorage(BaseDocumentStorage):
         #CONSIDER this does not look before we save
         document.save()
         data[self.get_id_field_name()] = document.pk
+        self._index_document(doc_class.to_python(data))
     
     def get(self, doc_class, collection, doc_id):
         try:
@@ -76,7 +77,6 @@ class ModelDocumentStorage(BaseDocumentStorage):
             raise doc_class.DoesNotExist
         data = simplejson.loads(document.data)
         data[self.get_id_field_name()] = document.pk
-        self._index_document(doc_class.to_python(data))
         return data
     
     def delete(self, doc_class, collection, doc_id):

@@ -34,6 +34,8 @@ class DocumentManager(models.Manager):
 
 class BaseIndexManager(models.Manager):
     def filter_kwargs_for_operation(self, operation):
+        if operation.key in ('pk', '_pk'):
+            return {'pk__%s' % operation.operation: operation.value}
         prefix = self.model._meta.get_field('document').related.var_name
         filter_kwargs = dict()
         filter_kwargs['%s__index' % prefix] = operation.key

@@ -300,7 +300,7 @@ class FragmentViewMixin(DocumentViewMixin):
         if not hasattr(self, '_temporary_store'):
             temp_doc_id = self.temporary_document_id()
             if temp_doc_id:
-                storage = self.temp_document.objects.get(temp_doc_id)
+                storage = self.temp_document.objects.get(pk=temp_doc_id)
             else:
                 if getattr(self, 'object', None):
                     storage = self.temp_document.create_from_instance(self.object)
@@ -550,7 +550,7 @@ class DocumentProxyView(FragmentViewMixin, View):
     
     def get_object(self):
         if 'pk' in self.kwargs:
-            return self.document.objects.get(self.kwargs['pk'])
+            return self.document.objects.get(pk=self.kwargs['pk'])
         return None
 
 class CreateView(FragmentViewMixin, views.CreateView):
