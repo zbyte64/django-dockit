@@ -422,16 +422,12 @@ class Document(Schema):
         backend = self._meta.get_backend()
         data = type(self).to_primitive(self)
         backend.save(type(self), self._meta.collection, data)
-        for value in self.objects.get_indexes().itervalues():
-            value.on_document_save(self)
         post_save.send(sender=type(self), instance=self, created=created)
         
     def delete(self):
         pre_delete.send(sender=type(self), instance=self)
         backend = self._meta.get_backend()
         backend.delete(type(self), self._meta.collection, self.get_id())
-        for value in self.objects.get_indexes().itervalues():
-            value.on_document_delete(self)
         post_delete.send(sender=type(self), instance=self)
     
     def serializable_value(self, field_name):

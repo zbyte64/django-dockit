@@ -3,13 +3,24 @@ class BaseDocumentStorage(object):
     _indexers = dict()
     
     @classmethod
-    def register_indexer(cls, name, index_cls):
-        cls._indexers[name] = index_cls
+    def register_indexer(cls, index_cls, *names):
+        for name in names:
+            cls._indexers[name] = index_cls
     
     @classmethod
     def get_indexer(cls, name):
         return cls._indexers[name]
-
+    
+    def _get_indexer_for_operation(self, document, op):
+        indexer = self.get_indexer(op.operation)
+        return indexer(document, op)
+    
+    def register_index(self, query_index):
+        raise NotImplementedError
+    
+    def get_query(self, query_index):
+        raise NotImplementedError
+    
     def register_document(self, document):
         pass
         #for key, field in document._meta.fields.iteritems():
@@ -26,9 +37,6 @@ class BaseDocumentStorage(object):
         raise NotImplementedError
     
     def delete(self, doc_class, collection, doc_id):
-        raise NotImplementedError
-    
-    def all(self, doc_class, collection):
         raise NotImplementedError
     
     def get_id(self, data):

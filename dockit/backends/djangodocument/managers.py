@@ -33,18 +33,11 @@ class DocumentManager(models.Manager):
         return self.filter(**model.objects.filter_kwargs_for_value(index, value))
 
 class BaseIndexManager(models.Manager):
-    def filter_kwargs_for_value(self, index, value):
+    def filter_kwargs_for_operation(self, operation):
         prefix = self.model._meta.get_field('document').related.var_name
-        if '__' in index:
-            index, suffix = index.split('__', 1)
-        else:
-            suffix = None
         filter_kwargs = dict()
-        filter_kwargs['%s__index' % prefix] = index
-        if suffix:
-            filter_kwargs['%s__value__%s' % (prefix, suffix)] = value
-        else:
-            filter_kwargs['%s__value' % prefix] = value
+        filter_kwargs['%s__index' % prefix] = operation.key
+        filter_kwargs['%s__value__%s' % (prefix, operation.operation)] = operation.value
         return filter_kwargs
     
     def unique_values(self, index):

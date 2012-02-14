@@ -1,4 +1,4 @@
-from django.db.models import Model
+from django.db.models import Model, Q
 
 from dockit.backends.indexer import BaseIndexer
 from dockit.schema import fields#, Document
@@ -29,15 +29,7 @@ class Indexer(object):
         else:
             self.index_creator(document.pk, self.name, value)
 
-
 class ExactIndexer(BaseIndexer):
-    '''
-    register_indexer(backend, "equals", index_cls)
-
-    Book.objects.enable_index("equals", "author_name", {'field':'author_name'})
-    Book.objects.filter.author_name('Mark Twain')
-    Book.objects.values.author_name()
-    '''
     INDEXES = [(fields.TextField, StringIndex),
            (fields.CharField, StringIndex),
            (fields.IntegerField, IntegerIndex),
@@ -45,13 +37,15 @@ class ExactIndexer(BaseIndexer):
            #(fields.ListField, None), #multi key index
            #(fields.DictField, None), #multi key index
            #(Document, StringIndex),
+           (fields.DateField, DateIndex),
            (Model, StringIndex),
            (fields.ReferenceField, StringIndex),
            (fields.ModelReferenceField, StringIndex),]
     
-    def __init__(self, *args, **kwargs):
-        super(ExactIndexer, self).__init__(*args, **kwargs)
-        self.dotpath = self.params.get('field', self.params.get('dotpath'))
+    def __init__(self, document, filter_operation):
+        self.document = document
+        self.filter_operation = filter_operation
+        self.dotpath = self.filter_operation.dotpath()
         self.generate_index()
     
     def generate_index(self):
@@ -63,10 +57,11 @@ class ExactIndexer(BaseIndexer):
             subindex = self._lookup_index(field.subfield)
         
         if subindex is None:
-            raise TypeError("Could not identify an apropriate index for: %s" % field)
+            subindex = StringIndex
+            #raise TypeError("Could not identify an apropriate index for: %s" % field)
         
-        func = Indexer(self.document, subindex.objects.db_index, self.dotpath, self.name)
-        filt = subindex.objects.filter_kwargs_for_value
+        func = Indexer(self.document, subindex.objects.db_index, self.dotpath, self.filter_operation.key)
+        filt = subindex.objects.filter_kwargs_for_operation
         unique_values = subindex.objects.unique_values
         clear = subindex.objects.clear_db_index
         
@@ -83,53 +78,11 @@ class ExactIndexer(BaseIndexer):
     def on_document_delete(self, instance):
         self.index_functions['clear'](instance.pk)
         
-    def filter(self, value):
-        qs = DocumentStore.objects.filter(collection=self.collection)
-        qs = qs.filter(**self.index_functions['filter'](self.name, value))
-        return DocumentQuery(qs, self.document)
+    def filter(self):
+        return Q(**self.index_functions['filter'](self.filter_operation))
     
     def values(self):
-        return self.index_functions['unique_values'](self.name)
+        return self.index_functions['unique_values'](self.filter_operation.key)
 
-ModelDocumentStorage.register_indexer("equals", ExactIndexer)
-
-class DateIndexer(BaseIndexer):
-    def __init__(self, *args, **kwargs):
-        super(DateIndexer, self).__init__(*args, **kwargs)
-        self.dotpath = self.params.get('field', self.params.get('dotpath'))
-        self.generate_index()
-        
-    def generate_index(self):
-        collection = self.document._meta.collection
-        field = self.document._meta.dot_notation_to_field(self.dotpath)
-        
-        subindex = DateIndex
-        
-        func = Indexer(self.document, subindex.objects.db_index, self.dotpath, self.name)
-        filt = subindex.objects.filter_kwargs_for_value
-        unique_values = subindex.objects.unique_values
-        clear = subindex.objects.clear_db_index
-        
-        self.index_functions = {'map':func, 'filter':filt, 'unique_values':unique_values, 'clear':clear}
-    
-    def filter(self, *args, **kwargs):
-        qs = DocumentStore.objects.filter(collection=self.collection)
-        filter_func = self.index_functions['filter']
-        if args:
-            qs = qs.filter(**filter_func('%s__in' % self.name, args))
-        for key, value in kwargs.iteritems():
-            qs = qs.filter(**filter_func('%s__%s' % (self.name, key), value))
-            
-        return DocumentQuery(qs, self.document)
-    
-    def values(self, *args, **kwargs):
-        qs = DocumentStore.objects.filter(collection=self.collection)
-        filter_func = self.index_functions['filter']
-        if args:
-            qs = qs.filter(**filter_func('%s__in' % self.name, args))
-        for key, value in kwargs.iteritems():
-            qs = qs.filter(**filter_func('%s__%s' % (self.name, key), value))
-        return qs.values_list('dateindex__value', flat=True).distinct()
-
-ModelDocumentStorage.register_indexer("date", DateIndexer)
+ModelDocumentStorage.register_indexer(ExactIndexer, 'exact', 'iexact', 'startswith', 'endswith', 'year', 'month', 'day')
 
