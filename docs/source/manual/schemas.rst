@@ -55,17 +55,11 @@ The Document Manager
 
         Return all documents in the collection
 
-    .. method:: get(doc_id)
+    .. method:: get(**kwargs)
 
-        Return the document with this document id
+        Return the document matching the arguments
 
-    .. method:: enable_index(index_cls_name, index_name, params)
-
-        Creates the specified index on a document. The index will be made
-        accessible through document.objects.filter.<index_name> and 
-        document.objects.values.<index_name>
-
-    .. property:: filter
+    .. method:: filter(**kwargs)
 
         An accessor for the filters.
 

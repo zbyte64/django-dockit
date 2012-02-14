@@ -14,9 +14,9 @@ TODO
 Meta Options
 ------------
 
-# document
-# schema
-# dotpath
-# exclude
+* document
+* schema
+* dotpath
+* exclude
 
 TODO document the other options
