@@ -4,12 +4,13 @@ Welcome to Django Dockits's documentation!
 
 .. toctree::
    :glob:
-   :maxdepth: 2
+   :maxdepth: 1
 
    manual/installation
    manual/admin
    manual/backends
    manual/schemas
+   manual/indexing
    manual/fields
    manual/forms
    manual/views
