@@ -52,6 +52,7 @@ class DocumentQuery(BaseDocumentQuery):
 
 class ModelDocumentStorage(BaseDocumentStorage):
     name = "djangomodel"
+    _indexers = dict() #TODO this should be automatic
     
     def __init__(self):
         self.indexes = dict()

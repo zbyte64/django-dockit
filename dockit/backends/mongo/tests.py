@@ -22,14 +22,14 @@ class MongoBackendTestCase(unittest.TestCase):
     
     def test_get_nonexistant_document_raises_error(self):
         try:
-            TestDocument.objects.get(None)
+            TestDocument.objects.get(pk=None)
         except TestDocument.DoesNotExist:
             pass
         else:
             self.fail('Retrieved non-existant document')
         
         try:
-            TestDocument.objects.get('3f32ea6fd946e17d44000000')
+            TestDocument.objects.get(pk='3f32ea6fd946e17d44000000')
         except TestDocument.DoesNotExist:
             pass
         else:
@@ -39,7 +39,7 @@ class MongoBackendTestCase(unittest.TestCase):
         doc = TestDocument(charfield='test')
         doc.save()
         
-        doc2 = TestDocument.objects.get(doc.pk)
+        doc2 = TestDocument.objects.get(pk=doc.pk)
         self.assertEqual(doc, doc2)
         self.assertEqual(doc.charfield, doc2.charfield)
     
@@ -49,7 +49,7 @@ class MongoBackendTestCase(unittest.TestCase):
         pk = doc.pk
         doc.delete()
         try:
-            doc2 = TestDocument.objects.get(pk)
+            doc2 = TestDocument.objects.get(pk=pk)
         except TestDocument.DoesNotExist:
             pass
         else:
@@ -63,6 +63,6 @@ class MongoBackendTestCase(unittest.TestCase):
         doc.listfield = ['a', 'b', 'c']
         doc.save()
         
-        doc2 = TestDocument.objects.get(doc.pk)
+        doc2 = TestDocument.objects.get(pk=doc.pk)
         self.assertEqual(doc.listfield, doc2.listfield)
 

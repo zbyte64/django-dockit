@@ -16,9 +16,11 @@ class DocumentQuery(BaseDocumentQuery):
         for op in self.query_index.exclusions:
             indexer = self._get_indexer_for_operation(self.document, op)
             params.update(indexer.filter())
-        if params:
-            return params
-        return None
+        return params
+    
+    @property
+    def collection(self):
+        return self.document._meta.get_backend().get_collection(self.document._meta.collection)
     
     @property
     def queryset(self):
@@ -33,7 +35,7 @@ class DocumentQuery(BaseDocumentQuery):
     
     def wrap(self, entry):
         entry['_id'] = unicode(entry['_id'])
-        return self.doc_class.to_python(entry)
+        return self.document.to_python(entry)
     
     def delete(self):
         params = self._build_params()
@@ -45,7 +47,7 @@ class DocumentQuery(BaseDocumentQuery):
         params = self._build_params()
         for op in filter_operations:
             indexer = self._get_indexer_for_operation(self.document, op)
-            params.update(index.filter())
+            params.update(indexer.filter())
         try:
             ret = self.collection.find_one(params)
         except TypeError:
@@ -79,6 +81,8 @@ class DocumentQuery(BaseDocumentQuery):
             return self.wrap(self.queryset[val])
 
 class MongoDocumentStorage(BaseDocumentStorage):
+    name = "mongodb"
+    _indexers = dict() #TODO this should be automatic
 
     def __init__(self, username=None, password=None, host=None, port=None, db=None):
         #TODO be proper about this
@@ -90,7 +94,7 @@ class MongoDocumentStorage(BaseDocumentStorage):
             self.db.authenticate(username, password)
     
     def get_collection(self, collection):
-        return collection
+        return self.db[collection]
     
     def save(self, doc_class, collection, data):
         id_field = self.get_id_field_name()
