@@ -7,7 +7,7 @@ from dockit.backends.queryset import BaseDocumentQuery
 from django.conf import settings
 
 class DocumentQuery(BaseDocumentQuery):
-    def _build_params(self):
+    def _build_params(self, include_indexes=False):
         params =  dict()
         for op in self.query_index.inclusions:
             indexer = self._get_indexer_for_operation(self.document, op)
@@ -16,6 +16,10 @@ class DocumentQuery(BaseDocumentQuery):
         for op in self.query_index.exclusions:
             indexer = self._get_indexer_for_operation(self.document, op)
             params.update(indexer.filter())
+        if include_indexes:
+            for op in self.query_index.indexes:
+                indexer = self._get_indexer_for_operation(self.document, op)
+                params.update(indexer.filter())
         return params
     
     @property
@@ -58,10 +62,7 @@ class DocumentQuery(BaseDocumentQuery):
         return self.wrap(ret)
     
     def values(self):
-        params = self._build_params() or dict()
-        for op in self.query_index.indexes:
-            indexer = self._get_indexer_for_operation(self.document, op)
-            params.update(indexer.filter())
+        params = self._build_params(include_indexes=True)
         raise NotImplementedError
     
     def __len__(self):
@@ -121,9 +122,15 @@ class MongoDocumentStorage(BaseDocumentStorage):
     
     def register_index(self, query_index):
         query = self.get_query(query_index)
-        params = query._build_params()
-        collection = query_index.document._meta.collection
-        self.get_collection(collection).ensure_index(params)
+        params = query._build_params(include_indexes=True)
+        for key in params.keys(): #TODO this is a hack
+            params[key] = 1
+        if params:
+            collection = query_index.document._meta.collection
+            try:
+                self.get_collection(collection).ensure_index(params)
+            except TypeError:
+                self.get_collection(collection).ensure_index(params.items())
     
     def get_query(self, query_index):
         return DocumentQuery(query_index)
