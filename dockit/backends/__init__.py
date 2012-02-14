@@ -22,7 +22,7 @@ def dynamic_import(name):
     return ret
 
 def get_document_backend():
-    #TODO
+    #TODO be thread safe
     global backend
     if not backend:
         backend_path = getattr(settings, 'DOCKIT_BACKEND', 'dockit.backends.djangodocument.backend.ModelDocumentStorage')

@@ -1,22 +1,22 @@
 from pymongo import Connection
 from pymongo.objectid import ObjectId
 
-from dockit.backends.base import BaseDocumentStorage, BaseDocumentQuerySet
+from dockit.backends.base import BaseDocumentStorage
+from dockit.backends.queryset import BaseDocumentQuery
 
 from django.conf import settings
 
-class DocumentQuery(BaseDocumentQuerySet):
-    def __init__(self, collection, doc_class, params=None):
-        self.collection = collection
-        self.doc_class = doc_class
-        self.params = params or list()
-        super(DocumentQuery, self).__init__()
-    
+class DocumentQuery(BaseDocumentQuery):
     def _build_params(self):
-        if self.params:
-            params = [(key.endswith('.*') and key[:-2] or key, value) for key, value in self.params]
-            if len(params) > 1:
-                params = dict(params)
+        params =  dict()
+        for op in self.query_index.inclusions:
+            indexer = self._get_indexer_for_operation(self.document, op)
+            #i think this is horribly wrong
+            params.update(indexer.filter())
+        for op in self.query_index.exclusions:
+            indexer = self._get_indexer_for_operation(self.document, op)
+            params.update(indexer.filter())
+        if params:
             return params
         return None
     
@@ -28,7 +28,7 @@ class DocumentQuery(BaseDocumentQuerySet):
                 return self.collection.find(params)
             except TypeError:
                 #why is it pymongo wants tuples for some and dictionaries for others?
-                return self.collection.find(dict(params))
+                return self.collection.find(params.items())
         return self.collection.find()
     
     def wrap(self, entry):
@@ -41,26 +41,32 @@ class DocumentQuery(BaseDocumentQuerySet):
             return self.collection.remove(params)
         return self.collection.remove()
     
-    def get(self, doc_id):
-        cls = type(self)
-        query = cls(self.collection, self.doc_class, [('_id', ObjectId(doc_id))])
-        final_query = query & self
+    def get_from_filter_operations(self, filter_operations):
+        params = self._build_params()
+        for op in filter_operations:
+            indexer = self._get_indexer_for_operation(self.document, op)
+            params.update(index.filter())
         try:
-            return final_query[0]
-        except IndexError:
-            raise self.doc_class.DoesNotExist
+            ret = self.collection.find_one(params)
+        except TypeError:
+            #why is it pymongo wants tuples for some and dictionaries for others?
+            ret = self.collection.find_one(params.items())
+        if ret is None:
+            raise self.document.DoesNotExist
+        return self.wrap(ret)
+    
+    def values(self):
+        params = self._build_params() or dict()
+        for op in self.query_index.indexes:
+            indexer = self._get_indexer_for_operation(self.document, op)
+            params.update(indexer.filter())
+        raise NotImplementedError
     
     def __len__(self):
         return self.queryset.count()
     
     def __nonzero__(self):
         return bool(self.queryset)
-    
-    def _check_for_operation(self, other):
-        if not isinstance(other, DocumentQuery):
-            raise TypeError, "operation may only be done against other Document Queries"
-        if self.doc_class != other.doc_class:
-            raise TypeError, "operation may only be done with the same document type"
     
     def __getitem__(self, val):
         if isinstance(val, slice):
@@ -71,13 +77,6 @@ class DocumentQuery(BaseDocumentQuerySet):
             return results
         else:
             return self.wrap(self.queryset[val])
-    
-    #TODO and & or operations
-    def __and__(self, other):
-        self._check_for_operation(other)
-        cls = type(self)
-        params = self.params + other.params
-        return cls(self.collection, self.doc_class, params)
 
 class MongoDocumentStorage(BaseDocumentStorage):
 
@@ -90,17 +89,20 @@ class MongoDocumentStorage(BaseDocumentStorage):
         if username:
             self.db.authenticate(username, password)
     
+    def get_collection(self, collection):
+        return collection
+    
     def save(self, doc_class, collection, data):
         id_field = self.get_id_field_name()
         if data.get(id_field, False) is None:
             del data[id_field]
         elif id_field in data:
             data[id_field] = ObjectId(data[id_field])
-        self.db[collection].save(data, safe=True)
+        self.get_collection(collection).save(data, safe=True)
         data[id_field] = unicode(data[id_field])
     
     def get(self, doc_class, collection, doc_id):
-        data = self.db[collection].find_one({'_id':ObjectId(doc_id)})
+        data = self.get_collection(collection).find_one({'_id':ObjectId(doc_id)})
         if data is None:
             raise doc_class.DoesNotExist
         id_field = self.get_id_field_name()
@@ -108,11 +110,17 @@ class MongoDocumentStorage(BaseDocumentStorage):
         return data
     
     def delete(self, doc_class, collection, doc_id):
-        return self.db[collection].remove(ObjectId(doc_id), safe=True)
+        return self.get_collection(collection).remove(ObjectId(doc_id), safe=True)
     
     def get_id_field_name(self):
         return '_id'
     
-    def all(self, doc_class, collection):
-        return DocumentQuery(self.db[collection], doc_class)
+    def register_index(self, query_index):
+        query = self.get_query(query_index)
+        params = query._build_params()
+        collection = query_index.document._meta.collection
+        self.get_collection(collection).ensure_index(params)
+    
+    def get_query(self, query_index):
+        return DocumentQuery(query_index)
 

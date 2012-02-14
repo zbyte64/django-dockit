@@ -1,51 +1,16 @@
 from dockit.backends.indexer import BaseIndexer
 
-from backend import MongoDocumentStorage, DocumentQuery
+from backend import MongoDocumentStorage
 
 class ExactIndexer(BaseIndexer):
-    def __init__(self, *args, **kwargs):
-        super(ExactIndexer, self).__init__(*args, **kwargs)
-        self.dotpath = self.params.get('field', self.params.get('dotpath'))
-        self.generate_index()
-    
-    def get_mongo_collection(self):
-        backend = self.document._meta.get_backend()
-        return backend.db[self.collection]
-    
-    def generate_index(self):
-        mongo_collection = self.get_mongo_collection()
-        #docs claim it wants a dictionary but the api wants a list of tuples
-        param = [(self.dotpath, 1)]
-        mongo_collection.ensure_index(param)
-    
-    def filter(self, value):
-        param = [(self.dotpath, value)]
-        mongo_collection = self.get_mongo_collection()
-        return DocumentQuery(mongo_collection, self.document, param)
+    def filter(self):
+        dotpath = self.filter_operation.dotpath()
+        value = self.filter_operation.value
+        return {dotpath: value}
     
     def values(self):
-        mongo_collection = self.get_mongo_collection()
-        return mongo_collection.distinct(self.dotpath)
+        mdotpath = self.filter_operation.dotpath()
+        value = self.filter_operation.value
+        return {dotpath: value}
 
-MongoDocumentStorage.register_indexer("equals", ExactIndexer)
-
-class DateIndexer(ExactIndexer):
-    def filter(self, *args, **kwargs):
-        mongo_collection = self.get_mongo_collection()
-        if args:
-            qs = mongo_collection.find(args[0])
-        #for key, value in kwargs.iteritems():
-        #    qs = qs.filter(**filter_func('%s__%s' % (self.name, key), value))
-            
-        return DocumentQuery(qs, self.document)
-    
-    def values(self, *args, **kwargs):
-        qs = None
-        filter_func = self.index_functions['filter']
-        if args:
-            qs = qs.filter(**filter_func('%s__in' % self.name, args))
-        for key, value in kwargs.iteritems():
-            qs = qs.filter(**filter_func('%s__%s' % (self.name, key), value))
-        return qs.values_list('dateindex__value', flat=True).distinct()
-
-MongoDocumentStorage.register_indexer("date", DateIndexer)
+MongoDocumentStorage.register_indexer(ExactIndexer, 'exact')

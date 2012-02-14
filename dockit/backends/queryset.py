@@ -11,6 +11,13 @@ class BaseDocumentQuery(object):
     def document(self):
         return self.query_index.document
     
+    @property
+    def backend(self):
+        return self.document._meta.get_backend()
+    
+    def _get_indexer_for_operation(self, document, op):
+        return self.backend._get_indexer_for_operation(document, op)
+    
     def __len__(self):
         raise NotImplementedError
     
