@@ -237,7 +237,7 @@ class DateTimeField(BaseField):
     
     def __init__(self, *args, **kwargs):
         self.input_formats = kwargs.pop('input_formats', list())
-        super(DateField, self).__init__(*args, **kwargs)
+        super(DateTimeField, self).__init__(*args, **kwargs)
     
     def to_python(self, value, parent=None):
         """

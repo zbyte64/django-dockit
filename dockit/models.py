@@ -3,6 +3,8 @@ from dockit.backends import get_document_backend
 
 from copy import deepcopy
 
+import datetime
+
 class SchemaProxyDict(dict):
     def __getitem__(self, key):
         val = dict.__getitem__(self, key)
@@ -57,11 +59,15 @@ class TemporaryDocument(dockit.Document):
         obj._original_id = instance_id
         return obj
 
-class FactoryMeta(object):
-    def __init__(self, attributes):
-        for key, value in attributes.iteritems():
-            setattr(self, key, value)
-
 def create_temporary_document_class(document_cls):
     return TemporaryDocument.generate_document(document_cls)
+
+#TODO creating an index should optionally populate this table
+class ActiveIndex(dockit.Document):
+    collection = dockit.CharField()
+    name = dockit.CharField() #name assigned in application
+    backend = dockit.CharField()
+    backend_index_identifier = dockit.CharField()
+    creation_date = dockit.DateTimeField(default=datetime.datetime.now)
+    #TODO store the index parameters
 

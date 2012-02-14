@@ -128,9 +128,9 @@ class MongoDocumentStorage(BaseDocumentStorage):
         if params:
             collection = query_index.document._meta.collection
             try:
-                self.get_collection(collection).ensure_index(params)
+                self.get_collection(collection).ensure_index(params, background=True)
             except TypeError:
-                self.get_collection(collection).ensure_index(params.items())
+                self.get_collection(collection).ensure_index(params.items(), background=True)
     
     def get_query(self, query_index):
         return DocumentQuery(query_index)
