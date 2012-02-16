@@ -3,7 +3,8 @@ from django.db.models import Model, Q
 from dockit.backends.indexer import BaseIndexer
 from dockit.schema import fields#, Document
 
-from models import DocumentStore, StringIndex, IntegerIndex, DateIndex
+from models import DocumentStore, StringIndex
+import models as indexes
 from backend import ModelDocumentStorage, DocumentQuery
 
 #TODO need a mechanism for back populating indexes, must be task based
@@ -32,17 +33,18 @@ class Indexer(object):
             self.index_creator(document.pk, self.name, value)
 
 class ExactIndexer(BaseIndexer):
-    INDEXES = [(fields.TextField, StringIndex),
-           (fields.CharField, StringIndex),
-           (fields.IntegerField, IntegerIndex),
-           #(fields.SchemaField, TextIndex), #unsoported
-           #(fields.ListField, None), #multi key index
-           #(fields.DictField, None), #multi key index
-           #(Document, StringIndex),
-           (fields.DateField, DateIndex),
-           (Model, StringIndex),
-           (fields.ReferenceField, StringIndex),
-           (fields.ModelReferenceField, StringIndex),]
+    INDEXES = [(fields.TextField, indexes.StringIndex),
+           (fields.CharField, indexes.StringIndex),
+           (fields.IntegerField, indexes.IntegerIndex),
+           (fields.FloatField, indexes.FloatIndex),
+           (fields.DecimalField, indexes.DecimalIndex),
+           (fields.BooleanField, indexes.BooleanIndex),
+           (fields.DateField, indexes.DateIndex),
+           (fields.DateTimeField, indexes.DateTimeIndex),
+           (fields.TimeField, indexes.TimeIndex),
+           (Model, indexes.StringIndex),
+           (fields.ReferenceField, indexes.StringIndex),
+           (fields.ModelReferenceField, indexes.StringIndex),]
     
     def __init__(self, document, filter_operation):
         self.document = document
