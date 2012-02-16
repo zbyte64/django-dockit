@@ -10,8 +10,7 @@ from django.utils import simplejson
 
 from decimal import Decimal
 
-from schema import Schema
-from common import get_schema, DotPathList, DotPathDict
+from common import DotPathList, DotPathDict
 
 class Handler(object):
     def encode(self, obj):
@@ -62,22 +61,6 @@ class DecimalHandler(Handler):
     def decode(self, dct):
         return Decimal(dct['value'])
 
-class SchemaHandler(Handler):
-    key = 'Schema'
-    instancetype = Schema
-    
-    def encode(self, obj):
-        return {'__type__':self.key,
-                'key':obj._meta.schema_key,
-                'value':obj.to_primitive(obj),}
-    
-    def decode(self, dct):
-        schema_cls = self.get_schema_class(dct)
-        return schema_cls.to_python(dct['value'])
-    
-    def get_schema_class(self, dct):
-        return get_schema(dct['key'])
-
 class JSONDecoder(simplejson.JSONDecoder):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('object_hook', self.decode_objects)
@@ -104,7 +87,7 @@ class JSONEncoder(DjangoJSONEncoder):
         return super(JSONEncoder, self).default(obj)
 
 def make_serializers():
-    handlers = [SchemaHandler(), ModelHandler(), DecimalHandler()]
+    handlers = [ModelHandler(), DecimalHandler()]
     #CONSIDER it might be a good idea to allow registering more serializers
     return {'encoder': JSONEncoder(handlers=handlers),
             'decoder': JSONDecoder(handlers=handlers),}
@@ -139,7 +122,7 @@ class PrimitiveProcessor(object):
         return obj
 
 def make_primitive_processor():
-    handlers = [SchemaHandler(), ModelHandler(), DecimalHandler()]
+    handlers = [ModelHandler(), DecimalHandler()]
     return PrimitiveProcessor(handlers)
 
 PRIMITIVE_PROCESSOR = make_primitive_processor()

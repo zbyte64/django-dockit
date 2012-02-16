@@ -1,12 +1,12 @@
 from exceptions import DotPathNotFound
 
-SCHEMAS = dict()
+COLLECTIONS = dict()
 
-def register_schema(key, cls):
-    SCHEMAS[key] = cls
+def register_collection(cls):
+    COLLECTIONS[cls._meta.collection] = cls
 
-def get_schema(key):
-    return SCHEMAS[key]
+def get_base_document(key):
+    return COLLECTIONS[key]
 
 class UnSet(object):
     def __nonzero__(self):

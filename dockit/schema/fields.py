@@ -1,4 +1,4 @@
-from django.utils.encoding import smart_unicode, force_unicode, smart_str
+from django.utils.encoding import smart_unicode, force_unicode
 from django.utils.text import capfirst
 from django.utils import formats
 from django.core.exceptions import ObjectDoesNotExist
@@ -11,7 +11,7 @@ import copy
 
 from serializer import PRIMITIVE_PROCESSOR
 from exceptions import DotPathNotFound
-from common import get_schema, DotPathList, DotPathDict, DotPathSet, UnSet
+from common import DotPathList, DotPathDict, DotPathSet, UnSet
 from dockit.forms.fields import HiddenSchemaField, HiddenListField, HiddenDictField, SchemaChoiceField, PrimitiveListField, SchemaMultipleChoiceField
 
 class NOT_PROVIDED:
@@ -369,13 +369,13 @@ class SchemaField(BaseField):
         else:
             parent[attr] = value
 
-class GenericSchemaField(BaseField):
+class GenericSchemaField(BaseField): #meant to be sublcassed
     def __init__(self, field_name='_type', **kwargs):
         self.type_field_name = field_name
         super(GenericSchemaField, self).__init__(**kwargs)
     
     def lookup_schema(self, key):
-        return get_schema(key)
+        raise NotImplementedError
     
     def get_schema_type(self, val):
         return val._meta.schema_key
