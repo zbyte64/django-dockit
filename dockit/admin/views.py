@@ -103,7 +103,56 @@ class SchemaTypeSelectionView(DocumentViewMixin, TemplateView):
         context['form_url'] = self.request.get_full_path()
         return context
 
-class FragmentViewMixin(DocumentViewMixin):
+class BaseFragmentViewMixin(DocumentViewMixin):
+    def is_polymorphic(self, schema):
+        return bool(schema._meta.typed_field)
+    
+    def should_prompt_polymorphic_type(self, schema, obj=None):
+        if self.is_polymorphic(schema):
+            foo = schema._meta.typed_field
+            return obj is None or not getattr(obj, schema._meta.typed_field, None)
+        return False
+    
+    def needs_typed_selection(self, schema, obj=None):
+        if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
+            return False
+        return self.should_prompt_polymorphic_type(schema, obj)
+    
+    def dotpath(self):
+        return self.request.GET.get('_dotpath', None)
+    
+    def parent_dotpath(self):
+        return self.request.GET.get('_parent_dotpath', None)
+    
+    def temporary_document_id(self):
+        return self.request.GET.get('_tempdoc', None)
+    
+    def get_temporary_store(self):
+        if not hasattr(self, '_temporary_store'):
+            temp_doc_id = self.temporary_document_id()
+            if temp_doc_id:
+                storage = self.temp_document.objects.get(pk=temp_doc_id)
+            else:
+                if getattr(self, 'object', None):
+                    storage = self.temp_document.create_from_instance(self.object)
+                else:
+                    storage = self.temp_document()
+            self._temporary_store = storage
+        return self._temporary_store
+    
+    def get_active_object(self):
+        if self.dotpath():
+            val = self.get_temporary_store()
+            return val.dot_notation_to_value(self.dotpath())
+        return self.get_temporary_store()
+    
+    @property
+    def temp_document(self):
+        if not hasattr(self, '_temp_document'):
+            self._temp_document = create_temporary_document_class(self.document)
+        return self._temp_document
+
+class FragmentViewMixin(BaseFragmentViewMixin):
     template_suffix = 'schema_form'
     
     def create_admin_form(self):
@@ -128,20 +177,6 @@ class FragmentViewMixin(DocumentViewMixin):
             return self.form_class
         else:
             return self._generate_form_class()
-    
-    def is_polymorphic(self, schema):
-        return bool(schema._meta.typed_field)
-    
-    def should_prompt_polymorphic_type(self, schema, obj=None):
-        if self.is_polymorphic(schema):
-            foo = schema._meta.typed_field
-            return obj is None or not getattr(obj, schema._meta.typed_field, None)
-        return False
-    
-    def needs_typed_selection(self, schema, obj=None):
-        if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
-            return False
-        return self.should_prompt_polymorphic_type(schema, obj)
     
     def get_readonly_fields(self):
         return self.admin.get_readonly_fields(self.request)
@@ -234,12 +269,6 @@ class FragmentViewMixin(DocumentViewMixin):
                         'save_on_top': self.admin.save_on_top,})
         return context
     
-    def dotpath(self):
-        return self.request.GET.get('_dotpath', None)
-    
-    def parent_dotpath(self):
-        return self.request.GET.get('_parent_dotpath', None)
-    
     @property
     def form_class(self):
         return self.admin.form_class
@@ -268,9 +297,6 @@ class FragmentViewMixin(DocumentViewMixin):
         info = self.fragment_info()
         return info.get('next_dotpath', None)
     
-    def temporary_document_id(self):
-        return self.request.GET.get('_tempdoc', None)
-    
     def formfield_for_field(self, prop, field, **kwargs):
         return self.admin.formfield_for_field(prop, field, self, **kwargs)
     
@@ -295,31 +321,6 @@ class FragmentViewMixin(DocumentViewMixin):
                 exclude = self.admin.get_excludes() + self.get_readonly_fields()
                 #TODO fix readonly field behavior
         return CustomDocumentForm
-    
-    def get_temporary_store(self):
-        if not hasattr(self, '_temporary_store'):
-            temp_doc_id = self.temporary_document_id()
-            if temp_doc_id:
-                storage = self.temp_document.objects.get(pk=temp_doc_id)
-            else:
-                if getattr(self, 'object', None):
-                    storage = self.temp_document.create_from_instance(self.object)
-                else:
-                    storage = self.temp_document()
-            self._temporary_store = storage
-        return self._temporary_store
-    
-    def get_active_object(self):
-        if self.dotpath():
-            val = self.get_temporary_store()
-            return val.dot_notation_to_value(self.dotpath())
-        return self.get_temporary_store()
-    
-    @property
-    def temp_document(self):
-        if not hasattr(self, '_temp_document'):
-            self._temp_document = create_temporary_document_class(self.document)
-        return self._temp_document
     
     def get_form_kwargs(self, **kwargs):
         kwargs['instance'] = self.get_temporary_store()
@@ -467,7 +468,58 @@ class IndexView(DocumentViewMixin, views.ListView):
         cl = self.get_changelist()
         return cl.get_query_set()
 
-class DocumentProxyView(FragmentViewMixin, View):
+class ListFieldIndexView(BaseFragmentViewMixin, views.DetailView):
+    template_suffix = 'listfield_change_list'
+    
+    def get_changelist_class(self):
+        from changelist import ListFieldChangeList
+        return ListFieldChangeList
+    
+    def get_changelist(self):
+        if not hasattr(self, 'changelist'):
+            instance = self.get_temporary_store()
+            dotpath = self.dotpath()
+            changelist_cls = self.get_changelist_class()
+            #CONSIDER: schemaadmin should have these values
+            self.changelist = changelist_cls(request=self.request,
+                                        model=self.schema,
+                                        instance=instance,
+                                        dotpath=dotpath,
+                                        list_display=self.admin.list_display,
+                                        list_display_links=self.admin.list_display_links,
+                                        list_filter=self.admin.list_filter,
+                                        date_hierarchy=self.admin.date_hierarchy,
+                                        search_fields=self.admin.search_fields,
+                                        list_select_related=self.admin.list_select_related,
+                                        list_per_page=self.admin.list_per_page,
+                                        list_editable=self.admin.list_editable,
+                                        model_admin=self.admin,)
+        return self.changelist
+    
+    def get_context_data(self, **kwargs):
+        context = views.DetailView.get_context_data(self, **kwargs)
+        context.update(BaseFragmentViewMixin.get_context_data(self, **kwargs))
+        cl = self.get_changelist()
+        context.update({'cl': cl,
+                        'title': cl.title,
+                        'is_popup': cl.is_popup,})
+        context['object_list'] = cl.get_query_set()
+        
+        params = self.request.GET.copy()
+        params['_dotpath'] = '%s.%s' % (params['_dotpath'], len(context['object_list']))
+        context['add_link'] = './?%s' % params.urlencode()
+        
+        return_dotpath = self.dotpath()
+        if '.' in return_dotpath:
+            return_dotpath = return_dotpath.rsplit('.', 1)[0]
+        else:
+            return_dotpath = ''
+        params['_dotpath'] = return_dotpath
+        context['return_link'] = './?%s' % params.urlencode()
+        
+        return context
+
+class DocumentProxyView(BaseFragmentViewMixin, View):
     def dispatch(self, request, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
@@ -481,6 +533,11 @@ class DocumentProxyView(FragmentViewMixin, View):
         
         schema = self.get_schema()
         admin = self.admin.create_admin_for_schema(schema)
+        field = self.get_field()
+        
+        #detect list field
+        if field and isinstance(field, ListField):
+            return admin.get_field_list_index_view()(request, *args, **kwargs)
         
         if 'pk' in kwargs:
             return admin.get_update_view()(request, *args, **kwargs)
@@ -489,7 +546,7 @@ class DocumentProxyView(FragmentViewMixin, View):
     
     def get_base_schema(self):
         '''
-        Retrieves the currently active schema, taking into account dynamic typing
+        Retrieves base schema, taking into account dynamic typing
         '''
         schema = self.admin.model
         if schema._meta.typed_field:
@@ -515,12 +572,9 @@ class DocumentProxyView(FragmentViewMixin, View):
             #KeyErrors cause the base schema to return, this should cause needs_typed_selection to return true
         return schema
     
-    def get_schema(self):
-        '''
-        Retrieves the currently active schema, taking into account dynamic typing
-        '''
+    def get_field(self):
         schema = self.get_base_schema()
-        
+        field = None
         if self.dotpath():
             val = self.get_temporary_store()
             field = val.dot_notation_to_field(self.dotpath())
@@ -528,10 +582,20 @@ class DocumentProxyView(FragmentViewMixin, View):
                 field_name = self.dotpath().rsplit('.',1)[1]
                 field = schema._meta.dot_notation_to_field(field_name)
                 if field is None: #lists are tricky
+                    #TODO review this
                     field_name = self.dotpath().rsplit('.',2)[1]
                     field = schema._meta.dot_notation_to_field(field_name)
+        return field
+    
+    def get_schema(self):
+        '''
+        Retrieves the currently active schema, taking into account dynamic typing
+        '''
+        schema = None
+        
+        if self.dotpath():
+            field = self.get_field()
             if getattr(field, 'subfield', None):
-                foo = field
                 field = field.subfield
             if getattr(field, 'schema'):
                 schema = field.schema
@@ -546,6 +610,8 @@ class DocumentProxyView(FragmentViewMixin, View):
                             schema = type(obj)
             else:
                 assert False
+        else:
+            schema = self.get_base_schema()
         return schema
     
     def get_object(self):

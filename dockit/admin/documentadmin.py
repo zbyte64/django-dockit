@@ -33,6 +33,7 @@ class SchemaAdmin(object):
     update = views.UpdateView
     delete = views.DeleteView
     select_schema = views.SchemaTypeSelectionView
+    field_list_index = views.ListFieldIndexView
     
     raw_id_fields = ()
     fields = None
@@ -52,6 +53,17 @@ class SchemaAdmin(object):
     save_on_top = False
     paginator = Paginator
     inlines = []
+    
+    #list display options
+    list_display = ('__str__',)
+    list_display_links = ()
+    list_filter = ()
+    list_select_related = False
+    list_per_page = 100
+    list_editable = ()
+    search_fields = ()
+    date_hierarchy = None
+    ordering = None
 
     # Custom templates (designed to be over-ridden in subclasses)
     add_form_template = None
@@ -118,6 +130,10 @@ class SchemaAdmin(object):
         kwargs = self.get_view_kwargs()
         kwargs['schema'] = self.schema
         return self.as_view(self.select_schema.as_view(**kwargs))
+    
+    def get_field_list_index_view(self):
+        kwargs = self.get_view_kwargs()
+        return self.as_view(self.field_list_index.as_view(**kwargs))
     
     def get_model_perms(self, request):
         return {
@@ -245,17 +261,10 @@ class SchemaAdmin(object):
                 read_only.append(key)
         return read_only
     
+    def get_paginator(self, request, query_set, paginate_by):
+        return self.paginator(query_set, paginate_by)
+
 class DocumentAdmin(SchemaAdmin):
-    list_display = ('__str__',)
-    list_display_links = ()
-    list_filter = ()
-    list_select_related = False
-    list_per_page = 100
-    list_editable = ()
-    search_fields = ()
-    date_hierarchy = None
-    ordering = None
-    
     # Actions
     actions = []
     #action_form = helpers.ActionForm
@@ -326,9 +335,6 @@ class DocumentAdmin(SchemaAdmin):
     def get_changelist(self, request):
         from changelist import ChangeList
         return ChangeList
-    
-    def get_paginator(self, request, query_set, paginate_by):
-        return self.paginator(query_set, paginate_by)
     
     def reverse(self, name, *args, **kwargs):
         from django.core.urlresolvers import get_urlconf, get_resolver

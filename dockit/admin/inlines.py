@@ -9,7 +9,7 @@ from dockit.forms.formsets import BaseInlineFormSet, inlinedocumentformset_facto
 class InlineSchemaAdmin(SchemaAdmin):
     schema = None
     formset = BaseInlineFormSet
-    extra = 3
+    extra = 1
     max_num = None
     template = None
     verbose_name = None
