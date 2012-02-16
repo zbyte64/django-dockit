@@ -180,7 +180,7 @@ class SchemaChoiceField(ChoiceField):
         if value in EMPTY_VALUES:
             return None
         try:
-            value = self.queryset.get(value)
+            value = self.queryset.get(pk=value)
         except (ValueError):#, self.queryset.model.DoesNotExist): #TODO catch the propr does not exist error
             raise ValidationError(self.error_messages['invalid_choice'])
         return value

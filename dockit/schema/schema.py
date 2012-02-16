@@ -96,7 +96,7 @@ class Options(object):
                 #    raise TypeError("Schemas that specify a typed_field and not a typed_key must be virtual.")
                 if self.typed_field not in self.fields:
                     from fields import SchemaTypeField
-                    self.polymorphic_schemas = dict()
+                    self.polymorphic_schemas = SortedDict()
                     field = SchemaTypeField(self.polymorphic_schemas, editable=False)
                     field.contribute_to_class(cls, self.typed_field)
     
