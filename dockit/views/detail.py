@@ -25,7 +25,7 @@ class SingleObjectMixin(detailview.SingleObjectMixin):
                 return queryset.get(pk=self.kwargs['pk'])
             elif slug is not None:
                 slug_field = self.get_slug_field()
-                return queryset.get(slug_field=self.kwargs['slug'])
+                return queryset.get(**{slug_field:self.kwargs['slug']})
             
         except (ObjectDoesNotExist, IndexError):
             raise Http404(_(u"No %(verbose_name)s found matching the query") %
