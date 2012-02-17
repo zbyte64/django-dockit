@@ -38,3 +38,24 @@ class ChangeList(BaseChangeList):
         self.multi_page = multi_page
         self.paginator = paginator
 
+class ListFieldChangeList(ChangeList):
+    def __init__(self, **kwargs):
+        self.instance = kwargs.pop('instance')
+        self.dotpath = kwargs.pop('dotpath')
+        self.request = kwargs['request']
+        super(ListFieldChangeList, self).__init__(**kwargs)
+    
+    def get_query_set(self):
+        def _patch_instance(instance, index): #complete hack
+            def serializable_value(*args):
+                return index
+            instance.serializable_value = serializable_value
+            return instance
+        return [_patch_instance(obj, index) for index, obj in enumerate(self.instance.dot_notation_to_value(self.dotpath) or [])]
+    
+    def url_for_result(self, result):
+        dotpath = '%s.%s' % (self.dotpath, result.serializable_value())
+        params = self.request.GET.copy()
+        params['_dotpath'] = dotpath
+        return "./?%s" % params.urlencode()
+
