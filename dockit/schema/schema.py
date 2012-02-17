@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from manager import Manager
 from common import register_collection, DotPathTraverser, UnSet
 from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
-from options import Options
+import options
 
 def subclass_exception(name, parents, module):
     return type(name, parents, {'__module__': module})
@@ -19,9 +19,12 @@ class SchemaBase(type):
     """
     Metaclass for all schemas.
     """
+    options_module = options.SchemaOptions
+    
     def __new__(cls, name, bases, attrs):
         super_new = super(SchemaBase, cls).__new__
         parents = [b for b in bases if isinstance(b, SchemaBase)]
+        options_module = cls.options_module
         
         module = attrs.pop('__module__')
         new_class = super_new(cls, name, bases, {'__module__': module})
@@ -36,7 +39,7 @@ class SchemaBase(type):
                 if not hasattr(new_class, '_meta'):
                     raise ValueError('Proxy schemas must inherit from another schema')
                 parent_meta = getattr(new_class, '_meta')
-                for key in Options.DEFAULT_NAMES:
+                for key in options_module.DEFAULT_NAMES:
                     if not hasattr(meta, key) and hasattr(parent_meta, key):
                         setattr(meta, key, getattr(parent_meta, key))
         
@@ -53,7 +56,7 @@ class SchemaBase(type):
         fields = [(field_name, attrs.pop(field_name)) for field_name, obj in attrs.items() if hasattr(obj, 'creation_counter')]
         fields.sort(key=lambda x: x[1].creation_counter)
         
-        options = Options(meta, app_label=app_label)
+        options = options_module(meta, app_label=app_label)
         options.process_values(new_class)
         setattr(new_class, '_meta', options)
         
@@ -232,6 +235,8 @@ class Schema(object):
             self[attr] = value
 
 class DocumentBase(SchemaBase):
+    options_module = options.DocumentOptions
+    
     def __new__(cls, name, bases, attrs):
         new_class = SchemaBase.__new__(cls, name, bases, attrs)
         if 'objects' not in attrs:

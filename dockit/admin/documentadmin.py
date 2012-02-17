@@ -174,6 +174,19 @@ class SchemaAdmin(object):
         excludes.update([field.name for field, schema, many in self._get_static_schema_fields()])
         return list(excludes)
     
+    def get_default_inline_instances(self, exclude=[]):
+        inline_instances = list()
+        from inlines import StackedInline
+        for field, schema, many in self._get_static_schema_fields():
+            if field.name in exclude:
+                continue
+            kwargs = {'dotpath':field.name + '.*'}
+            if not many:
+                kwargs['max_num'] = 1
+            inline_instance = StackedInline(self.model, self.admin_site, schema, self.documentadmin, **kwargs)
+            inline_instances.append(inline_instance)
+        return inline_instances
+    
     def get_inline_instances(self):
         inline_instances = list()
         seen = set()
@@ -182,16 +195,7 @@ class SchemaAdmin(object):
             inline_instances.append(inline_instance)
             seen.add(inline_instance.dotpath)
         
-        #TODO how to overide?
-        from inlines import StackedInline
-        for field, schema, many in self._get_static_schema_fields():
-            if field.name in seen:
-                continue
-            kwargs = {'dotpath':field.name + '.*'}
-            if not many:
-                kwargs['max_num'] = 1
-            inline_instance = StackedInline(self.model, self.admin_site, schema, self.documentadmin, **kwargs)
-            inline_instances.append(inline_instance)
+        inline_instances.extend(self.get_default_inline_instances(exclude=seen))
         
         return inline_instances
     
@@ -263,6 +267,11 @@ class SchemaAdmin(object):
     
     def get_paginator(self, request, query_set, paginate_by):
         return self.paginator(query_set, paginate_by)
+    
+    def get_object_tools(self, request, object=None):
+        #TODO object tools are renderable object that are displayed at the top the admin
+        #TODO return history object tool if there is an object
+        return []
 
 class DocumentAdmin(SchemaAdmin):
     # Actions
