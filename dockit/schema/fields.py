@@ -85,7 +85,10 @@ class BaseField(object):
         as SelectField choices for this field."""
         first_choice = include_blank and blank_choice or []
         if self.choices:
-            return first_choice + list(self.choices)
+            choices = self.choices
+            if callable(choices):
+                choices = choices()
+            return first_choice + list(choices)
         return first_choice
         #rel_model = self.rel.to
         #if hasattr(self.rel, 'get_related_field'):
