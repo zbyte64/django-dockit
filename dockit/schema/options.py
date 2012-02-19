@@ -11,16 +11,16 @@ from django.db.models import FieldDoesNotExist
 
 from common import DotPathTraverser
 
-class Options(object):
+class SchemaOptions(object):
     """ class based on django.db.models.options. We only keep
     useful bits."""
     
-    abstract = False
+    abstract = True
     ordering = ['_id']
     
-    DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering', 'schema_key',
+    DEFAULT_NAMES = ['verbose_name', 'db_table', 'ordering', 'schema_key',
                      'app_label', 'collection', 'virtual', 'proxy',
-                     'typed_field', 'typed_key')
+                     'typed_field', 'typed_key']
     
     def __init__(self, meta, app_label=None):
         self.module_name, self.verbose_name = None, None
@@ -154,4 +154,8 @@ class Options(object):
     
     def is_dynamic(self):
         return bool(self.typed_field)
+
+class DocumentOptions(SchemaOptions):
+    abstract = False
+
 

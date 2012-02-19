@@ -1,7 +1,5 @@
 from django.db import models
 
-import dockit
-
 class DocumentManager(models.Manager):
     def __init__(self, *args, **kwargs):
         super(DocumentManager, self).__init__(*args, **kwargs)
@@ -51,10 +49,6 @@ class BaseIndexManager(models.Manager):
         return self.filter(document=instance_id, index=name).delete()
     
     def db_index(self, instance_id, name, value):
-        if isinstance(value, models.Model):
-            value = value.pk
-        if isinstance(value, dockit.Document):
-            value = value.pk
         self.filter(document=instance_id, index=name).delete()
         obj = self.create(document_id=instance_id, index=name, value=value)
 

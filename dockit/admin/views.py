@@ -267,6 +267,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
                         #'content_type_id': ContentType.objects.get_for_model(self.model).id,
                         'save_as': self.admin.save_as,
                         'save_on_top': self.admin.save_on_top,})
+        context['object_tools'] = self.get_object_tools(context)
         return context
     
     @property
@@ -296,6 +297,12 @@ class FragmentViewMixin(BaseFragmentViewMixin):
     def next_dotpath(self):
         info = self.fragment_info()
         return info.get('next_dotpath', None)
+    
+    def get_object_tools(self, context):
+        object_tools = list()
+        for object_tool in self.admin.get_object_tools(self.request):
+            object_tools.append(object_tool.render(self.request, context))
+        return object_tools
     
     def formfield_for_field(self, prop, field, **kwargs):
         return self.admin.formfield_for_field(prop, field, self, **kwargs)
