@@ -11,6 +11,7 @@ from dockit import views
 from dockit.models import create_temporary_document_class
 from dockit.schema.fields import ListField
 from dockit.schema.common import UnSet
+from dockit.schema.schema import Schema
 
 from urllib import urlencode
 from urlparse import parse_qsl
@@ -607,18 +608,19 @@ class DocumentProxyView(BaseFragmentViewMixin, View):
             if getattr(field, 'schema'):
                 schema = field.schema
                 if schema._meta.typed_field:
-                    field = schema._meta.fields[schema._meta.typed_field]
+                    typed_field = schema._meta.fields[schema._meta.typed_field]
                     if schema._meta.typed_field in self.request.GET:
                         key = self.request.GET[schema._meta.typed_field]
-                        schema = field.schemas[key]
+                        schema = typed_field.schemas[key]
                     else:
                         obj = self.get_active_object()
-                        if obj is not None:
+                        if obj is not None and isinstance(obj, Schema):
                             schema = type(obj)
             else:
                 assert False
         else:
             schema = self.get_base_schema()
+        assert issubclass(schema, Schema)
         return schema
     
     def get_object(self):
