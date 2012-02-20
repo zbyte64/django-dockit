@@ -1,10 +1,9 @@
-from dockit.backends import get_document_backend
-
 import sys
 
 from django.utils.encoding import force_unicode
 from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
+from django.db.models.loading import app_cache_ready
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from manager import Manager
@@ -234,6 +233,13 @@ class Schema(object):
         else:
             self[attr] = value
 
+_pending_registered_documents = list()
+
+def _register_document(document_cls):
+    backend = document_cls._meta.get_backend()
+    backend.register_document(document_cls)
+    register_collection(document_cls)
+
 class DocumentBase(SchemaBase):
     options_module = options.DocumentOptions
     
@@ -244,9 +250,7 @@ class DocumentBase(SchemaBase):
             objects.contribute_to_class(new_class, 'objects')
         
         if not new_class._meta.virtual and not new_class._meta.proxy:
-            backend = get_document_backend()
-            backend.register_document(new_class)
-            register_collection(new_class)
+            _register_document(new_class)
         
         parents = [b for b in bases if isinstance(b, DocumentBase)]
         module = new_class.__module__

@@ -56,6 +56,7 @@ class ModelDocumentStorage(BaseDocumentStorage):
     
     def __init__(self):
         self.indexes = dict()
+        import indexers
     
     def get_id_field_name(self):
         return '_pk'
