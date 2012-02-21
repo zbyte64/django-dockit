@@ -581,19 +581,7 @@ class DocumentProxyView(BaseFragmentViewMixin, View):
         return schema
     
     def get_field(self):
-        schema = self.get_base_schema()
-        field = None
-        if self.dotpath():
-            val = self.get_temporary_store()
-            field = val.dot_notation_to_field(self.dotpath())
-            if field is None:
-                field_name = self.dotpath().rsplit('.',1)[1]
-                field = schema._meta.dot_notation_to_field(field_name)
-                if field is None: #lists are tricky
-                    #TODO review this
-                    field_name = self.dotpath().rsplit('.',2)[1]
-                    field = schema._meta.dot_notation_to_field(field_name)
-        return field
+        return self.admin.get_field(self.get_base_schema(), self.dotpath(), self.get_temporary_store())
     
     def get_schema(self):
         '''

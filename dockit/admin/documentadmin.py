@@ -272,6 +272,22 @@ class SchemaAdmin(object):
         #TODO object tools are renderable object that are displayed at the top the admin
         #TODO return history object tool if there is an object
         return []
+    
+    def get_field(self, schema, dotpath, obj=None):
+        field = None
+        if dotpath:
+            if obj:
+                field = obj.dot_notation_to_field(dotpath)
+            else:
+                field = schema._meta.dot_notation_to_field(dotpath)
+            if field is None:
+                field_name = dotpath.rsplit('.',1)[1]
+                field = schema._meta.dot_notation_to_field(field_name)
+                if field is None: #lists are tricky
+                    #TODO review this
+                    field_name = dotpath.rsplit('.',2)[1]
+                    field = schema._meta.dot_notation_to_field(field_name)
+        return field
 
 class DocumentAdmin(SchemaAdmin):
     # Actions
