@@ -6,10 +6,22 @@ from django.conf import settings
 from django.db.models.options import get_verbose_name
 from django.utils.translation import activate, deactivate_all, get_language, string_concat
 from django.utils.encoding import smart_str, force_unicode
-from django.utils.datastructures import SortedDict
+from django.utils.datastructures import SortedDict, MergeDict
 from django.db.models import FieldDoesNotExist
 
 from common import DotPathTraverser
+
+class FieldsDict(MergeDict):
+    def __init__(self, *dicts):
+        self.fields = SortedDict()
+        dicts = [self.fields] + list(dicts)
+        super(FieldsDict, self).__init__(*dicts)
+    
+    def __setitem__(self, key, value):
+        self.fields[key] = value
+    
+    def update(self, *args, **kwargs):
+        return self.fields.update(*args, **kwargs)
 
 class SchemaOptions(object):
     """ class based on django.db.models.options. We only keep
@@ -22,12 +34,12 @@ class SchemaOptions(object):
                      'app_label', 'collection', 'virtual', 'proxy',
                      'typed_field', 'typed_key']
     
-    def __init__(self, meta, app_label=None):
+    def __init__(self, meta, app_label=None, parent_fields=[]):
         self.module_name, self.verbose_name = None, None
         self.verbose_name_plural = None
         self.object_name, self.app_label = None, app_label
         self.meta = meta
-        self.fields = SortedDict()
+        self.fields = FieldsDict(*parent_fields)
         self.collection = None
         self.schema_key = None
         self.virtual = False #TODO all schemas are virtual

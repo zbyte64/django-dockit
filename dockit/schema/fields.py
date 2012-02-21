@@ -678,13 +678,6 @@ class ReferenceField(BaseField):
     def _meta(self):
         return self.document._meta
     
-    def contribute_to_class(self, cls, name):
-        new_field = copy.copy(self)
-        if self.self_reference and not cls._meta.virtual:
-            new_field.document = cls
-            new_field.self_reference = False
-        BaseField.contribute_to_class(new_field, cls, name)
-    
     def is_instance(self, val):
         if val is None:
             return True
@@ -698,10 +691,18 @@ class ReferenceField(BaseField):
         return val.get_id()
     
     def to_python(self, val, parent=None):
-        if self.is_instance(val):
-            return val
+        if self.self_reference:
+            if val is None:
+                return val
+            document = type(parent)
+            if isinstance(val, document):
+                return val
+        else:
+            if self.is_instance(val):
+                return val
+            document = self.document
         try:
-            return self.document.objects.get(pk=val)
+            return document.objects.get(pk=val)
         except ObjectDoesNotExist:
             if self.null:
                 return None

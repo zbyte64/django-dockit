@@ -48,14 +48,15 @@ class SchemaBase(type):
         else:
             app_label = getattr(meta, 'app_label')
         
+        parent_fields = list()
         for base in bases:
             if hasattr(base, '_meta') and hasattr(base._meta, 'fields'):
-                attrs.update(base._meta.fields)
+                parent_fields.append(base._meta.fields)
         
         fields = [(field_name, attrs.pop(field_name)) for field_name, obj in attrs.items() if hasattr(obj, 'creation_counter')]
         fields.sort(key=lambda x: x[1].creation_counter)
         
-        options = options_module(meta, app_label=app_label)
+        options = options_module(meta, app_label=app_label, parent_fields=parent_fields)
         options.process_values(new_class)
         setattr(new_class, '_meta', options)
         
