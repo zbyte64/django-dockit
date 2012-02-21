@@ -169,6 +169,13 @@ class BaseField(object):
         obj = copy.copy(self)
         memodict[id(self)] = obj
         return obj
+    
+    def _get_val_from_obj(self, obj):
+        return obj[self.name]
+    
+    def value_to_string(self, obj):
+        val = self._get_val_from_obj(obj)
+        return self.to_primitive(val)
 
 class BaseTypedField(BaseField):
     coerce_function = None

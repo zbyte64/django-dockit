@@ -166,6 +166,14 @@ class SchemaOptions(object):
     
     def is_dynamic(self):
         return bool(self.typed_field)
+    
+    @property
+    def local_fields(self):
+        return self.fields.values()
+    
+    @property
+    def many_to_many(self):
+        return []
 
 class DocumentOptions(SchemaOptions):
     abstract = False
