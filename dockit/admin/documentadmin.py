@@ -216,12 +216,12 @@ class SchemaAdmin(object):
         return [(None, {'fields': fields})]
     
     def formfield_for_field(self, prop, field, view, **kwargs):
-        import dockit
+        from dockit import schema
         from fields import DotPathField
         from dockit.forms.fields import HiddenJSONField
         request = kwargs.pop('request', None)
-        if ((isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField)) or
-             isinstance(prop, dockit.TypedSchemaField)):
+        if ((isinstance(prop, schema.ListField) and isinstance(prop.subfield, schema.TypedSchemaField)) or
+             isinstance(prop, schema.TypedSchemaField)):
             from fields import TypedSchemaField
             field = TypedSchemaField
             kwargs['dotpath'] = view.dotpath()
