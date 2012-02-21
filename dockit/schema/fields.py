@@ -176,6 +176,10 @@ class BaseField(object):
     def value_to_string(self, obj):
         val = self._get_val_from_obj(obj)
         return self.to_primitive(val)
+    
+    @property
+    def attname(self):
+        return self.name
 
 class BaseTypedField(BaseField):
     coerce_function = None

@@ -126,6 +126,8 @@ class SchemaOptions(object):
     
     def get_field(self, name):
         if name not in self.fields:
+            if name == 'pk':
+                return self.pk
             raise FieldDoesNotExist
         return self.fields[name]
     
@@ -150,11 +152,8 @@ class SchemaOptions(object):
     
     @property
     def pk(self):
-        class DummyField(object):
-            def __init__(self, **kwargs):
-                for key, value in kwargs.iteritems():
-                    setattr(self, key, value)
-        return DummyField(attname='pk')
+        from fields import CharField
+        return CharField(name='pk')
     
     def get_backend(self):
         return get_document_backend()
