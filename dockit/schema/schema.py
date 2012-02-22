@@ -254,6 +254,7 @@ class DocumentBase(SchemaBase):
             _register_document(new_class)
         
         parents = [b for b in bases if isinstance(b, DocumentBase)]
+        
         module = new_class.__module__
         
         if not new_class._meta.virtual:
@@ -265,7 +266,8 @@ class DocumentBase(SchemaBase):
                     tuple(x.MultipleObjectsReturned
                             for x in parents if hasattr(x, '_meta') and not x._meta.virtual)
                                     or (MultipleObjectsReturned,), module))
-            
+        if parents and new_class._meta.proxy:
+            new_class._meta.module_name = parents[0]._meta.module_name
         return new_class
 
 class Document(Schema):

@@ -79,7 +79,7 @@ class SchemaAdmin(object):
     def __init__(self, model, admin_site, schema=None, documentadmin=None):
         self.model = model
         self.admin_site = admin_site
-        self.app_name = (model._meta.app_label +'_'+ model._meta.object_name).lower()
+        self.app_name = model._meta.app_label +'_'+ model._meta.module_name
         overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
         overrides.update(self.formfield_overrides)
         self.formfield_overrides = overrides

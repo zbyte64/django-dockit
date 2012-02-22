@@ -68,7 +68,7 @@ class SchemaOptions(object):
                 # over it, so we loop over the *original* dictionary instead.
                 if name.startswith('_'):
                     del meta_attrs[name]
-            for attr_name in self.DEFAULT_NAMES:
+            for attr_name in self.DEFAULT_NAMES + ['module_name']:
                 if attr_name in meta_attrs:
                     setattr(self, attr_name, meta_attrs.pop(attr_name))
                 elif hasattr(self.meta, attr_name):
