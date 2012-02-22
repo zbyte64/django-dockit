@@ -5,6 +5,7 @@ from django.utils.html import escape, escapejs
 from django.views.generic import TemplateView, View
 
 from base import AdminViewMixin
+from breadcrumbs import Breadcrumb
 import helpers
 
 from dockit import views
@@ -22,6 +23,7 @@ class DocumentViewMixin(AdminViewMixin):
     template_suffix = None
     template_name = None
     form_class = None
+    object = None
     
     @property
     def document(self):
@@ -44,17 +46,18 @@ class DocumentViewMixin(AdminViewMixin):
     #def get_queryset(self):
     #    return self.model.objects.all()
     
+    def get_breadcrumbs(self):
+        return self.admin.get_base_breadcrumbs()
+    
     def get_context_data(self, **kwargs):
         opts = self.document._meta
-        obj = None
-        if hasattr(self, 'object'):
-            obj = self.object
+        obj = self.object
         context = AdminViewMixin.get_context_data(self, **kwargs)
         context.update({'root_path': self.admin_site.root_path,
                         'app_label': opts.app_label,
                         'opts': opts,
                         'module_name': force_unicode(opts.verbose_name_plural),
-                        
+                        'breadcrumbs': self.get_breadcrumbs(),
                         'has_add_permission': self.admin.has_add_permission(self.request),
                         'has_change_permission': self.admin.has_change_permission(self.request, obj),
                         'has_delete_permission': self.admin.has_delete_permission(self.request, obj),
@@ -63,45 +66,6 @@ class DocumentViewMixin(AdminViewMixin):
                         #'content_type_id': ContentType.objects.get_for_model(self.model).id,
                         'save_as': self.admin.save_as,
                         'save_on_top': self.admin.save_on_top,})
-        return context
-
-from forms import TypeSelectionForm
-
-class SchemaTypeSelectionView(DocumentViewMixin, TemplateView):
-    template_name = 'admin/type_selection_form.html'
-    form_class = TypeSelectionForm
-    schema = None
-    
-    def get_form_class(self):
-        return self.form_class
-    
-    def get_form_kwargs(self):
-        assert self.schema
-        return {'schema': self.schema,
-                'initial':self.request.GET}
-    
-    def get_form(self, form_cls):
-        return form_cls(**self.get_form_kwargs())
-    
-    def get_admin_form_kwargs(self):
-        return {
-            'fieldsets': [(None, {'fields': [self.schema._meta.typed_field]})],
-            'prepopulated_fields': dict(),
-            'readonly_fields': [],
-            'model_admin': self.admin,
-        }
-    
-    def create_admin_form(self):
-        form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        admin_form = helpers.AdminForm(form, **self.get_admin_form_kwargs())
-        return admin_form
-    
-    def get_context_data(self, **kwargs):
-        context = DocumentViewMixin.get_context_data(self, **kwargs)
-        context.update(TemplateView.get_context_data(self, **kwargs))
-        context['adminform'] = self.create_admin_form()
-        context['form_url'] = self.request.get_full_path()
         return context
 
 class BaseFragmentViewMixin(DocumentViewMixin):
@@ -152,6 +116,59 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         if not hasattr(self, '_temp_document'):
             self._temp_document = create_temporary_document_class(self.document)
         return self._temp_document
+    
+    def get_breadcrumbs(self):
+        breadcrumbs = DocumentViewMixin.get_breadcrumbs(self)
+        obj = self.object
+        breadcrumbs.append(self.admin.get_instance_breadcrumb(obj))
+        return breadcrumbs
+
+from forms import TypeSelectionForm
+
+class SchemaTypeSelectionView(BaseFragmentViewMixin, TemplateView):
+    template_name = 'admin/type_selection_form.html'
+    form_class = TypeSelectionForm
+    schema = None
+    
+    def get_form_class(self):
+        return self.form_class
+    
+    def get_form_kwargs(self):
+        assert self.schema
+        return {'schema': self.schema,
+                'initial':self.request.GET}
+    
+    def get_form(self, form_cls):
+        return form_cls(**self.get_form_kwargs())
+    
+    def get_admin_form_kwargs(self):
+        return {
+            'fieldsets': [(None, {'fields': [self.schema._meta.typed_field]})],
+            'prepopulated_fields': dict(),
+            'readonly_fields': [],
+            'model_admin': self.admin,
+        }
+    
+    def create_admin_form(self):
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        admin_form = helpers.AdminForm(form, **self.get_admin_form_kwargs())
+        return admin_form
+    
+    def get_breadcrumbs(self):
+        breadcrumbs = DocumentViewMixin.get_breadcrumbs(self)
+        obj = getattr(self, 'object', None)
+        breadcrumbs.append(self.admin.get_instance_breadcrumb(obj))
+        if self.dotpath():
+            breadcrumbs.append(Breadcrumb(self.dotpath()))
+        return breadcrumbs
+    
+    def get_context_data(self, **kwargs):
+        context = DocumentViewMixin.get_context_data(self, **kwargs)
+        context.update(TemplateView.get_context_data(self, **kwargs))
+        context['adminform'] = self.create_admin_form()
+        context['form_url'] = self.request.get_full_path()
+        return context
 
 class FragmentViewMixin(BaseFragmentViewMixin):
     template_suffix = 'schema_form'
@@ -230,6 +247,12 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         
         return inline_admin_formsets
     
+    def get_breadcrumbs(self):
+        breadcrumbs = BaseFragmentViewMixin.get_breadcrumbs(self)
+        if self.dotpath():
+            breadcrumbs.append(Breadcrumb(self.dotpath()))
+        return breadcrumbs
+    
     def get_context_data(self, **kwargs):
         context = AdminViewMixin.get_context_data(self, **kwargs)
         opts = self.schema._meta
@@ -243,6 +266,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
                         'cancel': False,
                         'change': False,
                         'delete': False,
+                        'breadcrumbs': self.get_breadcrumbs(),
                         'dotpath': self.dotpath(),
                         'tempdoc': self.get_temporary_store(),
                         'adminform':self.create_admin_form(),
@@ -504,6 +528,11 @@ class ListFieldIndexView(BaseFragmentViewMixin, views.DetailView):
                                         model_admin=self.admin,)
         return self.changelist
     
+    def get_breadcrumbs(self):
+        breadcrumbs = BaseFragmentViewMixin.get_breadcrumbs(self)
+        breadcrumbs.append(Breadcrumb(self.dotpath()))
+        return breadcrumbs
+    
     def get_context_data(self, **kwargs):
         context = views.DetailView.get_context_data(self, **kwargs)
         context.update(BaseFragmentViewMixin.get_context_data(self, **kwargs))
@@ -524,7 +553,6 @@ class ListFieldIndexView(BaseFragmentViewMixin, views.DetailView):
             return_dotpath = ''
         params['_dotpath'] = return_dotpath
         context['return_link'] = './?%s' % params.urlencode()
-        
         return context
 
 class DocumentProxyView(BaseFragmentViewMixin, View):
@@ -537,7 +565,7 @@ class DocumentProxyView(BaseFragmentViewMixin, View):
         
         if not self.dotpath() and self.needs_typed_selection(schema, self.get_temporary_store()):
             admin = self.admin.create_admin_for_schema(schema)
-            return admin.get_select_schema_view()(request, *args, **kwargs)
+            return admin.get_select_schema_view(object=self.object)(request, *args, **kwargs)
         
         schema = self.get_schema()
         admin = self.admin.create_admin_for_schema(schema)
@@ -545,12 +573,12 @@ class DocumentProxyView(BaseFragmentViewMixin, View):
         
         #detect list field
         if field and isinstance(field, ListField):
-            return admin.get_field_list_index_view()(request, *args, **kwargs)
+            return admin.get_field_list_index_view(object=self.object)(request, *args, **kwargs)
         
         if 'pk' in kwargs:
-            return admin.get_update_view()(request, *args, **kwargs)
+            return admin.get_update_view(object=self.object)(request, *args, **kwargs)
         else:
-            return admin.get_create_view()(request, *args, **kwargs)
+            return admin.get_create_view(object=self.object)(request, *args, **kwargs)
     
     def get_base_schema(self):
         '''
@@ -649,11 +677,12 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         self.request = request
         self.args = args
         self.kwargs = kwargs
-        self.object = self.get_object()
+        if not self.object:
+            self.object = self.get_object()
         schema = self.get_schema()
         obj = self.get_active_object()
         if self.needs_typed_selection(schema, obj):
-            return self.admin.get_select_schema_view()(request, *args, **kwargs)
+            return self.admin.get_select_schema_view(object=self.object)(request, *args, **kwargs)
         return super(UpdateView, self).dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
