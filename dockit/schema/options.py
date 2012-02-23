@@ -6,10 +6,22 @@ from django.conf import settings
 from django.db.models.options import get_verbose_name
 from django.utils.translation import activate, deactivate_all, get_language, string_concat
 from django.utils.encoding import smart_str, force_unicode
-from django.utils.datastructures import SortedDict
+from django.utils.datastructures import SortedDict, MergeDict
 from django.db.models import FieldDoesNotExist
 
 from common import DotPathTraverser
+
+class FieldsDict(MergeDict):
+    def __init__(self, *dicts):
+        self.fields = SortedDict()
+        dicts = [self.fields] + list(dicts)
+        super(FieldsDict, self).__init__(*dicts)
+    
+    def __setitem__(self, key, value):
+        self.fields[key] = value
+    
+    def update(self, *args, **kwargs):
+        return self.fields.update(*args, **kwargs)
 
 class SchemaOptions(object):
     """ class based on django.db.models.options. We only keep
@@ -22,12 +34,12 @@ class SchemaOptions(object):
                      'app_label', 'collection', 'virtual', 'proxy',
                      'typed_field', 'typed_key']
     
-    def __init__(self, meta, app_label=None):
+    def __init__(self, meta, app_label=None, parent_fields=[]):
         self.module_name, self.verbose_name = None, None
         self.verbose_name_plural = None
         self.object_name, self.app_label = None, app_label
         self.meta = meta
-        self.fields = SortedDict()
+        self.fields = FieldsDict(*parent_fields)
         self.collection = None
         self.schema_key = None
         self.virtual = False #TODO all schemas are virtual
@@ -56,7 +68,7 @@ class SchemaOptions(object):
                 # over it, so we loop over the *original* dictionary instead.
                 if name.startswith('_'):
                     del meta_attrs[name]
-            for attr_name in self.DEFAULT_NAMES:
+            for attr_name in self.DEFAULT_NAMES + ['module_name']:
                 if attr_name in meta_attrs:
                     setattr(self, attr_name, meta_attrs.pop(attr_name))
                 elif hasattr(self.meta, attr_name):
@@ -114,6 +126,8 @@ class SchemaOptions(object):
     
     def get_field(self, name):
         if name not in self.fields:
+            if name == 'pk':
+                return self.pk
             raise FieldDoesNotExist
         return self.fields[name]
     
@@ -138,11 +152,8 @@ class SchemaOptions(object):
     
     @property
     def pk(self):
-        class DummyField(object):
-            def __init__(self, **kwargs):
-                for key, value in kwargs.iteritems():
-                    setattr(self, key, value)
-        return DummyField(attname='pk')
+        from fields import CharField
+        return CharField(name='pk')
     
     def get_backend(self):
         return get_document_backend()
@@ -154,6 +165,14 @@ class SchemaOptions(object):
     
     def is_dynamic(self):
         return bool(self.typed_field)
+    
+    @property
+    def local_fields(self):
+        return self.fields.values()
+    
+    @property
+    def many_to_many(self):
+        return []
 
 class DocumentOptions(SchemaOptions):
     abstract = False

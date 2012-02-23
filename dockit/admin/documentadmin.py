@@ -10,6 +10,7 @@ from dockit.forms import DocumentForm
 from dockit.forms.fields import PrimitiveListField
 
 import views
+from breadcrumbs import Breadcrumb
 
 FORMFIELD_FOR_FIELD_DEFAULTS = {
     forms.DateTimeField: {
@@ -78,7 +79,7 @@ class SchemaAdmin(object):
     def __init__(self, model, admin_site, schema=None, documentadmin=None):
         self.model = model
         self.admin_site = admin_site
-        self.app_name = (model._meta.app_label +'_'+ model._meta.object_name).lower()
+        self.app_name = model._meta.app_label +'_'+ model._meta.module_name
         overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
         overrides.update(self.formfield_overrides)
         self.formfield_overrides = overrides
@@ -118,22 +119,26 @@ class SchemaAdmin(object):
     def as_view(self, view, cacheable=False):
         return self.admin_site.admin_view(view, cacheable)
     
-    def get_create_view(self):
-        kwargs = self.get_view_kwargs()
-        return self.as_view(self.create.as_view(**kwargs))
+    def get_create_view(self, **kwargs):
+        params = self.get_view_kwargs()
+        params.update(kwargs)
+        return self.as_view(self.create.as_view(**params))
     
-    def get_update_view(self):
-        kwargs = self.get_view_kwargs()
-        return self.as_view(self.update.as_view(**kwargs))
+    def get_update_view(self, **kwargs):
+        params = self.get_view_kwargs()
+        params.update(kwargs)
+        return self.as_view(self.update.as_view(**params))
     
-    def get_select_schema_view(self):
-        kwargs = self.get_view_kwargs()
-        kwargs['schema'] = self.schema
-        return self.as_view(self.select_schema.as_view(**kwargs))
+    def get_select_schema_view(self, **kwargs):
+        params = self.get_view_kwargs()
+        params['schema'] = self.schema
+        params.update(kwargs)
+        return self.as_view(self.select_schema.as_view(**params))
     
-    def get_field_list_index_view(self):
-        kwargs = self.get_view_kwargs()
-        return self.as_view(self.field_list_index.as_view(**kwargs))
+    def get_field_list_index_view(self, **kwargs):
+        params = self.get_view_kwargs()
+        params.update(kwargs)
+        return self.as_view(self.field_list_index.as_view(**params))
     
     def get_model_perms(self, request):
         return {
@@ -216,12 +221,12 @@ class SchemaAdmin(object):
         return [(None, {'fields': fields})]
     
     def formfield_for_field(self, prop, field, view, **kwargs):
-        import dockit
+        from dockit import schema
         from fields import DotPathField
         from dockit.forms.fields import HiddenJSONField
         request = kwargs.pop('request', None)
-        if ((isinstance(prop, dockit.ListField) and isinstance(prop.subfield, dockit.TypedSchemaField)) or
-             isinstance(prop, dockit.TypedSchemaField)):
+        if ((isinstance(prop, schema.ListField) and isinstance(prop.subfield, schema.TypedSchemaField)) or
+             isinstance(prop, schema.TypedSchemaField)):
             from fields import TypedSchemaField
             field = TypedSchemaField
             kwargs['dotpath'] = view.dotpath()
@@ -272,6 +277,28 @@ class SchemaAdmin(object):
         #TODO object tools are renderable object that are displayed at the top the admin
         #TODO return history object tool if there is an object
         return []
+    
+    def get_field(self, schema, dotpath, obj=None):
+        field = None
+        if dotpath:
+            if obj:
+                field = obj.dot_notation_to_field(dotpath)
+            else:
+                field = schema._meta.dot_notation_to_field(dotpath)
+            if field is None:
+                field_name = dotpath.rsplit('.',1)[1]
+                field = schema._meta.dot_notation_to_field(field_name)
+                if field is None: #lists are tricky
+                    #TODO review this
+                    field_name = dotpath.rsplit('.',2)[1]
+                    field = schema._meta.dot_notation_to_field(field_name)
+        return field
+    
+    def get_base_breadcrumbs(self):
+        return self.documentadmin.get_base_breadcrumbs()
+    
+    def get_instance_breadcrumb(self, obj=None):
+        return self.documentadmin.get_instance_breadcrumb(obj)
 
 class DocumentAdmin(SchemaAdmin):
     # Actions
@@ -411,6 +438,22 @@ class DocumentAdmin(SchemaAdmin):
             object_repr     = object_repr,
             action_flag     = DELETION
         )
+    
+    def get_base_breadcrumbs(self):
+        admin_name = self.admin_site.name
+        model_name = self.model._meta.verbose_name
+        opts = self.model._meta
+        breadcrumbs = [
+            Breadcrumb('Home', ['%s:index' % admin_name]),
+            Breadcrumb(opts.app_label, ['%s:app_list' % admin_name, (self.app_name,), {}]),
+            Breadcrumb(opts.verbose_name_plural, ['%s:%s_changelist' % (admin_name, self.app_name)]),
+        ]
+        return breadcrumbs
+    
+    def get_instance_breadcrumb(self, obj=None):
+        if obj:
+            return Breadcrumb(unicode(obj))
+        return Breadcrumb('Add %s' % self.model._meta.verbose_name)
 
 
 '''

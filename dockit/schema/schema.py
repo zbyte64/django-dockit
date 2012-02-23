@@ -1,10 +1,9 @@
-from dockit.backends import get_document_backend
-
 import sys
 
 from django.utils.encoding import force_unicode
 from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
+from django.db.models.loading import app_cache_ready
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from manager import Manager
@@ -49,14 +48,15 @@ class SchemaBase(type):
         else:
             app_label = getattr(meta, 'app_label')
         
+        parent_fields = list()
         for base in bases:
             if hasattr(base, '_meta') and hasattr(base._meta, 'fields'):
-                attrs.update(base._meta.fields)
+                parent_fields.append(base._meta.fields)
         
         fields = [(field_name, attrs.pop(field_name)) for field_name, obj in attrs.items() if hasattr(obj, 'creation_counter')]
         fields.sort(key=lambda x: x[1].creation_counter)
         
-        options = options_module(meta, app_label=app_label)
+        options = options_module(meta, app_label=app_label, parent_fields=parent_fields)
         options.process_values(new_class)
         setattr(new_class, '_meta', options)
         
@@ -234,6 +234,13 @@ class Schema(object):
         else:
             self[attr] = value
 
+_pending_registered_documents = list()
+
+def _register_document(document_cls):
+    backend = document_cls._meta.get_backend()
+    backend.register_document(document_cls)
+    register_collection(document_cls)
+
 class DocumentBase(SchemaBase):
     options_module = options.DocumentOptions
     
@@ -244,11 +251,10 @@ class DocumentBase(SchemaBase):
             objects.contribute_to_class(new_class, 'objects')
         
         if not new_class._meta.virtual and not new_class._meta.proxy:
-            backend = get_document_backend()
-            backend.register_document(new_class)
-            register_collection(new_class)
+            _register_document(new_class)
         
         parents = [b for b in bases if isinstance(b, DocumentBase)]
+        
         module = new_class.__module__
         
         if not new_class._meta.virtual:
@@ -260,7 +266,8 @@ class DocumentBase(SchemaBase):
                     tuple(x.MultipleObjectsReturned
                             for x in parents if hasattr(x, '_meta') and not x._meta.virtual)
                                     or (MultipleObjectsReturned,), module))
-            
+        if parents and new_class._meta.proxy:
+            new_class._meta.module_name = parents[0]._meta.module_name
         return new_class
 
 class Document(Schema):
@@ -269,6 +276,9 @@ class Document(Schema):
     def get_id(self):
         backend = self._meta.get_backend()
         return backend.get_id(self._primitive_data)
+    
+    def _get_pk_val(self):
+        return self.get_id()
     
     pk = property(get_id)
     

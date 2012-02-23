@@ -1,4 +1,4 @@
-import dockit
+from dockit import schema
 from dockit.backends import get_document_backend
 
 from copy import deepcopy
@@ -10,7 +10,7 @@ class SchemaProxyDict(dict):
         val = dict.__getitem__(self, key)
         return TemporaryDocument.generate_document(val)
 
-class TemporaryDocument(dockit.Document):
+class TemporaryDocument(schema.Document):
     @classmethod
     def generate_document(cls, document):
         class GeneratedTempDocument(cls):
@@ -63,11 +63,11 @@ def create_temporary_document_class(document_cls):
     return TemporaryDocument.generate_document(document_cls)
 
 #TODO creating an index should optionally populate this table
-class ActiveIndex(dockit.Document):
-    collection = dockit.CharField()
-    name = dockit.CharField() #name assigned in application
-    backend = dockit.CharField()
-    backend_index_identifier = dockit.CharField()
-    creation_date = dockit.DateTimeField(default=datetime.datetime.now)
+class ActiveIndex(schema.Document):
+    collection = schema.CharField()
+    name = schema.CharField() #name assigned in application
+    backend = schema.CharField()
+    backend_index_identifier = schema.CharField()
+    creation_date = schema.DateTimeField(default=datetime.datetime.now)
     #TODO store the index parameters
 

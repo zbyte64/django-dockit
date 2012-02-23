@@ -8,7 +8,7 @@ class QueryFilterOperation(object):
     def __init__(self, key, operation, value):
         self.key = key
         self.operation = operation
-        from dockit import Document
+        from dockit.schema import Document
         from django.db.models import Model
         if isinstance(value, Model):
             value = value.pk
