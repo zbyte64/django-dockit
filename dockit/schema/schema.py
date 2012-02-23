@@ -275,7 +275,7 @@ class Document(Schema):
     
     def get_id(self):
         backend = self._meta.get_backend()
-        return backend.get_id(self._primitive_data)
+        return str(backend.get_id(self._primitive_data))
     
     def _get_pk_val(self):
         return self.get_id()

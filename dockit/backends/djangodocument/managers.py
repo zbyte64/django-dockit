@@ -50,5 +50,10 @@ class BaseIndexManager(models.Manager):
     
     def db_index(self, instance_id, name, value):
         self.filter(document=instance_id, index=name).delete()
+        from dockit.schema import Document
+        if isinstance(value, models.Model):
+            value = value.pk
+        if isinstance(value, Document):
+            value = value.pk
         obj = self.create(document_id=instance_id, index=name, value=value)
 

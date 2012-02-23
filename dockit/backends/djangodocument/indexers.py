@@ -26,7 +26,7 @@ class Indexer(object):
         
         if value is None:
             return #TODO proper handling
-        if isinstance(value, list):
+        if isinstance(value, (list, set)):
             for val in value:
                 self.index_creator(document.pk, self.name, val)
         else:
@@ -64,6 +64,7 @@ class ExactIndexer(BaseIndexer):
             subindex = StringIndex
             #raise TypeError("Could not identify an apropriate index for: %s" % field)
         
+        self.subindex = subindex
         func = Indexer(self.document, subindex.objects.db_index, self.dotpath, self.filter_operation.key)
         filt = subindex.objects.filter_kwargs_for_operation
         unique_values = subindex.objects.unique_values
