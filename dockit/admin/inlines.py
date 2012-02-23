@@ -21,9 +21,16 @@ class InlineSchemaAdmin(SchemaAdmin):
         self.opts = self.schema._meta
         self.dotpath = dotpath
         if self.verbose_name is None:
-            self.verbose_name = self.schema._meta.verbose_name
+            self.verbose_name = self.opts.verbose_name
         if self.verbose_name_plural is None:
-            self.verbose_name_plural = self.schema._meta.verbose_name_plural
+            #admin display hack, this or I copy the whole template
+            field_name = self.dotpath
+            if field_name.endswith('.*'):
+                field_name = field_name[:-2]
+            if '.' in field_name:
+                field_name = field_name.rsplit('.',1)[-1]
+            self.verbose_name_plural = field_name
+        
 
     def _media(self):
         from django.conf import settings
