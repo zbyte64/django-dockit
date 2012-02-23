@@ -445,7 +445,7 @@ class DocumentAdmin(SchemaAdmin):
         opts = self.model._meta
         breadcrumbs = [
             Breadcrumb('Home', ['%s:index' % admin_name]),
-            Breadcrumb(opts.app_label, ['%s:%s' % (admin_name, self.app_name)]),
+            Breadcrumb(opts.app_label, ['%s:app_list' % admin_name, (self.app_name,), {}]),
             Breadcrumb(opts.verbose_name_plural, ['%s:%s_changelist' % (admin_name, self.app_name)]),
         ]
         return breadcrumbs
