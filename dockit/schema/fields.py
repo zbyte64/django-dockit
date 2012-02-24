@@ -364,14 +364,17 @@ class SchemaField(BaseField):
             name = traverser.next_part
             value = traverser.current_value
             next_value = field = None
+            schema = self.schema
             
             if value:
                 try:
                     next_value = value[name]
                 except KeyError:
                     pass
-            if name in self.schema._meta.fields:
-                field = self.schema._meta.fields[name]
+                schema = type(value)
+            
+            if name in schema._meta.fields:
+                field = schema._meta.fields[name]
             
             traverser.next(field=field, value=next_value)
         else:

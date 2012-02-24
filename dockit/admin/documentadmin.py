@@ -280,18 +280,22 @@ class SchemaAdmin(object):
     
     def get_field(self, schema, dotpath, obj=None):
         field = None
-        if dotpath:
-            if obj:
-                field = obj.dot_notation_to_field(dotpath)
-            else:
-                field = schema._meta.dot_notation_to_field(dotpath)
+        if dotpath and obj:
+            field = obj.dot_notation_to_field(dotpath)
             if field is None:
-                field_name = dotpath.rsplit('.',1)[1]
-                field = schema._meta.dot_notation_to_field(field_name)
-                if field is None: #lists are tricky
-                    #TODO review this
-                    field_name = dotpath.rsplit('.',2)[1]
-                    field = schema._meta.dot_notation_to_field(field_name)
+                parent_path = dotpath.rsplit('.', 1)[0]
+                print 'no field', dotpath, obj
+                
+                from dockit.schema.common import DotPathTraverser
+                traverser = DotPathTraverser(parent_path)
+                traverser.resolve_for_instance(obj)
+                info = traverser.resolved_paths
+                subschema = info[2]['field'].schema
+                fields = subschema._meta.fields
+                
+                field = obj.dot_notation_to_field(parent_path)
+                data = obj._primitive_data
+                assert field
         return field
     
     def get_base_breadcrumbs(self):
