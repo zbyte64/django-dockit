@@ -5,7 +5,7 @@ try:
 except ImportError:
     from distutils.core import setup, find_packages
 
-VERSION = '0.0.4'
+VERSION = '0.0.5'
 LONG_DESC = """\
 """
 
