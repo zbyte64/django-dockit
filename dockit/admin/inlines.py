@@ -18,6 +18,7 @@ class InlineSchemaAdmin(SchemaAdmin):
 
     def __init__(self, model, admin_site, schema=None, documentadmin=None, dotpath=None):
         super(InlineSchemaAdmin, self).__init__(model, admin_site, schema or self.schema, documentadmin)
+        self.model = self.schema
         self.opts = self.schema._meta
         self.dotpath = dotpath
         if self.verbose_name is None:
