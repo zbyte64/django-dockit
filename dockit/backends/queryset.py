@@ -1,5 +1,3 @@
-import copy
-
 class BaseDocumentQuery(object):
     """
     Implemented by the backend to execute a certain index
@@ -23,6 +21,9 @@ class BaseDocumentQuery(object):
     
     def count(self):
         return self.__len__()
+    
+    def exists(self):
+        return bool(self.__len__())
     
     def delete(self):
         raise NotImplementedError
@@ -66,6 +67,9 @@ class QuerySet(object):
     def get(self, **kwargs):
         #TODO cache
         return self.query.get(**kwargs)
+    
+    def exists(self):
+        return self.query.exists()
     
     def __getitem__(self, val):
         #TODO cache

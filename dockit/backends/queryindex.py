@@ -106,6 +106,9 @@ class QueryIndex(object):
     def get(self, **kwargs):
         return self.queryset.get(**kwargs)
     
+    def exists(self):
+        return self.queryset.exists()
+    
     def __getitem__(self, val):
         return self.queryset.__getitem__(val)
     
