@@ -371,7 +371,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
     
     def delete_subobject(self):
         temp = self.get_temporary_store()
-        params = {'_tempdoc':temp.get_id(),}
+        params = {}
         
         #TODO in FragmentViewMixin, get_effective_parent_dotpath()
         next_dotpath = self.parent_dotpath()
@@ -391,6 +391,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         #TODO make this a blessed function
         temp.dot_notation_set_value(self.dotpath(), UnSet)
         temp.save()
+        params['_tempdoc'] = temp.get_id()
         return HttpResponseRedirect('%s?%s' % (self.admin.reverse(self.admin.app_name+'_change', self.kwargs['pk']), urlencode(params)))
     
     def post(self, request, *args, **kwargs):

@@ -31,7 +31,7 @@ class SchemaOptions(object):
     ordering = ['_id']
     
     DEFAULT_NAMES = ['verbose_name', 'db_table', 'ordering', 'schema_key',
-                     'app_label', 'collection', 'virtual', 'proxy',
+                     'app_label', 'collection', 'virtual', 'proxy', 'permissions',
                      'typed_field', 'typed_key']
     
     def __init__(self, meta, app_label=None, parent_fields=[]):
@@ -47,6 +47,7 @@ class SchemaOptions(object):
         self._document = None
         self.typed_field = None
         self.typed_key = None
+        self.permissions = []
     
     def process_values(self, cls):
         cls._meta = self

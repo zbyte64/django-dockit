@@ -1,6 +1,8 @@
 from dockit import schema
 from dockit.backends import get_document_backend
 
+from django.db import models
+
 from copy import deepcopy
 
 import datetime
@@ -70,4 +72,7 @@ class ActiveIndex(schema.Document):
     backend_index_identifier = schema.CharField()
     creation_date = schema.DateTimeField(default=datetime.datetime.now)
     #TODO store the index parameters
+
+class DockitPermission(models.Model):
+    pass #a content type is required for creating permissions
 
