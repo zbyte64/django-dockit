@@ -2,6 +2,7 @@ from django.forms.widgets import Widget, Media, HiddenInput
 from django.utils.safestring import mark_safe
 import django.utils.copycompat as copy
 
+#TODO use formsets, the form will only have one field, the subfield
 class PrimitiveListWidget(Widget):
     '''
     Wraps around a subfield
@@ -28,7 +29,7 @@ class PrimitiveListWidget(Widget):
             output.append(self.subfield.widget.render(name + '_%s' % i, widget_value, final_attrs))
         output.append(self.subfield.widget.render(name + '_%s' % (i+1), None, final_attrs))
         output.append(HiddenInput().render(name + '_count', str(i+1), {}))
-        return mark_safe(self.format_output(output))
+        return mark_safe(self.format_output(output, name))
 
     def id_for_label(self, id_):
         # See the comment for RadioSelect.id_for_label()
@@ -57,7 +58,7 @@ class PrimitiveListWidget(Widget):
         return True #CONSIDER where is my name?
         return False
 
-    def format_output(self, rendered_widgets):
+    def format_output(self, rendered_widgets, name):
         """
         Given a list of rendered widgets (as strings), returns a Unicode string
         representing the HTML for the whole lot.
@@ -66,7 +67,7 @@ class PrimitiveListWidget(Widget):
         needed.
         """
         
-        return '<table><tr><td>%s</td></tr></table>' % u'</td></tr><tr><td>'.join(rendered_widgets)
+        return '<table class="primitivelist_field" data-field-name="%s"><tr><td>%s</td></tr></table>' % (name, u'</td></tr><tr><td>'.join(rendered_widgets))
 
     def decompress(self, value):
         """
@@ -80,6 +81,9 @@ class PrimitiveListWidget(Widget):
         "Media for a multiwidget is the combination of all media of the subwidgets"
         media = Media()
         media += self.subfield.media
+        definition = getattr(self, 'Media', None)
+        if definition:
+            media += Media(definition)
         return media
     media = property(_get_media)
 

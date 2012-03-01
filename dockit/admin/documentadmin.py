@@ -10,6 +10,7 @@ from dockit.forms import DocumentForm
 from dockit.forms.fields import PrimitiveListField
 
 import views
+from widgets import AdminPrimitiveListWidget
 from breadcrumbs import Breadcrumb
 
 FORMFIELD_FOR_FIELD_DEFAULTS = {
@@ -244,6 +245,7 @@ class SchemaAdmin(object):
             subfield_kwargs = dict(kwargs)
             subfield = self.formfield_for_field(prop, type(subfield_kwargs.pop('subfield')), view, **subfield_kwargs)
             kwargs['subfield'] = subfield
+            kwargs['widget'] = AdminPrimitiveListWidget
         if field in self.formfield_overrides:
             opts = dict(self.formfield_overrides[field])
             field = opts.pop('form_class', field)
