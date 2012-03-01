@@ -458,26 +458,18 @@ class DocumentAdmin(SchemaAdmin):
         if obj:
             return Breadcrumb(unicode(obj))
         return Breadcrumb('Add %s' % self.model._meta.verbose_name)
-
-
-'''
-crud request -> DocumentAdmin
-DocumentAdmin -> DocumentProxyView
-DocumentProxyView
-'''
-
-'''
-bring back inlines with a vengance
-
-StackedInline, TabularInline, FieldInline
-
-admin excludes these fields, need to get inlines for schema
-2nd pass could get rid of some nasty hacks
-
-django admin is strict about inlines, may need to implement under a different name
-inline.get_formset => powerhouse, basic formset support is all that is needed
-
-CONSIDER: may want to create new admin instance for a subschema, like get_view_for_schema...
-what other sane strategies are there?
-'''
+    
+    def has_add_permission(self, request):
+        opts = self.model._meta
+        #print opts.collection, request.user.has_perm('dockit.'+ opts.get_add_permission()), opts.get_add_permission()
+        #print request.user.user_permissions.all().filter(codename=opts.get_add_permission()).values_list('codename', 'content_type')
+        return request.user.has_perm('dockit.'+ opts.get_add_permission())
+    
+    def has_change_permission(self, request, obj=None):
+        opts = self.model._meta
+        return request.user.has_perm('dockit.'+ opts.get_change_permission(), obj)
+    
+    def has_delete_permission(self, request, obj=None):
+        opts = self.model._meta
+        return request.user.has_perm('dockit.'+ opts.get_delete_permission(), obj)
 

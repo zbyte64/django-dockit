@@ -2,6 +2,7 @@ from dockit import schema
 from dockit.backends import get_document_backend
 
 from django.db import models
+from django.conf import settings
 
 from copy import deepcopy
 
@@ -75,4 +76,7 @@ class ActiveIndex(schema.Document):
 
 class DockitPermission(models.Model):
     pass #a content type is required for creating permissions
+
+if 'django.contrib.auth' in settings.INSTALLED_APPS:
+    import auth
 

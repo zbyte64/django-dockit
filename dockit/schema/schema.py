@@ -8,7 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from manager import Manager
 from common import register_collection, DotPathTraverser, UnSet
-from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
+from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init, document_registered
 import options
 
 def subclass_exception(name, parents, module):
@@ -240,6 +240,7 @@ def _register_document(document_cls):
     backend = document_cls._meta.get_backend()
     backend.register_document(document_cls)
     register_collection(document_cls)
+    document_registered.send(sender=document_cls._meta.collection, document=document_cls)
 
 class DocumentBase(SchemaBase):
     options_module = options.DocumentOptions

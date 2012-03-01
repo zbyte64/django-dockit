@@ -174,6 +174,15 @@ class SchemaOptions(object):
     @property
     def many_to_many(self):
         return []
+    
+    def get_add_permission(self):
+        return '%s.add' % self.collection
+
+    def get_change_permission(self):
+        return '%s.change' % self.collection
+
+    def get_delete_permission(self):
+        return '%s.delete' % self.collection
 
 class DocumentOptions(SchemaOptions):
     abstract = False
