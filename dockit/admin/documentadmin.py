@@ -243,6 +243,7 @@ class SchemaAdmin(object):
             return field(**kwargs)
         if issubclass(field, PrimitiveListField) and 'subfield' in kwargs:
             subfield_kwargs = dict(kwargs)
+            subfield_kwargs.pop('initial', None)
             subfield = self.formfield_for_field(prop, type(subfield_kwargs.pop('subfield')), view, **subfield_kwargs)
             kwargs['subfield'] = subfield
             kwargs['widget'] = AdminPrimitiveListWidget

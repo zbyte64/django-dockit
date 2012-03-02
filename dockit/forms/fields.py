@@ -3,10 +3,11 @@ from django.forms.widgets import HiddenInput, SelectMultiple, MultipleHiddenInpu
 from django.forms import ValidationError
 from django.utils.translation import ugettext as _
 from django.utils.encoding import force_unicode, smart_unicode
-
 from django.utils import simplejson as json
 
 from widgets import PrimitiveListWidget
+
+import inspect
 
 class HiddenJSONField(Field):
     widget = HiddenInput
@@ -68,11 +69,24 @@ class PrimitiveListField(Field):
     def clean(self, data, initial=None):
         ret = list()
         for i, data_item in enumerate(data):
-            if initial and len(initial) >= i:
+            if initial and len(initial) > i:
                 initial_item = initial[i]
             else:
                 initial_item = None
-            ret.append(self.subfield.clean(data_item, initial_item))
+            data_item = self.subfield.bound_data(data_item, initial_item)
+            arg_spec = inspect.getargspec(self.subfield.clean)
+            #TODO skip items to be deleted
+            #TODO reordering
+            try:
+                if len(arg_spec.args) > 2:
+                    val = self.subfield.clean(data_item, initial_item)
+                else:
+                    val = self.subfield.clean(data_item)
+            except ValidationError:
+                if data_item is not None:
+                    raise
+            else:
+                ret.append(val)
         return ret
 
 class SchemaChoiceIterator(object):

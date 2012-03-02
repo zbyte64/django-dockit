@@ -2,7 +2,10 @@ from django.forms.widgets import Widget, Media, HiddenInput
 from django.utils.safestring import mark_safe
 import django.utils.copycompat as copy
 
-#TODO use formsets, the form will only have one field, the subfield
+from django import forms
+from django.forms.util import flatatt
+from django.forms.formsets import formset_factory
+
 class PrimitiveListWidget(Widget):
     '''
     Wraps around a subfield
@@ -11,41 +14,43 @@ class PrimitiveListWidget(Widget):
     def __init__(self, subfield, attrs=None):
         self.subfield = subfield
         super(PrimitiveListWidget, self).__init__(attrs)
+    
+    def get_base_form_class(self):
+        class BaseForm(forms.Form):
+            value = self.subfield
+        return BaseForm
+    
+    def get_formset_class(self, **kwargs):
+        form_cls = self.get_base_form_class()
+        kwargs.setdefault('can_order', True)
+        kwargs.setdefault('can_delete', True)
+        formset = formset_factory(form_cls, **kwargs)
+        return formset
 
     def render(self, name, value, attrs=None):
-        #if self.is_localized:
-        #    self.widget.is_localized = self.is_localized
-        # value is a list of values, each corresponding to a widget
-        # in self.widgets.
         if not isinstance(value, list):
             value = self.decompress(value)
-        output = []
+        
         final_attrs = self.build_attrs(attrs)
-        id_ = final_attrs.get('id', None)
-        i = -1
-        for i, widget_value in enumerate(value):
-            if id_:
-                final_attrs = dict(final_attrs, id='%s_%s' % (id_, i))
-            output.append(self.subfield.widget.render(name + '_%s' % i, widget_value, final_attrs))
-        output.append(self.subfield.widget.render(name + '_%s' % (i+1), None, final_attrs))
-        output.append(HiddenInput().render(name + '_count', str(i+1), {}))
-        return mark_safe(self.format_output(output, name))
-
-    def id_for_label(self, id_):
-        # See the comment for RadioSelect.id_for_label()
-        if id_:
-            id_ += '_0'
-        return id_
-    id_for_label = classmethod(id_for_label)
-
+        
+        formset_class = self.get_formset_class()
+        initial=[{'value':val} for val in value]
+        formset = formset_class(initial=initial, prefix=name)
+        parts = ['<div class="list-row form-row"><table>%s</table></div>' % form.as_table() for form in formset]
+        parts.append('<div id="%s-empty" class="list-row form-row form-empty"><table>%s</table></div>' % (name, formset.empty_form.as_table()))
+        output = u'<div%s style="float: left;" class="primitivelistfield" data-prefix="%s">%s %s</div>' % (flatatt(final_attrs), name, formset.management_form, u''.join(parts))
+        return mark_safe(output)
+    
     def value_from_datadict(self, data, files, name):
-        count = int(data.get(name + '_count', 0))
-        ret = list()
-        for i in range(count):
-            val = self.subfield.widget.value_from_datadict(data, files, '%s_%s' % (name, i))
-            ret.append(val)
-        return ret
-
+        formset_class = self.get_formset_class()
+        formset = formset_class(data=data, files=files, prefix=name)
+        value = list()
+        for form in formset.forms:
+            val = form.fields['value'].widget.value_from_datadict(data, files, form.add_prefix('value'))
+            #TODO order, delete needs to be attached to the val
+            value.append(val)
+        return value
+    
     def _has_changed(self, initial, data):
         if initial is None:
             initial = [u'' for x in range(0, len(data))]
@@ -57,18 +62,7 @@ class PrimitiveListWidget(Widget):
         #        return True
         return True #CONSIDER where is my name?
         return False
-
-    def format_output(self, rendered_widgets, name):
-        """
-        Given a list of rendered widgets (as strings), returns a Unicode string
-        representing the HTML for the whole lot.
-
-        This hook allows you to format the HTML design of the widgets, if
-        needed.
-        """
-        
-        return '<table class="primitivelist_field" data-field-name="%s"><tr><td>%s</td></tr></table>' % (name, u'</td></tr><tr><td>'.join(rendered_widgets))
-
+    
     def decompress(self, value):
         """
         Returns a list of decompressed values for the given compressed value.
@@ -86,8 +80,9 @@ class PrimitiveListWidget(Widget):
             media += Media(definition)
         return media
     media = property(_get_media)
-
+    
     def __deepcopy__(self, memo):
         obj = super(PrimitiveListWidget, self).__deepcopy__(memo)
         obj.subfield = copy.deepcopy(self.subfield)
         return obj
+
