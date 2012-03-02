@@ -69,25 +69,34 @@ class PrimitiveListField(Field):
     def clean(self, data, initial=None):
         ret = list()
         for i, data_item in enumerate(data):
+            if data_item.get('DELETE', False):
+                continue
             if initial and len(initial) > i:
                 initial_item = initial[i]
             else:
                 initial_item = None
-            data_item = self.subfield.bound_data(data_item, initial_item)
+            val = self.subfield.bound_data(data_item['value'], initial_item)
+            
             arg_spec = inspect.getargspec(self.subfield.clean)
-            #TODO skip items to be deleted
-            #TODO reordering
             try:
                 if len(arg_spec.args) > 2:
-                    val = self.subfield.clean(data_item, initial_item)
+                    val = self.subfield.clean(val, initial_item)
                 else:
-                    val = self.subfield.clean(data_item)
+                    val = self.subfield.clean(val)
             except ValidationError:
-                if data_item is not None:
+                if val is not None:
                     raise
             else:
-                ret.append(val)
-        return ret
+                if val:
+                    ret.append((val, data_item.get('ORDER', None)))
+        
+        def compare_ordering_key(k):
+            if k[1] is None:
+                return (1, 0) # +infinity, larger than any number
+            return (0, k[1])
+        
+        ret.sort(key=compare_ordering_key)
+        return [item[0] for item in ret]
 
 class SchemaChoiceIterator(object):
     def __init__(self, field):

@@ -4,7 +4,7 @@ import django.utils.copycompat as copy
 
 from django import forms
 from django.forms.util import flatatt
-from django.forms.formsets import formset_factory
+from django.forms.formsets import formset_factory, ORDERING_FIELD_NAME, DELETION_FIELD_NAME
 
 class PrimitiveListWidget(Widget):
     '''
@@ -46,8 +46,9 @@ class PrimitiveListWidget(Widget):
         formset = formset_class(data=data, files=files, prefix=name)
         value = list()
         for form in formset.forms:
-            val = form.fields['value'].widget.value_from_datadict(data, files, form.add_prefix('value'))
-            #TODO order, delete needs to be attached to the val
+            val = dict()
+            for key in ('value', ORDERING_FIELD_NAME, DELETION_FIELD_NAME):
+                val[key] = form.fields[key].widget.value_from_datadict(data, files, form.add_prefix(key))
             value.append(val)
         return value
     
