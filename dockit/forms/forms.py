@@ -228,7 +228,6 @@ class BaseDocumentForm(BaseForm):
     def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None, 
             initial=None, error_class=ErrorList, label_suffix=":",
             empty_permitted=False, instance=None, dotpath=None):
-            
         opts = self._meta
         self.dotpath = dotpath or opts.dotpath
         
@@ -257,6 +256,8 @@ class BaseDocumentForm(BaseForm):
                 arg_spec = inspect.getargspec(field.clean)
                 if len(arg_spec.args) > 2:
                     initial = self.initial.get(name, field.initial)
+                    if callable(initial):
+                        initial = initial()
                     value = field.clean(value, initial)
                 else:
                     value = field.clean(value)

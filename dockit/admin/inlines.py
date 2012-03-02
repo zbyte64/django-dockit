@@ -16,7 +16,7 @@ class InlineSchemaAdmin(SchemaAdmin):
     verbose_name_plural = None
     can_delete = True
 
-    def __init__(self, model, admin_site, schema=None, documentadmin=None, dotpath=None):
+    def __init__(self, model, admin_site, schema=None, documentadmin=None, dotpath=None, **kwargs):
         super(InlineSchemaAdmin, self).__init__(model, admin_site, schema or self.schema, documentadmin)
         self.model = self.schema
         self.opts = self.schema._meta
@@ -31,7 +31,11 @@ class InlineSchemaAdmin(SchemaAdmin):
             if '.' in field_name:
                 field_name = field_name.rsplit('.',1)[-1]
             self.verbose_name_plural = field_name
-        
+        for key, value in kwargs.iteritems():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                raise TypeError("Unrecognized option: %s" % key)
 
     def _media(self):
         from django.conf import settings

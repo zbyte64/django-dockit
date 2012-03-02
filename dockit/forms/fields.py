@@ -84,7 +84,7 @@ class PrimitiveListField(Field):
                 else:
                     val = self.subfield.clean(val)
             except ValidationError:
-                if val is not None:
+                if val:
                     raise
             else:
                 if val:

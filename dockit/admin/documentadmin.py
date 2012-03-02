@@ -189,6 +189,7 @@ class SchemaAdmin(object):
             kwargs = {'dotpath':field.name + '.*'}
             if not many:
                 kwargs['max_num'] = 1
+                kwargs['dotpath'] = field.name
             inline_instance = StackedInline(self.model, self.admin_site, schema, self.documentadmin, **kwargs)
             inline_instances.append(inline_instance)
         return inline_instances

@@ -128,11 +128,7 @@ class BaseField(object):
                     'help_text': self.help_text,
                     'widget':self.form_widget_class,}
         if self.has_default():
-            if callable(self.default):
-                defaults['initial'] = self.default
-                defaults['show_hidden_initial'] = True
-            else:
-                defaults['initial'] = self.get_default()
+            defaults['initial'] = self.get_default()
         
         for key, value in defaults.items():
             if value is None:

@@ -1,7 +1,5 @@
 from django.forms.formsets import BaseFormSet, formset_factory
-from django.utils.text import get_text_list, capfirst
 from django.utils.translation import ugettext_lazy as _, ugettext
-from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 
 from forms import DocumentForm, documentform_factory
 
@@ -150,8 +148,12 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
         self.instance = instance
         self.save_as_new = save_as_new
         self.dotpath = dotpath or self.form._meta.dotpath
+        self.singleton = False
         # is there a better way to get the object descriptor?
         qs = self.instance.dot_notation(self.base_dotpath) or []
+        if not isinstance(qs, (list, set)):
+            qs = [qs]
+            self.singleton = True
         super(BaseInlineFormSet, self).__init__(data, files, prefix=prefix,
                                                 queryset=qs)
     
@@ -165,7 +167,10 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
         return super(BaseInlineFormSet, self).initial_form_count()
 
     def _construct_form(self, i, **kwargs):
-        kwargs['dotpath'] = '%s.%i' % (self.base_dotpath, i)
+        if self.singleton:
+            kwargs['dotpath'] = self.base_dotpath
+        else:
+            kwargs['dotpath'] = '%s.%i' % (self.base_dotpath, i)
         kwargs['instance'] = self.instance
         form = super(BaseDocumentFormSet, self)._construct_form(i, **kwargs)
         if self.save_as_new:
@@ -208,7 +213,10 @@ class BaseInlineFormSet(BaseDocumentFormSet): #simply merge as one?
             self.save_m2m = save_m2m
         new_list = self.save_existing_objects(commit) + self.save_new_objects(commit)
         if commit:
-            self.instance.dot_notation_set_value(self.base_dotpath, new_list)
+            if self.singleton:
+                self.instance.dot_notation_set_value(self.base_dotpath, new_list[0])
+            else:
+                self.instance.dot_notation_set_value(self.base_dotpath, new_list)
         return new_list
 
 
