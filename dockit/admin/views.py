@@ -274,6 +274,8 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         context['media'] += context['adminform'].form.media
         for inline in context['inline_admin_formsets']:
             context['media'] += inline.media
+            #TODO this does not work as media is a property, fix this and js will be pulled from the inline form
+            context['media'] += inline.formset.form.media
         
         obj = None
         if hasattr(self, 'object'):
