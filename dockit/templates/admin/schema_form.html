@@ -44,6 +44,11 @@
 <form {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.module_name }}_form">{% csrf_token %}{% block form_top %}{% endblock %}
 <div>
 {% if is_popup %}<input type="hidden" name="_popup" value="1" />{% endif %}
+{% if tempdoc_info.number_of_changes %}
+    <ul class="messagelist">
+    <li class="warning">You have {{tempdoc_info.number_of_changes}} change(s) pending.</li>
+    </ul>
+{% endif %}
 {% if form.errors %}
     <p class="errornote">
     {% blocktrans count errors|length as counter %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktrans %}

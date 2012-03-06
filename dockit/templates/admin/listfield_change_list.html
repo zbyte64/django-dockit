@@ -16,6 +16,11 @@
 {% endif %}{% endblock %}
 
 {% block object-tools %}
+{% if tempdoc_info.number_of_changes %}
+    <ul class="messagelist">
+    <li class="warning">You have {{tempdoc_info.number_of_changes}} change(s) pending.</li>
+    </ul>
+{% endif %}
   {% if has_add_permission %}
     <ul class="object-tools">
       {% block object-tools-items %}

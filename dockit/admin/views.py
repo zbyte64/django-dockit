@@ -171,6 +171,8 @@ class SchemaTypeSelectionView(BaseFragmentViewMixin, TemplateView):
         context.update(TemplateView.get_context_data(self, **kwargs))
         context['adminform'] = self.create_admin_form()
         context['form_url'] = self.request.get_full_path()
+        context['tempdoc'] = self.get_temporary_store()
+        context['tempdoc_info'] = self.get_temporary_store()._tempinfo
         return context
 
 class FragmentViewMixin(BaseFragmentViewMixin):
@@ -272,6 +274,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
                         'breadcrumbs': self.get_breadcrumbs(),
                         'dotpath': self.dotpath(),
                         'tempdoc': self.get_temporary_store(),
+                        'tempdoc_info': self.get_temporary_store()._tempinfo,
                         'adminform':self.create_admin_form(),
                         'inline_admin_formsets': self.get_inline_admin_formsets(),})
         context['media'] += context['adminform'].form.media
@@ -417,6 +420,13 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         obj = form.save(commit=False) #CONSIDER this would normally be done in form_valid
         for formset in formsets:
             formset.save(instance=obj)#form.target_object)
+        
+        obj._tempinfo.user = request.user
+        if obj._tempinfo.number_of_changes is None:
+            obj._tempinfo.number_of_changes = 0
+        if not self.next_dotpath():
+            obj._tempinfo.number_of_changes += 1
+        
         obj.save()
         assert obj._meta.collection == self.temp_document._meta.collection
         
@@ -576,6 +586,8 @@ class ListFieldIndexView(BaseFragmentViewMixin, views.DetailView):
             return_dotpath = ''
         params['_dotpath'] = return_dotpath
         context['return_link'] = './?%s' % params.urlencode()
+        context['tempdoc'] = self.get_temporary_store()
+        context['tempdoc_info'] = self.get_temporary_store()._tempinfo
         return context
 
 class DocumentProxyView(BaseFragmentViewMixin, View):

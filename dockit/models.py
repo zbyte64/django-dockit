@@ -3,6 +3,7 @@ from dockit.backends import get_document_backend
 
 from django.db import models
 from django.conf import settings
+from django.contrib.auth.models import User
 
 from copy import deepcopy
 
@@ -13,7 +14,18 @@ class SchemaProxyDict(dict):
         val = dict.__getitem__(self, key)
         return TemporaryDocument.generate_document(val)
 
+class TemporaryDocumentInfo(schema.Schema):
+    user = schema.ModelReferenceField(User, blank=True, null=True)
+    created = schema.DateTimeField(default=datetime.datetime.now)
+    
+    object_collection = schema.CharField()
+    object_id = schema.CharField()
+    
+    number_of_changes = schema.IntegerField(default=0)
+
 class TemporaryDocument(schema.Document):
+    _tempinfo = schema.SchemaField(TemporaryDocumentInfo)
+    
     @classmethod
     def generate_document(cls, document):
         class GeneratedTempDocument(cls):
@@ -48,6 +60,7 @@ class TemporaryDocument(schema.Document):
         
         data = self.to_primitive(self)
         data[id_field] = doc_id
+        data.pop('_tempinfo', None)
         
         instance = document_cls(_primitive_data=data)
         instance.save()

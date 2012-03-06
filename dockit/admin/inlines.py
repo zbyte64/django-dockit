@@ -45,7 +45,9 @@ class InlineSchemaAdmin(SchemaAdmin):
             js.append('js/prepopulate.min.js')
         if self.filter_vertical or self.filter_horizontal:
             js.extend(['js/SelectBox.js' , 'js/SelectFilter2.js'])
-        return forms.Media(js=['%s%s' % (settings.ADMIN_MEDIA_PREFIX, url) for url in js])
+        media = forms.Media(js=['%s%s' % (settings.ADMIN_MEDIA_PREFIX, url) for url in js])
+        media.add_js(['%sadmin/js/primitivelist.js' % settings.STATIC_URL])
+        return media
     media = property(_media)
 
     def get_formset(self, request, obj=None, **kwargs):
