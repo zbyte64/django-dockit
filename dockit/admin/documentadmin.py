@@ -232,6 +232,14 @@ class SchemaAdmin(object):
         if isinstance(prop, schema.ListField):
             base_property = prop.subfield
         
+        #TODO self.raw_id_fields
+        #TODO ForeignKeyRawIdWidget => DocumentReferenceRawIdWidget
+        if prop.name in self.raw_id_fields:
+            if isinstance(prop, schema.ReferenceField):
+                pass
+            elif isinstance(prop, schema.ModelReferenceField):
+                pass
+        
         if (isinstance(base_property, schema.TypedSchemaField) or 
              (isinstance(base_property, schema.SchemaField) and base_property.schema._meta.typed_field)):
             from fields import TypedSchemaField
