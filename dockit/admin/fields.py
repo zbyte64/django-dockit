@@ -13,8 +13,9 @@ from urllib import urlencode
 class DotPathWidget(widgets.Input):
     input_type = 'submit'
     
-    def __init__(self, dotpath=None):
+    def __init__(self, dotpath=None, params=None):
         self.dotpath = dotpath
+        self.params = params
         super(DotPathWidget, self).__init__()
     
     def render_button(self, dotpath, edit=False):
@@ -22,7 +23,10 @@ class DotPathWidget(widgets.Input):
             label = 'edit'
         else:
             label = 'add'
-        data = {'next_dotpath':dotpath}
+        data = self.params.copy()
+        data.update({'_popup': 1,
+                     '_basepath': self.dotpath or '',
+                     'next_dotpath': dotpath,})
         name = '[fragment]%s' % urlencode(data)
         submit_attrs = self.build_attrs({}, type=self.input_type, name=name, value=label)
         return mark_safe(u'<input%s />' % flatatt(submit_attrs))
@@ -80,10 +84,12 @@ class DotPathField(HiddenJSONField):
     
     def __init__(self, *args, **kwargs):
         self.dotpath = kwargs.pop('dotpath')
+        self.params = kwargs.pop('params')
         #if 'widget' not in kwargs or self.widget == kwargs['widget']:
         #    kwargs['widget'] = self.widget(dotpath=self.dotpath)
         super(DotPathField, self).__init__(*args, **kwargs)
         self.widget.dotpath = self.dotpath
+        self.widget.params = self.params
     
     def prepare_value(self, value):
         return value
@@ -102,7 +108,7 @@ class TypedSchemaFieldWidget(DotPathWidget):
         for val, label in self.schema_property.get_schema_choices():
             options.append(u'<option value="%s">%s</option>' % (escape(force_unicode(val)), escape(force_unicode(label))))
         data = {'next_dotpath':dotpath,
-                'name':self.schema_property.type_field_name,}
+                'name':self.schema_property.name,}
         name = '[fragment-passthrough]%s' % urlencode(data)
         return u'<select name="%s">%s</select>' % (name, '\n'.join(options))
     

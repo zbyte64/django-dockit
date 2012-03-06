@@ -336,6 +336,9 @@ class SchemaTypeField(CharField):
             return first_choice + list(zip(self.schemas.keys(), self.schemas.keys()))
             #TODO allow schema to have a display label, perhaps verbose name?
         return first_choice
+    
+    def get_schema_choices(self):
+        return self.get_choices()
 
 class SchemaField(BaseField):
     form_field_class = HiddenSchemaField
@@ -354,6 +357,10 @@ class SchemaField(BaseField):
         if val is None:
             return True
         return isinstance(val, self.schema)
+    
+    def get_schema_choices(self):
+        field_name = self.schema._meta.typed_field
+        return self.schema._meta.fields[field_name].schemas.items()
     
     def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:

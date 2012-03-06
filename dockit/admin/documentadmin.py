@@ -227,18 +227,29 @@ class SchemaAdmin(object):
         from fields import DotPathField
         from dockit.forms.fields import HiddenJSONField
         request = kwargs.pop('request', None)
-        if ((isinstance(prop, schema.ListField) and isinstance(prop.subfield, schema.TypedSchemaField)) or
-             isinstance(prop, schema.TypedSchemaField)):
+        
+        base_property = prop
+        if isinstance(prop, schema.ListField):
+            base_property = prop.subfield
+        
+        if (isinstance(base_property, schema.TypedSchemaField) or 
+             (isinstance(base_property, schema.SchemaField) and base_property.schema._meta.typed_field)):
             from fields import TypedSchemaField
             field = TypedSchemaField
             kwargs['dotpath'] = view.dotpath()
-            kwargs['schema_property'] = prop
-            if self.next_dotpath():
+            kwargs['params'] = request.GET.copy()
+            if isinstance(base_property, schema.SchemaField):
+                type_selector = base_property.schema._meta.fields[base_property.schema._meta.typed_field]
+            else:
+                type_selector = base_property
+            kwargs['schema_property'] = type_selector
+            if view.next_dotpath():
                 kwargs['required'] = False
             return field(**kwargs)
         if issubclass(field, HiddenJSONField):
             field = DotPathField
             kwargs['dotpath'] = view.dotpath()
+            kwargs['params'] = request.GET.copy()
             if view.next_dotpath():
                 kwargs['required'] = False
             return field(**kwargs)

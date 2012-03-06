@@ -79,7 +79,7 @@ class BaseFragmentViewMixin(DocumentViewMixin):
         return False
     
     def needs_typed_selection(self, schema, obj=None):
-        if schema._meta.typed_field and schema._meta.typed_field in self.request.GET:
+        if schema._meta.typed_field and self.request.GET.get(schema._meta.typed_field, None):
             return False
         return self.should_prompt_polymorphic_type(schema, obj)
     
@@ -91,6 +91,9 @@ class BaseFragmentViewMixin(DocumentViewMixin):
     
     def temporary_document_id(self):
         return self.request.GET.get('_tempdoc', None)
+    
+    def basepath(self):
+        return self.request.GET.get('_basepath', None)
     
     def get_temporary_store(self):
         if not hasattr(self, '_temporary_store'):
@@ -332,6 +335,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         return object_tools
     
     def formfield_for_field(self, prop, field, **kwargs):
+        kwargs['request'] = self.request
         return self.admin.formfield_for_field(prop, field, self, **kwargs)
     
     def get_base_schema(self):
@@ -416,33 +420,49 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         obj.save()
         assert obj._meta.collection == self.temp_document._meta.collection
         
+        params = {'_tempdoc': obj.get_id(),}
+        if self.basepath():
+            params['_basepath'] = self.basepath()
         
         if self.next_dotpath():
             info = self.fragment_info()
             passthrough = self.fragment_passthrough()
-            params = {'_dotpath': self.next_dotpath(),
-                      '_parent_dotpath': self.dotpath() or '',
-                      '_tempdoc': obj.get_id(),}
+            params.update({'_dotpath': self.next_dotpath(),
+                           '_parent_dotpath': self.dotpath() or '',})
             params.update(passthrough)
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
         if self.dotpath():
-            params = {'_tempdoc':obj.get_id(),}
-            
-            #if they signaled to continue editing
-            if self.request.POST.get('_continue', False):
-                next_dotpath = self.dotpath()
+            next_dotpath = None
+            if self.dotpath() == self.basepath(): #commit the changes
+                del params['_tempdoc']
+                if obj._meta.collection != self.document._meta.collection:
+                    self.object = obj.commit_changes(self.kwargs.get('pk', None))
+                else:
+                    self.object = obj
+                if 'pk' in self.kwargs:
+                    assert str(self.object.pk) == self.kwargs['pk']
+                if self.temporary_document_id():
+                    self.get_temporary_store().delete()
+                if self.request.POST.get('_continue', False):
+                    next_dotpath = self.dotpath()
+                else:
+                    return self.form_valid(form)
             else:
-                next_dotpath = self.parent_dotpath()
-                if next_dotpath is None:
-                    dotpath = self.dotpath()
-                    if '.' in dotpath:
-                        next_dotpath = dotpath[:dotpath.rfind('.')]
-                    field = obj.dot_notation_to_field(next_dotpath)
-                    if isinstance(field, ListField):
-                        if '.' in next_dotpath:
-                            next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
-                        else:
-                            next_dotpath = None
+                #if they signaled to continue editing
+                if self.request.POST.get('_continue', False):
+                    next_dotpath = self.dotpath()
+                else:
+                    next_dotpath = self.parent_dotpath()
+                    if next_dotpath is None:
+                        dotpath = self.dotpath()
+                        if '.' in dotpath:
+                            next_dotpath = dotpath[:dotpath.rfind('.')]
+                        field = obj.dot_notation_to_field(next_dotpath)
+                        if isinstance(field, ListField):
+                            if '.' in next_dotpath:
+                                next_dotpath = next_dotpath[:next_dotpath.rfind('.')]
+                            else:
+                                next_dotpath = None
             if next_dotpath:
                 params['_dotpath'] = next_dotpath
             return HttpResponseRedirect('%s?%s' % (request.path, urlencode(params)))
@@ -590,7 +610,7 @@ class DocumentProxyView(BaseFragmentViewMixin, View):
         schema = self.admin.model
         if schema._meta.typed_field:
             field = schema._meta.fields[schema._meta.typed_field]
-            if schema._meta.typed_field in self.request.GET:
+            if self.request.GET.get(schema._meta.typed_field, False):
                 key = self.request.GET[schema._meta.typed_field]
                 try:
                     schema = field.schemas[key]
@@ -628,7 +648,7 @@ class DocumentProxyView(BaseFragmentViewMixin, View):
                 schema = field.schema
                 if schema._meta.typed_field:
                     typed_field = schema._meta.fields[schema._meta.typed_field]
-                    if schema._meta.typed_field in self.request.GET:
+                    if self.request.GET.get(schema._meta.typed_field, False):
                         key = self.request.GET[schema._meta.typed_field]
                         schema = typed_field.schemas[key]
                     else:
