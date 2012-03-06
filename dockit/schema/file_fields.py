@@ -77,5 +77,7 @@ class FileField(Field):
     def to_python(self, val, parent=None):
         if not val:
             return None
-        return self.attr_class(parent, self, val)
+        ret = self.attr_class(parent, self, val)
+        ret.storage_path = val
+        return ret
 
