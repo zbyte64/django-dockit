@@ -41,7 +41,7 @@
                 formCssClass: "dynamic-form",
                 deleteCssClass: "inline-deletelink",
                 deleteText: "Remove",
-                emptyCssClass: "empty-form",
+                emptyCssClass: "empty-row",
                 added: (function(row) {
                     initPrepopulatedFields(row);
                     reinitDateTimeShortCuts();

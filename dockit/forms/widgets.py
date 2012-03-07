@@ -37,7 +37,7 @@ class PrimitiveListWidget(Widget):
         initial=[{'value':val} for val in value]
         formset = formset_class(initial=initial, prefix=name)
         parts = ['<div class="list-row form-row"><table>%s</table></div>' % form.as_table() for form in formset]
-        parts.append('<div id="%s-empty" class="list-row form-row form-empty"><table>%s</table></div>' % (name, formset.empty_form.as_table()))
+        parts.append('<div id="%s-empty" class="list-row form-row empty-row"><table>%s</table></div>' % (name, formset.empty_form.as_table()))
         output = u'<div%s style="float: left;" class="primitivelistfield" data-prefix="%s">%s %s</div>' % (flatatt(final_attrs), name, formset.management_form, u''.join(parts))
         return mark_safe(output)
     

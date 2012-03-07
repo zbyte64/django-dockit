@@ -77,12 +77,7 @@ class FileField(Field):
     def to_python(self, val, parent=None):
         if not val:
             return None
-        #self.attr_class(instance, field, name)
-        ret = self.storage.open(val)
+        ret = self.attr_class(parent, self, val)
         ret.storage_path = val
-        try:
-            ret.url = self.storage.url(val)
-        except Exception, error:
-            print error
         return ret
 

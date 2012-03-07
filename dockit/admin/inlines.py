@@ -47,6 +47,7 @@ class InlineSchemaAdmin(SchemaAdmin):
             js.extend(['js/SelectBox.js' , 'js/SelectFilter2.js'])
         media = forms.Media(js=['%s%s' % (settings.ADMIN_MEDIA_PREFIX, url) for url in js])
         media.add_js(['%sadmin/js/primitivelist.js' % settings.STATIC_URL])
+        media.add_css({'all': ['%sadmin/css/primitivelist.css' % settings.STATIC_URL]})
         return media
     media = property(_media)
 
