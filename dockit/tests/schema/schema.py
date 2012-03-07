@@ -14,10 +14,10 @@ class SchemaTestCase(unittest.TestCase):
     
     def test_to_python(self):
         obj = SimpleSchema(_primitive_data={'charfield':'charmander'})
-        py_data = obj.to_python(obj)
-        self.assertEqual(py_data, {'charfield':'charmander'})
+        py_obj = obj.to_python({'charfield':'charmander'})
+        self.assertEqual(obj._primitive_data, py_obj._primitive_data)
     
     def test_traverse(self):
-        obj = ScimpleSchema(charfield='charmander')
+        obj = SimpleSchema(charfield='charmander')
         self.assertEqual(obj.dot_notation('charfield'), 'charmander')
-        
+

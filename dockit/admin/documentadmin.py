@@ -3,6 +3,7 @@ from django.utils.functional import update_wrapper
 from django.utils.encoding import force_unicode
 from django.core.urlresolvers import reverse
 from django.contrib.admin import widgets
+from django.contrib.admin.options import get_ul_class
 from django import forms
 
 from dockit.paginator import Paginator
@@ -226,8 +227,13 @@ class SchemaAdmin(object):
         from dockit import schema
         from fields import DotPathField
         from dockit.forms.fields import HiddenJSONField
-        request = kwargs.pop('request', None)
         
+        if isinstance(prop, schema.ModelReferenceField):
+            return self.formfield_for_foreignkey(prop, field, view, **kwargs)
+        if isinstance(prop, schema.ModelSetField):
+            return self.formfield_for_manytomany(prop, field, view, **kwargs)
+        
+        request = kwargs.pop('request', None)
         base_property = prop
         if isinstance(prop, schema.ListField):
             base_property = prop.subfield
@@ -272,6 +278,32 @@ class SchemaAdmin(object):
             field = opts.pop('form_class', field)
             kwargs = dict(opts, **kwargs)
         return field(**kwargs)
+    
+    def formfield_for_foreignkey(self, prop, field, view, **kwargs):
+        """
+        Get a form Field for a ForeignKey.
+        """
+        if prop.name in self.raw_id_fields:
+            kwargs['widget'] = widgets.ForeignKeyRawIdWidget(rel=None)
+        elif prop.name in self.radio_fields:
+            kwargs['widget'] = widgets.AdminRadioSelect(attrs={
+                'class': get_ul_class(self.radio_fields[prop.name]),
+            })
+            kwargs['empty_label'] = prop.blank and _('None') or None
+
+        return prop.formfield(**kwargs)
+
+    def formfield_for_manytomany(self, prop, field, view, **kwargs):
+        """
+        Get a form Field for a ManyToManyField.
+        """
+        if prop.name in self.raw_id_fields:
+            kwargs['widget'] = widgets.ManyToManyRawIdWidget(rel=None)
+            kwargs['help_text'] = ''
+        elif prop.name in (list(self.filter_vertical) + list(self.filter_horizontal)):
+            kwargs['widget'] = widgets.FilteredSelectMultiple(prop.verbose_name, (prop.name in self.filter_vertical))
+
+        return prop.formfield(**kwargs)
     
     def log_addition(self, request, object):
         return self.documentadmin.log_addition(request, object)
