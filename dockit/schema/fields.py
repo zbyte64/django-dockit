@@ -279,6 +279,8 @@ class DecimalField(BaseField):
         return str(val)
     
     def to_python(self, val, parent=None):
+        if val is None:
+            return None
         return Decimal(val)
 
 class EmailField(CharField):

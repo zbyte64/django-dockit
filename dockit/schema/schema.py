@@ -237,10 +237,17 @@ class Schema(object):
 _pending_registered_documents = list()
 
 def _register_document(document_cls):
-    backend = document_cls._meta.get_backend()
-    backend.register_document(document_cls)
-    register_collection(document_cls)
-    document_registered.send(sender=document_cls._meta.collection, document=document_cls)
+    if app_cache_ready():
+        while document_cls:
+            backend = document_cls._meta.get_backend()
+            backend.register_document(document_cls)
+            register_collection(document_cls)
+            document_registered.send_robust(sender=document_cls._meta.collection, document=document_cls)
+            if not _pending_registered_documents:
+                break
+            document_cls = _pending_registered_documents.pop()
+    else:
+        _pending_registered_documents.append(document_cls)
 
 class DocumentBase(SchemaBase):
     options_module = options.DocumentOptions

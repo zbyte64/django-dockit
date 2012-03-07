@@ -4,6 +4,7 @@ from dockit.schema.common import COLLECTIONS
 
 from django.contrib.auth import models as auth_app
 from django.contrib.contenttypes.models import ContentType
+from django.db.utils import DatabaseError
 
 def _get_permission_codename(action, opts):
     return u'%s.%s' % (opts.collection, action)
@@ -56,6 +57,9 @@ def on_document_registered(document, **kwargs):
     create_permissions([document], 1)
 document_registered.connect(on_document_registered)
 
-create_permissions(COLLECTIONS.values(), 1)
+try:
+    create_permissions(COLLECTIONS.values(), 1)
+except DatabaseError:
+    pass
 
 
