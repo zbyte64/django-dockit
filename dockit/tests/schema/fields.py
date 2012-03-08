@@ -1,14 +1,24 @@
 from dockit.schema import fields
 
 from django.utils import unittest
+from django.contrib.contenttypes.models import ContentType
 
 import datetime
 from decimal import Decimal
 
+from common import SimpleSchema, SimpleDocument
+
 class BaseFieldTestCase(unittest.TestCase):
     EXAMPLE_VALUES = []
     EXAMPLE_PRIMITIVE_VALUES = []
+    NULL_VALUE = None
     field_class = fields.BaseField
+    
+    def get_example_values(self):
+        return self.EXAMPLE_VALUES
+    
+    def get_example_primitive_values(self):
+        return self.EXAMPLE_PRIMITIVE_VALUES
     
     def get_field_kwargs(self):
         return {}
@@ -21,18 +31,18 @@ class BaseFieldTestCase(unittest.TestCase):
     def test_handles_null_value(self):
         field = self.get_field(null=True)
         val = field.to_python(None)
-        self.assertEqual(val, None)
+        self.assertEqual(val, self.NULL_VALUE)
     
     def test_to_python_to_primitive(self):
         field = self.get_field()
         
-        for val in self.EXAMPLE_VALUES:
+        for val in self.get_example_values():
             primitive = field.to_primitive(val)
             py_val = field.to_python(primitive)
             self.assertEqual(py_val, val)
         
-        for val in self.EXAMPLE_PRIMITIVE_VALUES:
-            py_val = field.to_pyhon(val)
+        for val in self.get_example_primitive_values():
+            py_val = field.to_python(val)
             primitive = field.to_primitive(py_val)
             self.assertEqual(val, primitive)
         
@@ -46,7 +56,7 @@ class BaseFieldTestCase(unittest.TestCase):
     
     def test_json_serializable(self):
         field = self.get_field()
-        for val in self.EXAMPLE_VALUES:
+        for val in self.get_example_values():
             primitive = field.to_primitive(val)
             #TODO attempt to serialize
     
@@ -96,5 +106,82 @@ class SlugFieldTestCase(BaseFieldTestCase):
 class TimeFieldTestCase(BaseFieldTestCase):
     field_class = fields.TimeField
 
-#TODO complex field types
+#begin complex field types
+
+class SchemaTypeFieldTestCase(BaseFieldTestCase):
+    field_class = fields.SchemaTypeField
+    
+    def get_field_kwargs(self):
+        return {'schemas': dict()}
+
+class SchemaFieldTestCase(BaseFieldTestCase):
+    field_class = fields.SchemaField
+    EXAMPLE_VALUES = [SimpleSchema(charfield='charmander')]
+    EXAMPLE_PRIMITIVE_VALUES = [{'charfield':'charmander'}]
+    NULL_VALUE = SimpleSchema()
+    
+    def get_field_kwargs(self):
+        return {'schema': SimpleSchema}
+
+class TypedSchemaFieldTestCase(BaseFieldTestCase):
+    field_class = fields.TypedSchemaField
+    
+    def get_field_kwargs(self):
+        return {'schemas': dict()}
+
+class ListFieldTestCase(BaseFieldTestCase):
+    field_class = fields.ListField
+    EXAMPLE_VALUES = [[], ['a','b','c']]
+    EXAMPLE_PRIMITIVE_VALUES = [[], ['a','b','c']]
+    NULL_VALUE = []
+    
+    def get_field_kwargs(self):
+        return {'subfield': fields.CharField()}
+
+class SetFieldTestCase(BaseFieldTestCase):
+    field_class = fields.SetField
+    EXAMPLE_VALUES = [[], ['a','b','c']]
+    EXAMPLE_PRIMITIVE_VALUES = [[], ['a','b','c']]
+    NULL_VALUE = set()
+    
+    def get_field_kwargs(self):
+        return {'subfield': fields.CharField()}
+
+class DictFieldTestCase(BaseFieldTestCase):
+    field_class = fields.DictField
+    EXAMPLE_VALUES = [{}, {'a':1}]
+    EXAMPLE_PRIMITIVE_VALUES = [{}, {'a':1}]
+    NULL_VALUE = dict()
+    
+    def get_field_kwargs(self):
+        return {}
+
+class ReferenceFieldTestCase(BaseFieldTestCase):
+    field_class = fields.ReferenceField
+    
+    def get_field_kwargs(self):
+        return {'document': SimpleDocument}
+
+class DocumentSetFieldTestCase(BaseFieldTestCase):
+    field_class = fields.DocumentSetField
+    NULL_VALUE = set()
+    
+    def get_field_kwargs(self):
+        return {'document': SimpleDocument}
+
+class ModelReferenceFieldTestCase(BaseFieldTestCase):
+    field_class = fields.ModelReferenceField
+    
+    def get_example_values(self):
+        return [ContentType.objects.all()[0]]
+    
+    def get_field_kwargs(self):
+        return {'model': ContentType}
+
+class ModelSetFieldTestCase(BaseFieldTestCase):
+    field_class = fields.ModelSetField
+    NULL_VALUE = set()
+    
+    def get_field_kwargs(self):
+        return {'model': ContentType}
 

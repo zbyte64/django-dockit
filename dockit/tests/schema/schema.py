@@ -1,10 +1,8 @@
-from dockit import schema
 from dockit.schema.schema import create_document, create_schema
 
 from django.utils import unittest
 
-class SimpleSchema(schema.Schema): #TODO make a more complex testcase
-    charfield = schema.CharField()
+from common import SimpleSchema
 
 class SchemaTestCase(unittest.TestCase):
     def test_to_primitive(self):

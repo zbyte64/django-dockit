@@ -233,6 +233,27 @@ class Schema(object):
             del self[attr]
         else:
             self[attr] = value
+    
+    def serializable_value(self, field_name):
+        try:
+            field = self._meta.get_field_by_name(field_name)[0]
+        except FieldDoesNotExist:
+            return getattr(self, field_name)
+        return getattr(self, field.attname)
+    
+    def __str__(self):
+        if hasattr(self, '__unicode__'):
+            return force_unicode(self).encode('utf-8')
+        return '%s object' % self.__class__.__name__
+    
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.to_primitive(self) == other.to_primitive(other)
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
+    def __hash__(self):
+        return hash(self.to_primitive(self))
 
 _pending_registered_documents = list()
 
@@ -311,16 +332,8 @@ class Document(Schema):
             return getattr(self, field_name)
         return getattr(self, field.attname)
     
-    def __str__(self):
-        if hasattr(self, '__unicode__'):
-            return force_unicode(self).encode('utf-8')
-        return '%s object' % self.__class__.__name__
-    
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.pk == other.pk
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def __hash__(self):
         return hash((self._meta.collection, self.pk))
