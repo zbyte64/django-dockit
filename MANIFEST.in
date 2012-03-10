@@ -1,2 +1,3 @@
 recursive-include dockit/templates *
+recursive-include dockit/static *
 recursive-exclude test_environment *
