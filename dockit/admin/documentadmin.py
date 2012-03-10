@@ -283,6 +283,7 @@ class SchemaAdmin(object):
         """
         Get a form Field for a ForeignKey.
         """
+        request = kwargs.pop('request', None)
         if prop.name in self.raw_id_fields:
             kwargs['widget'] = widgets.ForeignKeyRawIdWidget(rel=None)
         elif prop.name in self.radio_fields:
@@ -297,6 +298,7 @@ class SchemaAdmin(object):
         """
         Get a form Field for a ManyToManyField.
         """
+        request = kwargs.pop('request', None)
         if prop.name in self.raw_id_fields:
             kwargs['widget'] = widgets.ManyToManyRawIdWidget(rel=None)
             kwargs['help_text'] = ''
