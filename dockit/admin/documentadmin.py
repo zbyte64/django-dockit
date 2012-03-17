@@ -440,7 +440,7 @@ class DocumentAdmin(SchemaAdmin):
         app_list = resolver.app_dict['admin']
         return reverse('%s:%s' % (self.admin_site.name, name), args=args, kwargs=kwargs, current_app=self.app_name)
     
-    def create_admin_for_schema(self, schema):
+    def create_admin_for_schema(self, schema, object=None):
         admin_class = self.get_admin_class_for_schema(schema)
         return admin_class(self.model, self.admin_site, schema, self)
     

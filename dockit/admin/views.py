@@ -603,7 +603,7 @@ class DocumentProxyView(BaseFragmentViewMixin, View):
             return admin.get_select_schema_view(object=self.object)(request, *args, **kwargs)
         
         schema = self.get_schema()
-        admin = self.admin.create_admin_for_schema(schema)
+        admin = self.admin.create_admin_for_schema(schema, object)
         field = self.get_field()
         
         #detect list field
