@@ -89,5 +89,5 @@ class ExactIndexer(BaseIndexer):
     def values(self):
         return self.index_functions['unique_values'](self.filter_operation.key)
 
-ModelDocumentStorage.register_indexer(ExactIndexer, 'exact', 'iexact', 'startswith', 'endswith', 'year', 'month', 'day')
+ModelDocumentStorage.register_indexer(ExactIndexer, 'exact', 'iexact', 'startswith', 'endswith', 'istartswith', 'iendswith', 'year', 'month', 'day', 'lt', 'gt', 'lte', 'gte')
 

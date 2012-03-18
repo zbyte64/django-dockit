@@ -94,10 +94,8 @@ class Schema(object):
             setattr(self, key, value)
         assert isinstance(self._primitive_data, dict), str(type(self._primitive_data))
         assert isinstance(self._python_data, dict), str(type(self._python_data))
-        
         if self._meta.typed_field and self._meta.typed_key:
             self[self._meta.typed_field] = self._meta.typed_key
-        
         post_init.send(sender=self.__class__, instance=self)
     
     @classmethod
@@ -139,7 +137,10 @@ class Schema(object):
     def __getattribute__(self, name):
         fields = object.__getattribute__(self, '_meta').fields
         if name in fields:
-            python_data = object.__getattribute__(self, '_python_data')
+            try:
+                python_data = object.__getattribute__(self, '_python_data')
+            except AttributeError:
+                return object.__getattribute__(self, name)
             if name not in python_data:
                 primitive_data = object.__getattribute__(self, '_primitive_data')
                 python_data[name] = fields[name].to_python(primitive_data.get(name), parent=self)
