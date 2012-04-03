@@ -1,6 +1,8 @@
 from django.conf import settings
 
-backend = None
+import threading
+
+backend = None#threading.local()
 
 DYNAMIC_IMPORT_CACHE = dict()
 
@@ -21,13 +23,19 @@ def dynamic_import(name):
     DYNAMIC_IMPORT_CACHE[original_name] = ret
     return ret
 
+def get_document_backends():
+    backends = dict()
+    config = getattr(settings, 'DOCKIT_BACKENDS')
+    for key, value in config.iteritems():
+        kwargs = dict(value)
+        backend = dynamic_import(kwargs.pop('ENGINE'))
+        backends[key] = lambda: backend(**kwargs)
+    return backends
+
 def get_document_backend():
-    #TODO be thread safe
     global backend
     if not backend:
-        backend_path = getattr(settings, 'DOCKIT_BACKEND', 'dockit.backends.djangodocument.backend.ModelDocumentStorage')
-        backend = dynamic_import(backend_path)
-        if isinstance(backend, type) or callable(backend):
-            backend = backend()
+        backends = get_document_backends()
+        backend = backends['default']()
     return backend
 

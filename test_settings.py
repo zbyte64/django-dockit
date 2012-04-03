@@ -125,12 +125,19 @@ INSTALLED_APPS = [
     # 'django.contrib.admindocs',
 ]
 
+DOCKIT_BACKENDS = {
+    'default': {
+        'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
+    }
+}
+
 try:
     import pymongo
 except ImportError:
     pass
 else:
     INSTALLED_APPS.append('dockit.backends.mongo')
+    #DOCKIT_BACKENDS['mongo'] = {'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage'}
 
 
 # A sample logging configuration. The only tangible logging

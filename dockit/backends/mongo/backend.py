@@ -85,14 +85,11 @@ class MongoDocumentStorage(BaseDocumentStorage):
     name = "mongodb"
     _indexers = dict() #TODO this should be automatic
 
-    def __init__(self, username=None, password=None, host=None, port=None, db=None):
-        #TODO be proper about this
-        self.connection = Connection(host or settings.MONGO_HOST, port or settings.MONGO_PORT)
-        self.db = self.connection[db or settings.MONGO_DB]
-        username = getattr(settings, 'MONGO_USER', None)
-        password = getattr(settings, 'MONGO_PASSWORD', None)
+    def __init__(self, username=None, password=None, host=None, port=None, db=None, **kwargs):
+        self.connection = Connection(kwargs.get('HOST', host), kwargs.get('PORT', port))
+        self.db = self.connection[kwargs.get('DB', db)]
         if username:
-            self.db.authenticate(username, password)
+            self.db.authenticate(kwargs.get('USER', username), kwargs.get('PASSWORD', password))
     
     def get_collection(self, collection):
         return self.db[collection]
