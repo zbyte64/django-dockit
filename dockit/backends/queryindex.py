@@ -61,6 +61,10 @@ class QueryIndex(object):
         return QuerySet(query)
     
     @property
+    def collection(self):
+        return self.document._meta.collection
+    
+    @property
     def queryset(self):
         if self._queryset is None:
             self._queryset = self._build_queryset()
