@@ -137,8 +137,22 @@ except ImportError:
     pass
 else:
     INSTALLED_APPS.append('dockit.backends.mongo')
-    #DOCKIT_BACKENDS['mongo'] = {'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage'}
 
+if 'TRAVIS' in os.environ:
+    if os.environ['DB'] == 'mysql':
+        pass
+    elif os.environ['DB'] == 'mongodb':
+        DOCKIT_BACKENDS['mongo'] = {'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage',
+                                    'USER':'travis',
+                                    'PASSWORD':'test',
+                                    'DB':'mydb_test',
+                                    'HOST':'127.0.0.1',
+                                    'PORT':27017,}
+        DOCKIT_BACKENDS['default'] = DOCKIT_BACKENDS['mongo'] #TODO make tests smart enough to specifically use the mongo backend
+        if 'dockit.backends.mongo' not in INSTALLED_APPS:
+            INSTALLED_APPS.append('dockit.backends.mongo')
+    elif os.environ['DB'] == 'sqlite':
+        pass
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
