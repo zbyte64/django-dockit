@@ -1,4 +1,5 @@
 from dockit.schema import fields
+from dockit.schema.common import DotPathList, DotPathSet, DotPathDict
 
 from django.utils import unittest
 from django.contrib.contenttypes.models import ContentType
@@ -28,6 +29,12 @@ class BaseFieldTestCase(unittest.TestCase):
         params.update(kwargs)
         return self.field_class(**params)
     
+    def compare_py_val_to_primitive(self, py_val, primitive):
+        self.assertEqual(py_val, primitive)
+    
+    def compare_primitives(self, prim1, prim2):
+        self.assertEqual(prim1, prim2)
+    
     def test_handles_null_value(self):
         field = self.get_field(null=True)
         val = field.to_python(None)
@@ -39,12 +46,12 @@ class BaseFieldTestCase(unittest.TestCase):
         for val in self.get_example_values():
             primitive = field.to_primitive(val)
             py_val = field.to_python(primitive)
-            self.assertEqual(py_val, val)
+            self.compare_py_val_to_primitive(py_val, val)
         
         for val in self.get_example_primitive_values():
             py_val = field.to_python(val)
             primitive = field.to_primitive(py_val)
-            self.assertEqual(val, primitive)
+            self.compare_primitives(val, primitive)
         
     def test_form_field(self):
         field = self.get_field()
@@ -131,7 +138,7 @@ class TypedSchemaFieldTestCase(BaseFieldTestCase):
 
 class ListFieldTestCase(BaseFieldTestCase):
     field_class = fields.ListField
-    EXAMPLE_VALUES = [[], ['a','b','c']]
+    EXAMPLE_VALUES = [DotPathList([]), DotPathList(['a','b','c'])]
     EXAMPLE_PRIMITIVE_VALUES = [[], ['a','b','c']]
     NULL_VALUE = []
     
@@ -140,16 +147,24 @@ class ListFieldTestCase(BaseFieldTestCase):
 
 class SetFieldTestCase(BaseFieldTestCase):
     field_class = fields.SetField
-    EXAMPLE_VALUES = [[], ['a','b','c']]
+    EXAMPLE_VALUES = [DotPathSet([]), DotPathSet(['a','b','c'])]
     EXAMPLE_PRIMITIVE_VALUES = [[], ['a','b','c']]
     NULL_VALUE = set()
     
     def get_field_kwargs(self):
         return {'subfield': fields.CharField()}
+    
+    def compare_py_val_to_primitive(self, py_val, primitive):
+        self.assertTrue(isinstance(py_val, DotPathSet))
+        self.assertEqual(py_val, set(primitive))
+    
+    def compare_primitives(self, prim1, prim2):
+        #order does not matter
+        self.assertEqual(set(prim1), set(prim2))
 
 class DictFieldTestCase(BaseFieldTestCase):
     field_class = fields.DictField
-    EXAMPLE_VALUES = [{}, {'a':1}]
+    EXAMPLE_VALUES = [DotPathDict({}), DotPathDict({'a':1})]
     EXAMPLE_PRIMITIVE_VALUES = [{}, {'a':1}]
     NULL_VALUE = dict()
     
