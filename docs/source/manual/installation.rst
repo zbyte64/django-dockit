@@ -25,7 +25,13 @@ Django Document
 
 Set the following in your settings file::
 
-    DOCKIT_BACKEND = 'dockit.backends.djangodocument.backend.ModelDocumentStorage'
+    DOCKIT_BACKENDS = {
+        'default': {
+            'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
+        }
+    }
+
+Then add 'dockit.backends.djangodocument' to ``INSTALLED_APPS``
 
 
 =======
@@ -34,12 +40,12 @@ Mongodb
 
 Set the following in your settings file::
 
-    DOCKIT_BACKEND = 'dockit.backends.mongo.backend.MongoDocumentStorage'
-    MONGO_HOST = '127.0.0.1
-    MONGO_PORT = 27017
-    MONGO_USER = ''
-    MONGO_PASSWORD = ''
-    MONGO_DB = ''
-
-Note: the configuration parameters are likely to change in the future.
+    DOCKIT_BACKENDS = {
+        'default': {'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage',
+                    'USER':'travis',
+                    'PASSWORD':'test',
+                    'DB':'mydb_test',
+                    'HOST':'127.0.0.1',
+                    'PORT':27017,}
+    }
 
