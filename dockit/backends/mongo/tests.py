@@ -19,6 +19,7 @@ class MongoBackendTestCase(unittest.TestCase):
     
     def _create_backend(self):
         if 'mongo' in backends.backends:
+            #TODO backend should have get_test_backend()
             return backends.backends['mongo']
         return MongoDocumentStorage(host='localhost', port=27017, db='testdb')
     
