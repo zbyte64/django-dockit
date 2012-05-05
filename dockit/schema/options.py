@@ -157,7 +157,7 @@ class SchemaOptions(object):
         return CharField(name='pk')
     
     def get_backend(self):
-        return get_document_backend()
+        return get_document_backend(self._document)
     
     def dot_notation_to_field(self, notation):
         traverser = DotPathTraverser(notation)

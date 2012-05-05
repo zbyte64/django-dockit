@@ -11,13 +11,15 @@ class TestDocument(TemporaryDocument):
 
 class MongoBackendTestCase(unittest.TestCase):
     def setUp(self):
-        self._original_backend = backends.backend
-        backends.backend = self._create_backend()
+        self._original_backend = backends.backends['default']
+        backends.backends['default'] = self._create_backend()
     
     def tearDown(self):
-        backends.backend = self._original_backend
+        backends.backends['default'] = self._original_backend
     
     def _create_backend(self):
+        if 'mongo' in backends.backends:
+            return backends.backends['mongo']
         return MongoDocumentStorage(host='localhost', port=27017, db='testdb')
     
     def test_get_nonexistant_document_raises_error(self):

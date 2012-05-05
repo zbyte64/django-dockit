@@ -128,6 +128,9 @@ INSTALLED_APPS = [
 DOCKIT_BACKENDS = {
     'default': {
         'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
+    },
+    'mysql': {
+        'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
     }
 }
 
