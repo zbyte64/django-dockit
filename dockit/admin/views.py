@@ -506,17 +506,19 @@ class IndexView(DocumentViewMixin, views.ListView):
     def get_changelist(self):
         if not hasattr(self, 'changelist'):
             changelist_cls = self.admin.get_changelist(self.request)
-            self.changelist = changelist_cls(request=self.request,
-                                        model=self.document,
-                                        list_display=self.admin.list_display,
-                                        list_display_links=self.admin.list_display_links,
-                                        list_filter=self.admin.list_filter,
-                                        date_hierarchy=self.admin.date_hierarchy,
-                                        search_fields=self.admin.search_fields,
-                                        list_select_related=self.admin.list_select_related,
-                                        list_per_page=self.admin.list_per_page,
-                                        list_editable=self.admin.list_editable,
-                                        model_admin=self.admin,)
+            kwargs = {'request':self.request,
+                      'model':self.document,
+                      'list_display':self.admin.list_display,
+                      'list_display_links':self.admin.list_display_links,
+                      'list_filter':self.admin.list_filter,
+                      'date_hierarchy':self.admin.date_hierarchy,
+                      'search_fields':self.admin.search_fields,
+                      'list_select_related':self.admin.list_select_related,
+                      'list_per_page':self.admin.list_per_page,
+                      #'list_max_show_all':self.admin.list_max_show_all,
+                      'list_editable':self.admin.list_editable,
+                      'model_admin':self.admin,}
+            self.changelist = changelist_cls(**kwargs)
         return self.changelist
     
     def get_context_data(self, **kwargs):

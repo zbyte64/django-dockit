@@ -124,7 +124,7 @@ class SchemaChoiceIterator(object):
         return (self.field.prepare_value(obj), self.field.label_from_instance(obj))
 
 class SchemaChoiceField(ChoiceField):
-    """A ChoiceField whose choices are a model QuerySet."""
+    """A ChoiceField whose choices are a document QuerySet."""
     # This class is a subclass of ChoiceField for purity, but it doesn't
     # actually use any of ChoiceField's implementation.
     default_error_messages = {
