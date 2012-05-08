@@ -269,14 +269,10 @@ class SchemaAdmin(object):
                 kwargs['required'] = False
             return field(**kwargs)
         if issubclass(field, PrimitiveListField) and 'subfield' in kwargs:
-            subfield_kwargs = dict(kwargs)
+            subfield_kwargs = prop.subfield.formfield_kwargs()
             subfield_kwargs.pop('initial', None)
-            try:
-                subfield = self.formfield_for_field(prop, type(subfield_kwargs.pop('subfield')), view, **subfield_kwargs)
-            except TypeError:
-                pass #TODO develop a strategy for the admin to get the real subfield_kwargs
-            else:
-                kwargs['subfield'] = subfield
+            subfield = self.formfield_for_field(prop, type(kwargs['subfield']), view, **subfield_kwargs)
+            kwargs['subfield'] = subfield
             kwargs['widget'] = AdminPrimitiveListWidget
         if field in self.formfield_overrides:
             opts = dict(self.formfield_overrides[field])
