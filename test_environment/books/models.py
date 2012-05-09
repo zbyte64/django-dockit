@@ -39,6 +39,9 @@ class Book(Document):
     authors = ListField(ReferenceField(Author), db_index=True)
     tags = ListField(TextField(), db_index=True)
     
+    def __unicode__(self):
+        return self.title
+    
     class Meta:
         collection = 'book'
 
