@@ -8,6 +8,9 @@ class Author(Document):
     user = ModelReferenceField(User)
     internal_id = TextField()
     
+    def __unicode__(self):
+        return self.internal_id
+    
     class Meta:
         collection = 'author'
 
@@ -38,6 +41,9 @@ class Book(Document):
     publisher = ReferenceField(Publisher)
     authors = ListField(ReferenceField(Author), db_index=True)
     tags = ListField(TextField(), db_index=True)
+    
+    def __unicode__(self):
+        return self.title
     
     class Meta:
         collection = 'book'
