@@ -8,6 +8,9 @@ class Author(Document):
     user = ModelReferenceField(User)
     internal_id = TextField()
     
+    def __unicode__(self):
+        return self.internal_id
+    
     class Meta:
         collection = 'author'
 
