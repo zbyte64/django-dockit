@@ -129,7 +129,7 @@ DOCKIT_BACKENDS = {
     'default': {
         'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
     },
-    'mysql': {
+    'djangodocument': {
         'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
     }
 }

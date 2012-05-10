@@ -1,8 +1,6 @@
 from django.conf import settings
 
-import threading
-
-backends = None#threading.local()
+backends = None
 router = None
 
 DYNAMIC_IMPORT_CACHE = dict()
@@ -42,7 +40,7 @@ def get_document_backends():
         for key, value in config.iteritems():
             kwargs = dict(value)
             backend = dynamic_import(kwargs.pop('ENGINE'))
-            backends[key] = lambda: backend(**kwargs)
+            backends[key] = backend.get_constructor(key, kwargs)
     return backends
 
 def get_document_backend(document=None):

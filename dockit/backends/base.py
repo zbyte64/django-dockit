@@ -1,6 +1,27 @@
+import threading
+
+BACKEND_CONNECTIONS = {}
+THREADED_BACKEND_CONNECTIONS = threading.local()
 
 class BaseDocumentStorage(object):
+    thread_safe = False
+    
     _indexers = dict()
+    
+    @classmethod
+    def get_constructor(cls, key, options):
+        if cls.thread_safe:
+            def constructor():
+                if key not in BACKEND_CONNECTIONS:
+                    BACKEND_CONNECTIONS[key] = cls(**options)
+                return BACKEND_CONNECTIONS[key]
+            return constructor
+        else:
+            def constructor():
+                if not getattr(THREADED_BACKEND_CONNECTIONS, key, None):
+                    setattr(THREADED_BACKEND_CONNECTIONS, key, cls(**options))
+                return getattr(THREADED_BACKEND_CONNECTIONS, key)
+            return constructor
     
     @classmethod
     def register_indexer(cls, index_cls, *names):
