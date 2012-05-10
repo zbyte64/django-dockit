@@ -1,13 +1,13 @@
 from django.utils import unittest
 
-import dockit
+from dockit import schema
 from dockit import backends
 from dockit.models import TemporaryDocument
 from dockit.backends.mongo.backend import MongoDocumentStorage
 
 class TestDocument(TemporaryDocument):
-    charfield = dockit.CharField()
-    listfield = dockit.ListField(dockit.CharField())
+    charfield = schema.CharField()
+    listfield = schema.ListField(schema.CharField())
 
 class MongoBackendTestCase(unittest.TestCase):
     def setUp(self):
