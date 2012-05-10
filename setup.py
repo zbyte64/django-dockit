@@ -31,6 +31,7 @@ setup(name='django-dockit',
       tests_require=(
         'pep8',
         'coverage',
+        'django',
       ),
       include_package_data = True,
   )

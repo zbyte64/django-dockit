@@ -142,6 +142,7 @@ class SetupTestSuite(unittest.TestSuite):
             pep8.options, pep8.args = pep8.process_options()
             pep8.args = self.packages
             pep8.options.repeat = True
+            pep8.options.ignore = ['E2', 'E3', 'E4', 'E501', 'W']
             for package in self.packages:
                 pep8.input_dir(package)
 
