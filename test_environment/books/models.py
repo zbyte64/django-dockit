@@ -1,27 +1,32 @@
-import dockit
+from dockit.schema import Document, Schema, ModelReferenceField, \
+    TextField, DictField, SchemaField, FileField, IntegerField, \
+    ReferenceField, ListField, GenericSchemaField, CharField, DateField
 
 from django.contrib.auth.models import User
 
-class Author(dockit.Document):
-    user = dockit.ModelReferenceField(User)
-    internal_id = dockit.TextField()
+class Author(Document):
+    user = ModelReferenceField(User)
+    internal_id = TextField()
+    
+    def __unicode__(self):
+        return self.internal_id
     
     class Meta:
         collection = 'author'
 
-class Address(dockit.Schema):
-    street_1 = dockit.TextField()
-    street_2 = dockit.TextField(blank=True)
-    city = dockit.TextField()
-    postal_code = dockit.TextField()
-    region = dockit.TextField()
-    country = dockit.TextField()
+class Address(Schema):
+    street_1 = TextField()
+    street_2 = TextField(blank=True)
+    city = TextField()
+    postal_code = TextField()
+    region = TextField()
+    country = TextField()
     
-    extra_data = dockit.DictField(blank=True)
+    extra_data = DictField(blank=True)
 
-class Publisher(dockit.Document):
-    name = dockit.TextField()
-    address = dockit.SchemaField(Address)
+class Publisher(Document):
+    name = TextField()
+    address = SchemaField(Address)
     
     def __unicode__(self):
         return self.name
@@ -29,34 +34,37 @@ class Publisher(dockit.Document):
     class Meta:
         collection = 'publisher'
 
-class Book(dockit.Document):
-    title = dockit.TextField()
-    cover_image = dockit.FileField(upload_to='book-images')
-    year = dockit.IntegerField()
-    publisher = dockit.ReferenceField(Publisher)
-    authors = dockit.ListField(dockit.ReferenceField(Author), db_index=True)
-    tags = dockit.ListField(dockit.TextField(), db_index=True)
+class Book(Document):
+    title = TextField()
+    cover_image = FileField(upload_to='book-images')
+    year = IntegerField()
+    publisher = ReferenceField(Publisher)
+    authors = ListField(ReferenceField(Author), db_index=True)
+    tags = ListField(TextField(), db_index=True)
+    
+    def __unicode__(self):
+        return self.title
     
     class Meta:
         collection = 'book'
 
 Book.objects.index('tags').commit()
 
-class SubComplexTwo(dockit.Schema):
-    field2 = dockit.TextField()
+class SubComplexTwo(Schema):
+    field2 = TextField()
 
-class SubComplexOne(dockit.Schema):
-    field1 = dockit.TextField()
-    nested = dockit.SchemaField(SubComplexTwo)
+class SubComplexOne(Schema):
+    field1 = TextField()
+    nested = SchemaField(SubComplexTwo)
 
-class ComplexObject(dockit.Document):
-    field1 = dockit.TextField()
-    image = dockit.FileField(upload_to='complex-images', blank=True)
-    addresses = dockit.ListField(dockit.SchemaField(Address), blank=True)
-    main_address = dockit.SchemaField(Address, blank=True)
-    generic_objects = dockit.ListField(dockit.GenericSchemaField(), blank=True)
+class ComplexObject(Document):
+    field1 = TextField()
+    image = FileField(upload_to='complex-images', blank=True)
+    addresses = ListField(SchemaField(Address), blank=True)
+    main_address = SchemaField(Address, blank=True)
+    generic_objects = ListField(GenericSchemaField(), blank=True)
     
-    nested = dockit.SchemaField(SubComplexOne, blank=True)
+    nested = SchemaField(SubComplexOne, blank=True)
     
     def __unicode__(self):
         return unicode(self.field1)
@@ -64,34 +72,34 @@ class ComplexObject(dockit.Document):
     class Meta:
         collection = 'complex_object'
 
-class Publication(dockit.Document):
-    name = dockit.CharField()
-    date = dockit.DateField()
+class Publication(Document):
+    name = CharField()
+    date = DateField()
     
     class Meta:
         typed_field = '_type'
 
 class Newspaper(Publication):
-    city = dockit.CharField()
+    city = CharField()
     
     class Meta:
         typed_key = 'newspaper'
 
 class Magazine(Publication):
-    issue_number = dockit.CharField()
+    issue_number = CharField()
     
     class Meta:
         typed_key = 'magazine'
 
-class BaseProduct(dockit.Document):
-    name = dockit.CharField()
+class BaseProduct(Document):
+    name = CharField()
     
     class Meta:
         typed_field = '_type'
 
-class Brand(dockit.Document):
-    name = dockit.CharField()
-    products = dockit.ListField(dockit.SchemaField(BaseProduct))
+class Brand(Document):
+    name = CharField()
+    products = ListField(SchemaField(BaseProduct))
 
 class Shoes(BaseProduct):
     class Meta:

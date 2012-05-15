@@ -254,7 +254,8 @@ class BaseDocumentForm(BaseForm):
             value = field.widget.value_from_datadict(self.data, self.files, self.add_prefix(name))
             try:
                 arg_spec = inspect.getargspec(field.clean)
-                if len(arg_spec.args) > 2:
+                if ((hasattr(arg_spec, 'args') and len(arg_spec.args) > 2) or #py2.6+
+                     len(arg_spec[0]) > 2): #py2.5
                     initial = self.initial.get(name, field.initial)
                     if callable(initial):
                         initial = initial()

@@ -63,6 +63,7 @@ class SchemaAdmin(object):
     list_filter = ()
     list_select_related = False
     list_per_page = 100
+    list_max_show_all = 200
     list_editable = ()
     search_fields = ()
     date_hierarchy = None
@@ -268,9 +269,9 @@ class SchemaAdmin(object):
                 kwargs['required'] = False
             return field(**kwargs)
         if issubclass(field, PrimitiveListField) and 'subfield' in kwargs:
-            subfield_kwargs = dict(kwargs)
+            subfield_kwargs = prop.subfield.formfield_kwargs()
             subfield_kwargs.pop('initial', None)
-            subfield = self.formfield_for_field(prop, type(subfield_kwargs.pop('subfield')), view, **subfield_kwargs)
+            subfield = self.formfield_for_field(prop, type(kwargs['subfield']), view, **subfield_kwargs)
             kwargs['subfield'] = subfield
             kwargs['widget'] = AdminPrimitiveListWidget
         if field in self.formfield_overrides:

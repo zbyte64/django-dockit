@@ -5,7 +5,7 @@ try:
 except ImportError:
     from distutils.core import setup, find_packages
 
-VERSION = '0.0.11'
+VERSION = '0.0.12'
 LONG_DESC = """\
 """
 
@@ -26,10 +26,12 @@ setup(name='django-dockit',
       maintainer_email = 'zbyte64@gmail.com',
       url='http://github.com/zbyte64/django-dockit',
       license='New BSD License',
-      packages=find_packages(exclude=['test_environment']),
-      test_suite='setuptest.SetupTestSuite',
+      packages=find_packages(exclude=['test_environment', 'tests']),
+      test_suite='tests.setuptest.SetupTestSuite',
       tests_require=(
-        'django-setuptest',
+        'pep8',
+        'coverage',
+        'django',
       ),
       include_package_data = True,
   )

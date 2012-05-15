@@ -1,5 +1,8 @@
 from pymongo import Connection
-from pymongo.objectid import ObjectId
+try:
+    from bson.objectid import ObjectId
+except ImportError:
+    from pymongo.objectid import ObjectId
 
 from dockit.backends.base import BaseDocumentStorage
 from dockit.backends.queryset import BaseDocumentQuery

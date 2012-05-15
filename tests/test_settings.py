@@ -14,7 +14,7 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': '::memory::',                      # Or path to database file if using sqlite3.
+        'NAME': ':memory:',                      # Or path to database file if using sqlite3.
         'USER': '',                      # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
@@ -128,6 +128,9 @@ INSTALLED_APPS = [
 DOCKIT_BACKENDS = {
     'default': {
         'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
+    },
+    'djangodocument': {
+        'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
     }
 }
 
@@ -137,8 +140,16 @@ except ImportError:
     pass
 else:
     INSTALLED_APPS.append('dockit.backends.mongo')
-    #DOCKIT_BACKENDS['mongo'] = {'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage'}
 
+if 'TRAVIS' in os.environ:
+    DOCKIT_BACKENDS['mongo'] = {'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage',
+                                'USER':'travis',
+                                'PASSWORD':'test',
+                                'DB':'mydb_test',
+                                'HOST':'127.0.0.1',
+                                'PORT':27017,}
+    if 'dockit.backends.mongo' not in INSTALLED_APPS:
+        INSTALLED_APPS.append('dockit.backends.mongo')
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to

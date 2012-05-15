@@ -2,7 +2,10 @@ from dockit.backends.indexer import BaseIndexer
 
 from backend import MongoDocumentStorage
 
-from pymongo.objectid import ObjectId
+try:
+    from bson.objectid import ObjectId
+except ImportError:
+    from pymongo.objectid import ObjectId
 
 class MongoIndexer(BaseIndexer):
     def _get_key_value(self):

@@ -349,7 +349,7 @@ def create_schema(name, fields, attrs={}, module='dockit.models', base=SchemaBas
     all_attrs.update(attrs)
     all_attrs['__module__'] = module
     if kwargs:
-       all_attrs['Meta'] = UserMeta(**kwargs)
+        all_attrs['Meta'] = UserMeta(**kwargs)
     return base.__new__(base, name, parents, all_attrs)
 
 def create_document(name, fields, attrs={}, module='dockit.models', base=DocumentBase, parents=(Document,), **kwargs):
@@ -357,6 +357,6 @@ def create_document(name, fields, attrs={}, module='dockit.models', base=Documen
     all_attrs.update(attrs)
     all_attrs['__module__'] = module
     if kwargs:
-       all_attrs['Meta'] = UserMeta(**kwargs)
+        all_attrs['Meta'] = UserMeta(**kwargs)
     return base.__new__(base, name, parents, all_attrs)
 

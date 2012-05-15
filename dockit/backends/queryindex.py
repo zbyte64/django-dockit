@@ -55,6 +55,9 @@ class QueryIndex(object):
         new_index.indexes = self.indexes + indexes
         return new_index
     
+    def _clone(self):
+        return self._add_filter_parts()
+    
     def _build_queryset(self):
         backend = self.document._meta.get_backend()
         query = backend.get_query(self)
