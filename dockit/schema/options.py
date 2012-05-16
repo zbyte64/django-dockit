@@ -1,4 +1,4 @@
-from dockit.backends import get_document_backend
+from dockit.backends import get_document_backend, get_document_router, get_index_router
 
 import re
 
@@ -158,6 +158,18 @@ class SchemaOptions(object):
     
     def get_backend(self):
         return get_document_backend(self._document)
+    
+    def get_document_backend_for_write(self):
+        return get_document_router().get_storage_for_write(self._document)
+    
+    def get_document_backed_for_read(self):
+        return get_document_router().get_storage_for_read(self._document)
+    
+    def get_index_backend_for_write(self, queryset):
+        return get_index_router().get_index_for_write(self._document, queryset)
+    
+    def get_index_backend_for_read(self, queryset):
+        return get_index_router().get_index_for_read(self._document, queryset)
     
     def dot_notation_to_field(self, notation):
         traverser = DotPathTraverser(notation)

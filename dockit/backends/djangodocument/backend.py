@@ -1,7 +1,7 @@
 from django.utils import simplejson
 from django.core.serializers.json import DjangoJSONEncoder
 
-from dockit.backends.base import BaseDocumentStorage
+from dockit.backends.base import BaseDocumentStorage, BaseIndexStorage
 from dockit.backends.queryset import BaseDocumentQuery
 
 from models import DocumentStore
@@ -50,13 +50,45 @@ class DocumentQuery(BaseDocumentQuery):
         else:
             return self.wrap(self.queryset[val])
 
-class ModelDocumentStorage(BaseDocumentStorage):
+class ModelIndexStorage(BaseIndexStorage):
     name = "djangomodel"
     _indexers = dict() #TODO this should be automatic
     
     def __init__(self):
         self.indexes = dict()
         import indexers
+    
+    def _index_document(self, instance):
+        indexes = self.indexes.get(instance._meta.collection, set())
+        for index in indexes:
+            indexer = self._get_indexer_for_operation(type(instance), index)
+            indexer.on_document_save(instance)
+    
+    def register_index(self, query_index):
+        indexes = set(query_index.inclusions + query_index.exclusions + query_index.indexes)
+        document = query_index.document
+        self.indexes.setdefault(document._meta.collection, set())
+        self.indexes[document._meta.collection].update(indexes)
+    
+    def get_query(self, query_index):
+        document = query_index.document
+        queryset = DocumentStore.objects.filter(collection=query_index.document._meta.collection)
+        for op in query_index.inclusions:
+            indexer = self._get_indexer_for_operation(document, op)
+            queryset = queryset.filter(indexer.filter())
+        for op in query_index.exclusions:
+            indexer = self._get_indexer_for_operation(document, op)
+            queryset = queryset.exclude(indexer.filter())
+        return DocumentQuery(query_index, queryset)
+    
+    def on_save(self, doc_class, collection, data):
+        raise NotImplementedError
+    
+    def on_delete(self, doc_class, collection, doc_id):
+        raise NotImplementedError
+
+class ModelDocumentStorage(BaseDocumentStorage):
+    name = "djangomodel"
     
     def get_id_field_name(self):
         return '_pk'
@@ -70,7 +102,6 @@ class ModelDocumentStorage(BaseDocumentStorage):
         #CONSIDER this does not look before we save
         document.save()
         data[self.get_id_field_name()] = document.pk
-        self._index_document(doc_class.to_python(data))
     
     def get(self, doc_class, collection, doc_id):
         try:
@@ -83,18 +114,6 @@ class ModelDocumentStorage(BaseDocumentStorage):
     
     def delete(self, doc_class, collection, doc_id):
         return DocumentStore.objects.filter(collection=collection, pk=doc_id).delete()
-    
-    def _index_document(self, instance):
-        indexes = self.indexes.get(instance._meta.collection, set())
-        for index in indexes:
-            indexer = self._get_indexer_for_operation(type(instance), index)
-            indexer.on_document_save(instance)
-    
-    def register_index(self, query_index):
-        indexes = set(query_index.inclusions + query_index.exclusions + query_index.indexes)
-        document = query_index.document
-        self.indexes.setdefault(document._meta.collection, set())
-        self.indexes[document._meta.collection].update(indexes)
     
     def get_query(self, query_index):
         document = query_index.document

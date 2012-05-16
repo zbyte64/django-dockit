@@ -1,27 +1,36 @@
 import threading
 
-BACKEND_CONNECTIONS = {}
-THREADED_BACKEND_CONNECTIONS = threading.local()
+DOCUMENT_BACKEND_CONNECTIONS = {}
+THREADED_DOCUMENT_BACKEND_CONNECTIONS = threading.local()
 
-class BaseDocumentStorage(object):
+INDEX_BACKEND_CONNECTIONS = {}
+THREADED_INDEX_BACKEND_CONNECTIONS = threading.local()
+
+class BaseStorage(object):
     thread_safe = False
-    
-    _indexers = dict()
+    _connections = None
+    _threaded_connections = None
     
     @classmethod
     def get_constructor(cls, key, options):
         if cls.thread_safe:
             def constructor():
-                if key not in BACKEND_CONNECTIONS:
-                    BACKEND_CONNECTIONS[key] = cls(**options)
-                return BACKEND_CONNECTIONS[key]
+                if key not in cls._connections:
+                    cls._connections[key] = cls(**options)
+                return cls._connections[key]
             return constructor
         else:
             def constructor():
-                if not getattr(THREADED_BACKEND_CONNECTIONS, key, None):
-                    setattr(THREADED_BACKEND_CONNECTIONS, key, cls(**options))
-                return getattr(THREADED_BACKEND_CONNECTIONS, key)
+                if not getattr(cls._threaded_connections, key, None):
+                    setattr(cls._threaded_connections, key, cls(**options))
+                return getattr(cls._threaded_connections, key)
             return constructor
+
+class BaseIndexStorage(BaseStorage):
+    _connections = INDEX_BACKEND_CONNECTIONS
+    _threaded_connections = THREADED_INDEX_BACKEND_CONNECTIONS
+    
+    _indexers = dict()
     
     @classmethod
     def register_indexer(cls, index_cls, *names):
@@ -38,6 +47,25 @@ class BaseDocumentStorage(object):
     
     def register_index(self, query_index):
         raise NotImplementedError
+    
+    def get_query(self, query_index):
+        raise NotImplementedError
+    
+    def register_document(self, document):
+        pass
+        #for key, field in document._meta.fields.iteritems():
+        #    if getattr(field, 'db_index', False):
+        #        document.objects.enable_index("equals", key, {'field_name':key})
+    
+    def on_save(self, doc_class, collection, data):
+        raise NotImplementedError
+    
+    def on_delete(self, doc_class, collection, doc_id):
+        raise NotImplementedError
+
+class BaseDocumentStorage(BaseStorage):
+    _connections = DOCUMENT_BACKEND_CONNECTIONS
+    _threaded_connections = THREADED_DOCUMENT_BACKEND_CONNECTIONS
     
     def get_query(self, query_index):
         raise NotImplementedError

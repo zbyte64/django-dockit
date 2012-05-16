@@ -5,7 +5,7 @@ from dockit.schema import fields#, Document
 
 from models import DocumentStore, StringIndex
 import models as indexes
-from backend import ModelDocumentStorage, DocumentQuery
+from backend import ModelIndexStorage, DocumentQuery
 
 #TODO need a mechanism for back populating indexes, must be task based
 
@@ -89,5 +89,5 @@ class ExactIndexer(BaseIndexer):
     def values(self):
         return self.index_functions['unique_values'](self.filter_operation.key)
 
-ModelDocumentStorage.register_indexer(ExactIndexer, 'exact', 'iexact', 'startswith', 'endswith', 'istartswith', 'iendswith', 'year', 'month', 'day', 'lt', 'gt', 'lte', 'gte')
+ModelIndexStorage.register_indexer(ExactIndexer, 'exact', 'iexact', 'startswith', 'endswith', 'istartswith', 'iendswith', 'year', 'month', 'day', 'lt', 'gt', 'lte', 'gte')
 

@@ -2,8 +2,6 @@ import copy
 
 from queryset import QuerySet
 
-
-
 class QueryFilterOperation(object):
     def __init__(self, key, operation, value):
         self.key = key
@@ -59,7 +57,7 @@ class QueryIndex(object):
         return self._add_filter_parts()
     
     def _build_queryset(self):
-        backend = self.document._meta.get_backend()
+        backend = self.document._meta.get_index_backend_for_read(self)
         query = backend.get_query(self)
         return QuerySet(query)
     
@@ -89,11 +87,21 @@ class QueryIndex(object):
         return self._add_filter_parts(indexes=items)
     
     def commit(self):
-        backend = self.document._meta.get_backend()
-        backend.register_index(self)
+        from . import get_index_router
+        get_index_router().register_queryset(self)
     
     def setname(self, name):
         self.name = name
+    
+    def _index_hash(self):
+        parts = list()
+        parts.append('inclusions:')
+        parts.append(hash(tuple(self.inclusions)))
+        parts.append('exclusions:')
+        parts.append(hash(tuple(self.exclusions)))
+        parts.append('indexes:')
+        parts.append(hash(tuple(self.indexes)))
+        return hash(tuple(parts))
     
     #proxy queryset methods
     def __len__(self):

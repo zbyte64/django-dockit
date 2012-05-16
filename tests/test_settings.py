@@ -134,6 +134,15 @@ DOCKIT_BACKENDS = {
     }
 }
 
+DOCKIT_INDEX_BACKENDS = {
+    'default': {
+        'ENGINE': 'dockit.backends.djangodocument.backend.ModelIndexStorage',
+    },
+    'djangodocument': {
+        'ENGINE': 'dockit.backends.djangodocument.backend.ModelIndexStorage',
+    }
+}
+
 try:
     import pymongo
 except ImportError:
@@ -148,6 +157,7 @@ if 'TRAVIS' in os.environ:
                                 'DB':'mydb_test',
                                 'HOST':'127.0.0.1',
                                 'PORT':27017,}
+    #TODO DOCKIT_INDEX_BACKENDS
     if 'dockit.backends.mongo' not in INSTALLED_APPS:
         INSTALLED_APPS.append('dockit.backends.mongo')
 

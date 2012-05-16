@@ -313,17 +313,21 @@ class Document(Schema):
     pk = property(get_id)
     
     def save(self):
+        from dockit.backends import get_index_router
         created = not self.pk
         pre_save.send(sender=type(self), instance=self)
-        backend = self._meta.get_backend()
+        backend = self._meta.get_document_backend_for_write()
         data = type(self).to_primitive(self)
         backend.save(type(self), self._meta.collection, data)
+        get_index_router().on_save(type(self), self._meta.collection, data)
         post_save.send(sender=type(self), instance=self, created=created)
         
     def delete(self):
+        from dockit.backends import get_index_router
         pre_delete.send(sender=type(self), instance=self)
-        backend = self._meta.get_backend()
+        backend = self._meta.get_document_backend_for_write()
         backend.delete(type(self), self._meta.collection, self.get_id())
+        get_index_router().on_delete(type(self), self._meta.collection, self.get_id())
         post_delete.send(sender=type(self), instance=self)
     
     def serializable_value(self, field_name):

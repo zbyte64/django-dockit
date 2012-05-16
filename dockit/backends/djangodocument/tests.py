@@ -7,21 +7,42 @@ class Book(schema.Document):
     title = schema.CharField()
     slug = schema.SlugField()
 
+class MockedDocumentRouter(backends.CompositeDocumentRouter):
+    def __init__(self):
+        super(MockedDocumentRouter, self).__init__([])
+    
+    def get_storage_name_for_read(self, document):
+        return 'djangodocument'
+    
+    def get_storage_name_for_write(self, document):
+        return 'djangodocument'
+
+class MockedIndexRouter(backends.CompositeIndexRouter):
+    def __init__(self):
+        super(MockedIndexRouter, self).__init__([])
+    
+    def get_index_name_for_read(self, document, queryset):
+        return 'djangodocument'
+    
+    def get_index_name_for_write(self, document, queryset):
+        return 'djangodocument'
+
 class DjangoDocumentTestCase(unittest.TestCase):
     def setUp(self):
-        self._original_backend = backends.backends['default']
-        backends.backends['default'] = self._create_backend()
-        self.backend = backends.backends['default']()
+        #TODO use mock instead
+        self._original_document_router = backends.DOCUMENT_ROUTER
+        self._original_index_router = backends.INDEX_ROUTER
+        
+        backends.DOCUMENT_ROUTER = MockedDocumentRouter()
+        backends.INDEX_ROUTER = MockedIndexRouter()
         self.clear_books()
+    
+    def tearDown(self):
+        backends.DOCUMENT_ROUTER = self._original_document_router
+        backends.INDEX_ROUTER = self._original_index_router
     
     def clear_books(self):
         Book.objects.all().delete()
-    
-    def tearDown(self):
-        backends.backends['default'] = self._original_backend
-    
-    def _create_backend(self):
-        return backends.backends['djangodocument']
     
     def test_document_store(self):
         self.assertEqual(Book.objects.all().count(), 0)
@@ -32,8 +53,10 @@ class DjangoDocumentTestCase(unittest.TestCase):
         self.assertEqual(book.slug, 'test')
     
     def test_document_index(self):
-        Book.objects.index('slug').commit()
-        self.assertTrue(Book._meta.collection in self.backend.indexes)
+        queryset = Book.objects.index('slug')
+        queryset.commit()
+        self.assertTrue(Book._meta.collection in backends.INDEX_ROUTER.registered_querysets)
+        self.assertTrue(queryset._index_hash() in backends.INDEX_ROUTER.registered_querysets[Book._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[Book._meta.collection]))
         
         Book(title='test title', slug='test').save()
         self.assertEqual(Book.objects.all().filter(slug='test').count(), 1)
