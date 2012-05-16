@@ -1,6 +1,6 @@
 from dockit.backends.indexer import BaseIndexer
 
-from backend import MongoDocumentStorage
+from backend import MongoIndexStorage
 
 try:
     from bson.objectid import ObjectId
@@ -26,7 +26,7 @@ class ExactIndexer(MongoIndexer):
         dotpath, value = self._get_key_value()
         return {dotpath: value}
 
-MongoDocumentStorage.register_indexer(ExactIndexer, 'exact')
+MongoIndexStorage.register_indexer(ExactIndexer, 'exact')
 
 class OperationIndexer(MongoIndexer):
     operation = None
@@ -42,25 +42,25 @@ class OperationIndexer(MongoIndexer):
 class GTIndexer(OperationIndexer):
     operation = '$gt'
 
-MongoDocumentStorage.register_indexer(GTIndexer, 'gt')
+MongoIndexStorage.register_indexer(GTIndexer, 'gt')
 
 class LTIndexer(OperationIndexer):
     operation = '$lt'
 
-MongoDocumentStorage.register_indexer(LTIndexer, 'lt')
+MongoIndexStorage.register_indexer(LTIndexer, 'lt')
 
 class GTEIndexer(OperationIndexer):
     operation = '$gte'
 
-MongoDocumentStorage.register_indexer(GTEIndexer, 'gte')
+MongoIndexStorage.register_indexer(GTEIndexer, 'gte')
 
 class LTEIndexer(OperationIndexer):
     operation = '$lte'
 
-MongoDocumentStorage.register_indexer(LTEIndexer, 'lte')
+MongoIndexStorage.register_indexer(LTEIndexer, 'lte')
 
 class INIndexer(OperationIndexer):
     operation = '$in'
 
-MongoDocumentStorage.register_indexer(LTEIndexer, 'in')
+MongoIndexStorage.register_indexer(LTEIndexer, 'in')
 

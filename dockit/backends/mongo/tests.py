@@ -3,25 +3,45 @@ from django.utils import unittest
 from dockit import schema
 from dockit import backends
 from dockit.models import TemporaryDocument
-from dockit.backends.mongo.backend import MongoDocumentStorage
 
 class TestDocument(TemporaryDocument):
     charfield = schema.CharField()
     listfield = schema.ListField(schema.CharField())
 
+class MockedDocumentRouter(backends.CompositeDocumentRouter):
+    def __init__(self):
+        super(MockedDocumentRouter, self).__init__([])
+    
+    def get_storage_name_for_read(self, document):
+        return 'mongo'
+    
+    def get_storage_name_for_write(self, document):
+        return 'mongo'
+
+class MockedIndexRouter(backends.CompositeIndexRouter):
+    def __init__(self):
+        super(MockedIndexRouter, self).__init__([])
+    
+    def get_index_name_for_read(self, document, queryset):
+        return 'mongo'
+    
+    def get_index_name_for_write(self, document, queryset):
+        return 'mongo'
+
 class MongoBackendTestCase(unittest.TestCase):
     def setUp(self):
-        self._original_backend = backends.backends['default']
-        backends.backends['default'] = self._create_backend()
+        #TODO use mock instead
+        self._original_document_router = backends.DOCUMENT_ROUTER
+        self._original_index_router = backends.INDEX_ROUTER
+        
+        backends.DOCUMENT_ROUTER = MockedDocumentRouter()
+        backends.INDEX_ROUTER = MockedIndexRouter()
+        
+        TestDocument.objects.all().delete()
     
     def tearDown(self):
-        backends.backends['default'] = self._original_backend
-    
-    def _create_backend(self):
-        if 'mongo' in backends.backends:
-            #TODO backend should have get_test_backend()
-            return backends.backends['mongo']
-        return MongoDocumentStorage(host='localhost', port=27017, db='testdb')
+        backends.DOCUMENT_ROUTER = self._original_document_router
+        backends.INDEX_ROUTER = self._original_index_router
     
     def test_get_nonexistant_document_raises_error(self):
         try:
@@ -68,4 +88,16 @@ class MongoBackendTestCase(unittest.TestCase):
         
         doc2 = TestDocument.objects.get(pk=doc.pk)
         self.assertEqual(doc.listfield, doc2.listfield)
+    
+    def test_document_index(self):
+        queryset = TestDocument.objects.index('charfield')
+        queryset.commit()
+        self.assertTrue(TestDocument._meta.collection in backends.INDEX_ROUTER.registered_querysets)
+        self.assertTrue(queryset._index_hash() in backends.INDEX_ROUTER.registered_querysets[TestDocument._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[TestDocument._meta.collection]))
+        
+        doc = TestDocument(charfield='test')
+        doc.save()
+        self.assertEqual(TestDocument.objects.all().filter(charfield='test').count(), 1)
+        doc.delete()
+        self.assertEqual(TestDocument.objects.all().filter(charfield='test').count(), 0)
 

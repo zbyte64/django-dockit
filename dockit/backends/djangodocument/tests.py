@@ -58,6 +58,9 @@ class DjangoDocumentTestCase(unittest.TestCase):
         self.assertTrue(Book._meta.collection in backends.INDEX_ROUTER.registered_querysets)
         self.assertTrue(queryset._index_hash() in backends.INDEX_ROUTER.registered_querysets[Book._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[Book._meta.collection]))
         
-        Book(title='test title', slug='test').save()
+        book = Book(title='test title', slug='test')
+        book.save()
         self.assertEqual(Book.objects.all().filter(slug='test').count(), 1)
+        book.delete()
+        self.assertEqual(Book.objects.all().filter(slug='test').count(), 0)
 

@@ -131,7 +131,13 @@ DOCKIT_BACKENDS = {
     },
     'djangodocument': {
         'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
-    }
+    },
+    'mongo': {
+        'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage',
+        'HOST':'localhost',
+        'DB':'testdb',
+        'PORT': 27017,
+    },
 }
 
 DOCKIT_INDEX_BACKENDS = {
@@ -140,7 +146,13 @@ DOCKIT_INDEX_BACKENDS = {
     },
     'djangodocument': {
         'ENGINE': 'dockit.backends.djangodocument.backend.ModelIndexStorage',
-    }
+    },
+    'mongo': {
+        'ENGINE':'dockit.backends.mongo.backend.MongoIndexStorage',
+        'HOST':'localhost',
+        'DB':'testdb',
+        'PORT': 27017,
+    },
 }
 
 try:
@@ -157,7 +169,12 @@ if 'TRAVIS' in os.environ:
                                 'DB':'mydb_test',
                                 'HOST':'127.0.0.1',
                                 'PORT':27017,}
-    #TODO DOCKIT_INDEX_BACKENDS
+    DOCKIT_INDEX_BACKENDS['mongo'] = {'ENGINE':'dockit.backends.mongo.backend.MongoIndexStorage',
+                                'USER':'travis',
+                                'PASSWORD':'test',
+                                'DB':'mydb_test',
+                                'HOST':'127.0.0.1',
+                                'PORT':27017,}
     if 'dockit.backends.mongo' not in INSTALLED_APPS:
         INSTALLED_APPS.append('dockit.backends.mongo')
 

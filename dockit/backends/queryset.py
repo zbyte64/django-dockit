@@ -11,7 +11,7 @@ class BaseDocumentQuery(object):
     
     @property
     def backend(self):
-        return self.document._meta.get_backend()
+        return self.document._meta.get_index_backend_for_read(self.query_index)
     
     def _get_indexer_for_operation(self, document, op):
         return self.backend._get_indexer_for_operation(document, op)

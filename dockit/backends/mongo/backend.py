@@ -4,7 +4,7 @@ try:
 except ImportError:
     from pymongo.objectid import ObjectId
 
-from dockit.backends.base import BaseDocumentStorage
+from dockit.backends.base import BaseDocumentStorage, BaseIndexStorage
 from dockit.backends.queryset import BaseDocumentQuery
 
 from django.conf import settings
@@ -84,10 +84,7 @@ class DocumentQuery(BaseDocumentQuery):
         else:
             return self.wrap(self.queryset[val])
 
-class MongoDocumentStorage(BaseDocumentStorage):
-    name = "mongodb"
-    _indexers = dict() #TODO this should be automatic
-
+class MongoStorageMixin(object):
     def __init__(self, username=None, password=None, host=None, port=None, db=None, **kwargs):
         self.connection = Connection(kwargs.get('HOST', host), kwargs.get('PORT', port))
         self.db = self.connection[kwargs.get('DB', db)]
@@ -96,6 +93,35 @@ class MongoDocumentStorage(BaseDocumentStorage):
     
     def get_collection(self, collection):
         return self.db[collection]
+
+class MongoIndexStorage(BaseIndexStorage, MongoStorageMixin):
+    name = "mongodb"
+    _indexers = dict() #TODO this should be automatic
+    
+    def register_index(self, query_index):
+        query = self.get_query(query_index)
+        params = query._build_params(include_indexes=True)
+        for key in params.keys(): #TODO this is a hack
+            params[key] = 1
+        if params:
+            collection = query_index.document._meta.collection
+            try:
+                self.get_collection(collection).ensure_index(params, background=True)
+            except TypeError:
+                self.get_collection(collection).ensure_index(params.items(), background=True)
+    
+    def get_query(self, query_index):
+        return DocumentQuery(query_index)
+    
+    def on_save(self, doc_class, collection, data):
+        #CONSIDER supporting standalone mongo indexes
+        pass #no operation needed
+    
+    def on_delete(self, doc_class, collection, doc_id):
+        pass #no operation needed
+
+class MongoDocumentStorage(BaseDocumentStorage, MongoStorageMixin):
+    name = "mongodb"
     
     def save(self, doc_class, collection, data):
         id_field = self.get_id_field_name()
@@ -119,18 +145,6 @@ class MongoDocumentStorage(BaseDocumentStorage):
     
     def get_id_field_name(self):
         return '_id'
-    
-    def register_index(self, query_index):
-        query = self.get_query(query_index)
-        params = query._build_params(include_indexes=True)
-        for key in params.keys(): #TODO this is a hack
-            params[key] = 1
-        if params:
-            collection = query_index.document._meta.collection
-            try:
-                self.get_collection(collection).ensure_index(params, background=True)
-            except TypeError:
-                self.get_collection(collection).ensure_index(params.items(), background=True)
     
     def get_query(self, query_index):
         return DocumentQuery(query_index)
