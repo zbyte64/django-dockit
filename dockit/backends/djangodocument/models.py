@@ -18,18 +18,22 @@ class DocumentStore(models.Model):
 class RegisteredIndex(models.Model):
     name = models.CharField(max_length=128, db_index=True)
     collection = models.CharField(max_length=128, db_index=True)
-    serialized_query_index = models.TextField()
+    query_hash = models.CharField(max_length=32)
     
     objects = RegisteredIndexManager()
     
     class Meta:
         unique_together = [('name', 'collection')]
 
-class BaseIndex(models.Model):
+class RegisteredIndexDocument(models.Model):
+    index = models.ForeignKey(RegisteredIndex, related_name='documents')
     doc_id = models.CharField(max_length=128, db_index=True)
-    index = models.CharField(max_length=50, db_index=True)
-    param_name = models.CharField(max_length=128, db_index=True)
+    data = models.TextField(blank=True) #optionally store a copy of the document for retrieval
     timestamp = models.DateTimeField(auto_now=True)
+
+class BaseIndex(models.Model):
+    document = models.ForeignKey(RegisteredIndexDocument)
+    param_name = models.CharField(max_length=128, db_index=True)
     
     objects = BaseIndexManager()
     

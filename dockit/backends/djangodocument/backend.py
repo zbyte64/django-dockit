@@ -4,7 +4,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from dockit.backends.base import BaseDocumentStorage, BaseIndexStorage
 from dockit.backends.queryset import BaseDocumentQuery
 
-from models import DocumentStore, RegisteredIndex
+from models import DocumentStore, RegisteredIndex, RegisteredIndexDocument
 
 class DocumentQuery(BaseDocumentQuery):
     def __init__(self, query_index, queryset):
@@ -69,7 +69,7 @@ class ModelIndexStorage(BaseIndexStorage):
     
     def get_query(self, query_index):
         document = query_index.document
-        queryset = DocumentStore.objects.filter(collection=query_index.document._meta.collection)
+        queryset = RegisteredIndexDocument.objects.filter(index__collection=query_index.document._meta.collection, index__query_hash=query_index._index_hash())
         for op in query_index.inclusions:
             indexer = self._get_indexer_for_operation(document, op)
             queryset = queryset.filter(indexer.filter())
@@ -115,11 +115,5 @@ class ModelDocumentStorage(BaseDocumentStorage):
     def get_query(self, query_index):
         document = query_index.document
         queryset = DocumentStore.objects.filter(collection=query_index.document._meta.collection)
-        for op in query_index.inclusions:
-            indexer = self._get_indexer_for_operation(document, op)
-            queryset = queryset.filter(indexer.filter())
-        for op in query_index.exclusions:
-            indexer = self._get_indexer_for_operation(document, op)
-            queryset = queryset.exclude(indexer.filter())
         return DocumentQuery(query_index, queryset)
 

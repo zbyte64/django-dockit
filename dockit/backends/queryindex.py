@@ -57,7 +57,10 @@ class QueryIndex(object):
         return self._add_filter_parts()
     
     def _build_queryset(self):
-        backend = self.document._meta.get_index_backend_for_read(self)
+        if self.inclusions or self.exclusions or self.indexes:
+            backend = self.document._meta.get_index_backend_for_read(self)
+        else:
+            backend = self.document._meta.get_document_backend_for_read()
         query = backend.get_query(self)
         return QuerySet(query)
     

@@ -162,7 +162,7 @@ class SchemaOptions(object):
     def get_document_backend_for_write(self):
         return get_document_router().get_storage_for_write(self._document)
     
-    def get_document_backed_for_read(self):
+    def get_document_backend_for_read(self):
         return get_document_router().get_storage_for_read(self._document)
     
     def get_index_backend_for_write(self, queryset):

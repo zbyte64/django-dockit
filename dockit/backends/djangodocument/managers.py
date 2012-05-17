@@ -1,7 +1,5 @@
 from django.db import models
 
-import hashlib
-
 class DocumentManager(models.Manager):
     def __init__(self, *args, **kwargs):
         super(DocumentManager, self).__init__(*args, **kwargs)
@@ -44,16 +42,10 @@ class RegisteredIndexManager(models.Manager):
     def get_index(self, key):
         return self.index_models[key]
     
-    def serialize_query_index(self, query_index):
-        return query_index._index_hash()
-    
     def get_query_index_name(self, query_index):
         if query_index.name:
             return query_index.name
-        data = self.serialize_query_index(query_index)
-        #TODO check this code
-        ahash = hashlib.md5(str(data))
-        return ahash.hexdigest()
+        return str(query_index._index_hash())
     
     def remove_index(self, query_index):
         name = self.get_query_index_name(query_index)
@@ -63,15 +55,15 @@ class RegisteredIndexManager(models.Manager):
     def register_index(self, query_index):
         name = self.get_query_index_name(query_index)
         collection = query_index.collection
-        serialized_query_index = self.serialize_query_index(query_index)
         #TODO the rest should be done in a task
-        obj, created = self.get_or_create(name=name, collection=collection, defaults={'serialized_query_index':serialized_query_index})
+        query_hash = query_index._index_hash()
+        obj, created = self.get_or_create(name=name, collection=collection, defaults={'query_hash':query_hash})
         if not created:
-            if obj.serialized_query_index == serialized_query_index:
+            if obj.query_hash == query_hash:
                 return
-            obj.serialized_query_index = serialized_query_index
+            obj.query_hash = query_hash
             for index in self.index_models.itervalues():
-                index['model'].objects.filter(index=obj).delete()
+                index['model'].objects.filter(document__index=obj).delete()
             obj.save()
         
         #TODO do a reindex
@@ -79,15 +71,14 @@ class RegisteredIndexManager(models.Manager):
         for doc in documents:
             self.evaluate_query_index(obj, doc)
     
-    def on_save(self, collection, doc_id, data, encoded_data):
+    def on_save(self, collection, doc_id, data, encoded_data=None):
         registered_queries = self.filter(collection=collection)
         for query in registered_queries:
             self.evaluate_query_index(query, data)
     
     def on_delete(self, collection, doc_id):
-        registered_queries = self.filter(collection=collection)
-        for index in self.index_models.itervalues():
-            index['model'].objects.filter(index__in=registered_queries, doc_id=doc_id).delete()
+        from models import RegisteredIndexDocument
+        RegisteredIndexDocument.objects.filter(index__collection=collection, doc_id=doc_id).delete()
     
     def evaluate_query_index(self, registered_query, data):
         pass
@@ -100,7 +91,7 @@ class BaseIndexManager(models.Manager):
             return {'pk__%s' % operation.operation: operation.value}
         prefix = self.model._meta.get_field('document').related.var_name
         filter_kwargs = dict()
-        filter_kwargs['%s__index' % prefix] = operation.key
+        filter_kwargs['%s__param_name' % prefix] = operation.key
         filter_kwargs['%s__value__%s' % (prefix, operation.operation)] = operation.value
         return filter_kwargs
     
