@@ -319,7 +319,7 @@ class Document(Schema):
         backend = self._meta.get_document_backend_for_write()
         data = type(self).to_primitive(self)
         backend.save(type(self), self._meta.collection, data)
-        get_index_router().on_save(type(self), self._meta.collection, data)
+        get_index_router().on_save(type(self), self._meta.collection, self.get_id(), data)
         post_save.send(sender=type(self), instance=self, created=created)
         
     def delete(self):

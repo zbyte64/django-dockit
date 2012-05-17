@@ -4,7 +4,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from dockit.backends.base import BaseDocumentStorage, BaseIndexStorage
 from dockit.backends.queryset import BaseDocumentQuery
 
-from models import DocumentStore
+from models import DocumentStore, RegisteredIndex
 
 class DocumentQuery(BaseDocumentQuery):
     def __init__(self, query_index, queryset):
@@ -65,10 +65,7 @@ class ModelIndexStorage(BaseIndexStorage):
             indexer.on_document_save(instance)
     
     def register_index(self, query_index):
-        indexes = set(query_index.inclusions + query_index.exclusions + query_index.indexes)
-        document = query_index.document
-        self.indexes.setdefault(document._meta.collection, set())
-        self.indexes[document._meta.collection].update(indexes)
+        RegisteredIndex.objects.register_index(query_index)
     
     def get_query(self, query_index):
         document = query_index.document
@@ -81,11 +78,11 @@ class ModelIndexStorage(BaseIndexStorage):
             queryset = queryset.exclude(indexer.filter())
         return DocumentQuery(query_index, queryset)
     
-    def on_save(self, doc_class, collection, data):
-        raise NotImplementedError
+    def on_save(self, doc_class, collection, doc_id, data):
+        RegisteredIndex.objects.on_save(collection, doc_id, data, None)
     
     def on_delete(self, doc_class, collection, doc_id):
-        raise NotImplementedError
+        RegisteredIndex.objects.on_delete(collection, doc_id)
 
 class ModelDocumentStorage(BaseDocumentStorage):
     name = "djangomodel"

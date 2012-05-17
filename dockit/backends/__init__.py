@@ -58,11 +58,11 @@ class CompositeIndexRouter(object):
                 return name
         return get_document_router().get_storage_name_for_write(document)
     
-    def on_save(self, document, collection, data):
+    def on_save(self, document, collection, object_id, data):
         querysets = self.registered_querysets.get(collection, {})
         for query in querysets.itervalues():
             backend = self.get_index_for_write(document, query)
-            backend.on_save(document, collection, data)
+            backend.on_save(document, collection, object_id, data)
     
     def on_delete(self, document, collection, object_id):
         querysets = self.registered_querysets.get(collection, {})

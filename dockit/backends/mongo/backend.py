@@ -113,7 +113,7 @@ class MongoIndexStorage(BaseIndexStorage, MongoStorageMixin):
     def get_query(self, query_index):
         return DocumentQuery(query_index)
     
-    def on_save(self, doc_class, collection, data):
+    def on_save(self, doc_class, collection, data, doc_id):
         #CONSIDER supporting standalone mongo indexes
         pass #no operation needed
     

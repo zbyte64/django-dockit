@@ -57,7 +57,7 @@ class BaseIndexStorage(BaseStorage):
         #    if getattr(field, 'db_index', False):
         #        document.objects.enable_index("equals", key, {'field_name':key})
     
-    def on_save(self, doc_class, collection, data):
+    def on_save(self, doc_class, collection, doc_id, data):
         raise NotImplementedError
     
     def on_delete(self, doc_class, collection, doc_id):

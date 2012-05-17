@@ -3,7 +3,7 @@ from django.db import models
 import datetime
 from decimal import Decimal
 
-from managers import BaseIndexManager, DocumentManager
+from managers import BaseIndexManager, DocumentManager, RegisteredIndexManager
 
 class DocumentStore(models.Model):
     collection = models.CharField(max_length=128)
@@ -15,9 +15,20 @@ class DocumentStore(models.Model):
         for index in type(self).objects.index_models.itervalues():
             index['model'].objects.clear_db_index(self)
 
+class RegisteredIndex(models.Model):
+    name = models.CharField(max_length=128, db_index=True)
+    collection = models.CharField(max_length=128, db_index=True)
+    serialized_query_index = models.TextField()
+    
+    objects = RegisteredIndexManager()
+    
+    class Meta:
+        unique_together = [('name', 'collection')]
+
 class BaseIndex(models.Model):
-    document = models.ForeignKey(DocumentStore)
+    doc_id = models.CharField(max_length=128, db_index=True)
     index = models.CharField(max_length=50, db_index=True)
+    param_name = models.CharField(max_length=128, db_index=True)
     timestamp = models.DateTimeField(auto_now=True)
     
     objects = BaseIndexManager()
