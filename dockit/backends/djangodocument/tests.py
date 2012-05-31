@@ -3,6 +3,8 @@ from django.utils import unittest
 from dockit import backends
 from dockit import schema
 
+from models import RegisteredIndex, RegisteredIndexDocument
+
 class Book(schema.Document):
     title = schema.CharField()
     slug = schema.SlugField()
@@ -55,12 +57,19 @@ class DjangoDocumentTestCase(unittest.TestCase):
     def test_document_index(self):
         queryset = Book.objects.index('slug')
         queryset.commit()
+        query_hash = queryset._index_hash()
         self.assertTrue(Book._meta.collection in backends.INDEX_ROUTER.registered_querysets)
-        self.assertTrue(queryset._index_hash() in backends.INDEX_ROUTER.registered_querysets[Book._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[Book._meta.collection]))
+        self.assertTrue(query_hash in backends.INDEX_ROUTER.registered_querysets[Book._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[Book._meta.collection]))
         
         book = Book(title='test title', slug='test')
         book.save()
-        self.assertEqual(Book.objects.all().filter(slug='test').count(), 1)
+        
+        self.assertTrue(RegisteredIndex.objects.filter(query_hash=query_hash).exists())
+        self.assertTrue(RegisteredIndexDocument.objects.filter(doc_id=book.pk, index__query_hash=query_hash).exists())
+        
+        query = Book.objects.all().filter(slug='test')
+        msg = str(query.queryset.query.queryset.query)
+        self.assertEqual(query.count(), 1, msg)
         book.delete()
         self.assertEqual(Book.objects.all().filter(slug='test').count(), 0)
 

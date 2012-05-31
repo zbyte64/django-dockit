@@ -36,6 +36,14 @@ class DotPathTraverser(object):
         self.resolved_paths = [entry]
         self._resolve_loop()
     
+    def resolve_for_raw_data(self, data):
+        from fields import DictField
+        entry = {'value':data,
+                 'field':DictField(),
+                 'part':None,}
+        self.resolved_paths = [entry]
+        self._resolve_loop()
+    
     def _resolve_loop(self):
         while not self._finished:
             self._called = False

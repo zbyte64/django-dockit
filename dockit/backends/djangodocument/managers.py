@@ -1,5 +1,7 @@
 from django.db import models
 
+from dockit.schema.common import DotPathTraverser, DotPathNotFound
+
 class DocumentManager(models.Manager):
     def __init__(self, *args, **kwargs):
         super(DocumentManager, self).__init__(*args, **kwargs)
@@ -68,20 +70,51 @@ class RegisteredIndexManager(models.Manager):
         
         #TODO do a reindex
         documents = list() #TODO
-        for doc in documents:
-            self.evaluate_query_index(obj, doc)
+        #for doc in documents:
+        #    self.evaluate_query_index(obj, doc)
     
     def on_save(self, collection, doc_id, data, encoded_data=None):
         registered_queries = self.filter(collection=collection)
-        for query in registered_queries:
-            self.evaluate_query_index(query, data)
+        #for query in registered_queries:
+        #    self.evaluate_query_index(query, data)
     
     def on_delete(self, collection, doc_id):
         from models import RegisteredIndexDocument
         RegisteredIndexDocument.objects.filter(index__collection=collection, doc_id=doc_id).delete()
     
-    def evaluate_query_index(self, registered_query, data):
-        pass
+    def evaluate_query_index(self, registered_index, query_index, doc_id, data):
+        from models import RegisteredIndexDocument
+        
+        for inclusion in query_index.inclusions:
+            dotpath = inclusion.dotpath()
+            traverser = DotPathTraverser(dotpath)
+            try:
+                traverser.resolve_for_raw_data(data)
+            except DotPathNotFound:
+                return False
+            if traverser.current_value != inclusion.value:
+                return False
+        for exclusion in query_index.exclusions:
+            dotpath = exclusion.dotpath()
+            traverser = DotPathTraverser(dotpath)
+            try:
+                traverser.resolve_for_raw_data(data)
+            except DotPathNotFound:
+                pass
+            else:
+                if traverser.current_value == exclusion.value:
+                    return False
+        RegisteredIndexDocument.objects.get_or_create(index=registered_index, doc_id=doc_id)
+        for param in query_index.indexes:
+            dotpath = param.dotpath()
+            traverser = DotPathTraverser(dotpath)
+            try:
+                traverser.resolve_for_raw_data(data)
+            except DotPathNotFound:
+                value = None
+            else:
+                value = traverser.current_value
+            #TODO now create a BaseIndex entry associated to a registered index document
         #evaluate if document passes filters
         #index params
 
