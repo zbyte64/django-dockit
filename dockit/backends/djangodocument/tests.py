@@ -3,7 +3,7 @@ from django.utils import unittest
 from dockit import backends
 from dockit import schema
 
-from models import RegisteredIndex, RegisteredIndexDocument
+from models import RegisteredIndex, RegisteredIndexDocument, StringIndex
 
 class Book(schema.Document):
     title = schema.CharField()
@@ -64,12 +64,20 @@ class DjangoDocumentTestCase(unittest.TestCase):
         book = Book(title='test title', slug='test')
         book.save()
         
-        self.assertTrue(RegisteredIndex.objects.filter(query_hash=query_hash).exists())
+        self.assertTrue(RegisteredIndex.objects.filter(query_hash=query_hash, collection=Book._meta.collection).exists())
         self.assertTrue(RegisteredIndexDocument.objects.filter(doc_id=book.pk, index__query_hash=query_hash).exists())
+        
+        self.assertTrue(StringIndex.objects.filter(param_name='slug', document__doc_id=book.pk, document__index__query_hash=query_hash).exists())
+        self.assertTrue(StringIndex.objects.filter(value='test', param_name='slug', document__doc_id=book.pk, document__index__query_hash=query_hash).exists())
+        
+        vquery = RegisteredIndexDocument.objects.filter(doc_id=book.pk, index__query_hash=query_hash, index__collection=Book._meta.collection,
+                                                        stringindex__param_name='slug', stringindex__value='test')
+        self.assertTrue(vquery.exists())
         
         query = Book.objects.all().filter(slug='test')
         msg = str(query.queryset.query.queryset.query)
-        self.assertEqual(query.count(), 1, msg)
+        self.assertEqual(len(list(query)), query.count())
+        self.assertEqual(query.count(), 1, '%s != %s' % (msg, vquery.query))
         book.delete()
         self.assertEqual(Book.objects.all().filter(slug='test').count(), 0)
 

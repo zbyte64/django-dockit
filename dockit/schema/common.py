@@ -168,3 +168,17 @@ class DotPathSet(set):
         else:
             self.add(value)
 
+class GenericDotPathObject(object):
+    traverse_types = [(list, DotPathList),
+                      (dict, DotPathDict),
+                      (set, DotPathSet),]
+    
+    def __init__(self, value):
+        self.value = value
+    
+    def traverse_dot_path(self, traverser):
+        for atype, acls in self.traverse_types:
+            if isinstance(self.value, atype):
+                return acls(self.value).traverse_dot_path(traverser)
+        return traverser.end(value=self.value)
+

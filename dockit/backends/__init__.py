@@ -36,6 +36,13 @@ class CompositeIndexRouter(object):
         self.routers = routers
         self.registered_querysets = dict()
     
+    def get_effective_queryset(self, queryset):
+        return queryset
+        if queryset._index_hash() in self.registered_querysets:
+            return queryset
+        for val in self.registered_querysets.itervalues():
+            pass
+    
     def get_index_for_read(self, document, queryset):
         name = self.get_index_name_for_read(document, queryset)
         return get_index_backends()[name]()

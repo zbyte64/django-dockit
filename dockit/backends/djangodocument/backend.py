@@ -3,6 +3,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from dockit.backends.base import BaseDocumentStorage, BaseIndexStorage
 from dockit.backends.queryset import BaseDocumentQuery
+from dockit.backends import get_index_router
 
 from models import DocumentStore, RegisteredIndex, RegisteredIndexDocument
 
@@ -68,6 +69,8 @@ class ModelIndexStorage(BaseIndexStorage):
         RegisteredIndex.objects.register_index(query_index)
     
     def get_query(self, query_index):
+        #lookup the appropriate query index
+        query_index = get_index_router().get_effective_queryset(query_index)
         document = query_index.document
         queryset = RegisteredIndexDocument.objects.filter(index__collection=query_index.document._meta.collection, index__query_hash=query_index._index_hash())
         for op in query_index.inclusions:

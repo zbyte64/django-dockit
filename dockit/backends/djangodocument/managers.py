@@ -3,34 +3,7 @@ from django.db import models
 from dockit.schema.common import DotPathTraverser, DotPathNotFound
 
 class DocumentManager(models.Manager):
-    def __init__(self, *args, **kwargs):
-        super(DocumentManager, self).__init__(*args, **kwargs)
-        self.index_models = dict()
-    
-    def register_index_model(self, key, model, instance_types):
-        self.index_models[key] = {'model':model,
-                                  'instance_types':instance_types}
-    
-    def get_index(self, key):
-        return self.index_models[key]
-    
-    def filter_by_indexes(self, mapping, **filters):
-        """
-        mapping is a dictionary of the index as keys, and the datatype as the value
-        """
-        qs = self.all()
-        for param, value in filters.iteritems():
-            index = param.split('__', 1)[0]
-            if index in mapping:
-                key = mapping[index]
-                qs &= self.filter_by_indexed_value(key, param, value)
-            else:
-                raise KeyError, "Unrecognized filter: %s" % index
-        return qs
-    
-    def filter_by_indexed_value(self, key, index, value):
-        model = self.get_index(key)['model']
-        return self.filter(**model.objects.filter_kwargs_for_value(index, value))
+    pass
 
 class RegisteredIndexManager(models.Manager):
     def __init__(self, *args, **kwargs):
@@ -43,6 +16,13 @@ class RegisteredIndexManager(models.Manager):
     
     def get_index(self, key):
         return self.index_models[key]
+    
+    def get_index_for_value(self, value):
+        for entry in self.index_models.itervalues():
+            if isinstance(value, entry['instance_types']):
+                return entry['model']
+        assert False, str(type(value))
+        return None
     
     def get_query_index_name(self, query_index):
         if query_index.name:
@@ -68,15 +48,17 @@ class RegisteredIndexManager(models.Manager):
                 index['model'].objects.filter(document__index=obj).delete()
             obj.save()
         
-        #TODO do a reindex
-        documents = list() #TODO
-        #for doc in documents:
-        #    self.evaluate_query_index(obj, doc)
+        #TODO do a reindex in a task
+        documents = obj.get_document().objects.all()
+        for doc in documents:
+            self.evaluate_query_index(obj, query_index, doc.pk, doc.to_python(doc))
     
     def on_save(self, collection, doc_id, data, encoded_data=None):
+        from dockit.backends import INDEX_ROUTER
         registered_queries = self.filter(collection=collection)
-        #for query in registered_queries:
-        #    self.evaluate_query_index(query, data)
+        for query in registered_queries:
+            query_index = INDEX_ROUTER.registered_querysets[collection][query.query_hash]
+            self.evaluate_query_index(query, query_index, doc_id, data)
     
     def on_delete(self, collection, doc_id):
         from models import RegisteredIndexDocument
@@ -85,6 +67,7 @@ class RegisteredIndexManager(models.Manager):
     def evaluate_query_index(self, registered_index, query_index, doc_id, data):
         from models import RegisteredIndexDocument
         
+        #evaluate if document passes filters
         for inclusion in query_index.inclusions:
             dotpath = inclusion.dotpath()
             traverser = DotPathTraverser(dotpath)
@@ -104,7 +87,9 @@ class RegisteredIndexManager(models.Manager):
             else:
                 if traverser.current_value == exclusion.value:
                     return False
-        RegisteredIndexDocument.objects.get_or_create(index=registered_index, doc_id=doc_id)
+        
+        #index params
+        index_doc, created = RegisteredIndexDocument.objects.get_or_create(index=registered_index, doc_id=doc_id)
         for param in query_index.indexes:
             dotpath = param.dotpath()
             traverser = DotPathTraverser(dotpath)
@@ -114,9 +99,9 @@ class RegisteredIndexManager(models.Manager):
                 value = None
             else:
                 value = traverser.current_value
-            #TODO now create a BaseIndex entry associated to a registered index document
-        #evaluate if document passes filters
-        #index params
+            index_model = self.get_index_for_value(value) #TODO if value is None there is ambiguity, use schema to resolve this
+            #now create a BaseIndex entry associated to a registered index document
+            index_model.objects.db_index(index_doc, param.key, value)
 
 class BaseIndexManager(models.Manager):
     def filter_kwargs_for_operation(self, operation):
@@ -129,19 +114,19 @@ class BaseIndexManager(models.Manager):
         return filter_kwargs
     
     def unique_values(self, index):
-        return self.filter(index=index).values_list('value', flat=True).distinct()
+        return self.filter(param_name=index).values_list('value', flat=True).distinct()
     
-    def clear_db_index(self, instance_id, name=None):
-        if name is None:
-            return self.filter(doc_id=instance_id).delete()
-        return self.filter(doc_id=instance_id, index=name).delete()
+    def clear_db_index(self, index_document, param_name=None):
+        if param_name is None:
+            return self.filter(document=index_document).delete()
+        return self.filter(document=index_document, param_name=param_name).delete()
     
-    def db_index(self, instance_id, name, value):
-        self.filter(doc_id=instance_id, index=name).delete()
+    def db_index(self, index_document, param_name, value):
+        self.filter(document=index_document, param_name=param_name).delete()
         from dockit.schema import Document
         if isinstance(value, models.Model):
             value = value.pk
         if isinstance(value, Document):
             value = value.pk
-        obj = self.create(doc_id=instance_id, index=name, value=value)
+        obj = self.create(document=index_document, param_name=param_name, value=value)
 

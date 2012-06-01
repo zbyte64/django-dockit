@@ -1,5 +1,7 @@
 from django.db import models
 
+from dockit.schema.common import get_base_document
+
 import datetime
 from decimal import Decimal
 
@@ -18,9 +20,12 @@ class DocumentStore(models.Model):
 class RegisteredIndex(models.Model):
     name = models.CharField(max_length=128, db_index=True)
     collection = models.CharField(max_length=128, db_index=True)
-    query_hash = models.CharField(max_length=32)
+    query_hash = models.IntegerField()
     
     objects = RegisteredIndexManager()
+    
+    def get_document(self):
+        return get_base_document(self.collection)
     
     class Meta:
         unique_together = [('name', 'collection')]
@@ -42,37 +47,37 @@ class BaseIndex(models.Model):
 
 class IntegerIndex(BaseIndex):
     value = models.IntegerField(null=True)
-DocumentStore.objects.register_index_model('int', IntegerIndex, int)
+RegisteredIndex.objects.register_index_model('int', IntegerIndex, int)
 
 class BooleanIndex(BaseIndex):
     value = models.BooleanField()
-DocumentStore.objects.register_index_model('bool', BooleanIndex, bool)
+RegisteredIndex.objects.register_index_model('bool', BooleanIndex, bool)
 
 class StringIndex(BaseIndex):
     value = models.CharField(max_length=512)
-DocumentStore.objects.register_index_model('char', StringIndex, basestring)
+RegisteredIndex.objects.register_index_model('char', StringIndex, (basestring, type(None)))
 
 class TextIndex(BaseIndex):
     value = models.TextField()
-DocumentStore.objects.register_index_model('text', TextIndex, basestring)
+#RegisteredIndex.objects.register_index_model('text', TextIndex, basestring)
 
 class DateTimeIndex(BaseIndex):
     value = models.DateTimeField(null=True)
-DocumentStore.objects.register_index_model('datetime', DateTimeIndex, datetime.datetime)
+RegisteredIndex.objects.register_index_model('datetime', DateTimeIndex, datetime.datetime)
 
 class DateIndex(BaseIndex):
     value = models.DateField(null=True)
-DocumentStore.objects.register_index_model('date', DateIndex, datetime.date)
+RegisteredIndex.objects.register_index_model('date', DateIndex, datetime.date)
 
 class FloatIndex(BaseIndex):
     value = models.FloatField(null=True)
-DocumentStore.objects.register_index_model('float', FloatIndex, float)
+RegisteredIndex.objects.register_index_model('float', FloatIndex, float)
 
 class TimeIndex(BaseIndex):
     value = models.TimeField(null=True)
-DocumentStore.objects.register_index_model('time', TimeIndex, datetime.time)
+RegisteredIndex.objects.register_index_model('time', TimeIndex, datetime.time)
 
 class DecimalIndex(BaseIndex):
     value = models.DecimalField(max_digits=19, decimal_places=10, null=True)
-DocumentStore.objects.register_index_model('decimal', DecimalIndex, Decimal)
+RegisteredIndex.objects.register_index_model('decimal', DecimalIndex, Decimal)
 

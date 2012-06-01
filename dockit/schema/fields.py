@@ -665,8 +665,8 @@ class DictField(BaseField):
                 except KeyError:
                     pass
                 if new_value and not hasattr(new_value, 'traverse_dot_path'):
-                    from common import DotPathDict
-                    new_value = DotPathDict(new_value)
+                    from common import GenericDotPathObject
+                    new_value = GenericDotPathObject(new_value)
             traverser.next(field=self.value_subfield, value=new_value)
         else:
             traverser.end(field=self)
