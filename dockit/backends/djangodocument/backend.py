@@ -70,19 +70,20 @@ class ModelIndexStorage(BaseIndexStorage):
     
     def get_query(self, query_index):
         #lookup the appropriate query index
-        query_index = get_index_router().get_effective_queryset(query_index)
+        match = get_index_router().get_effective_queryset(query_index)
+        query_index = match['queryset']
         document = query_index.document
-        queryset = RegisteredIndexDocument.objects.filter(index__collection=query_index.document._meta.collection, index__query_hash=query_index._index_hash())
-        for op in query_index.inclusions:
+        queryset = RegisteredIndexDocument.objects.filter(index__collection=document._meta.collection, index__query_hash=query_index._index_hash())
+        for op in match['inclusions']:
             indexer = self._get_indexer_for_operation(document, op)
             queryset = queryset.filter(indexer.filter())
-        for op in query_index.exclusions:
+        for op in match['exclusions']:
             indexer = self._get_indexer_for_operation(document, op)
             queryset = queryset.exclude(indexer.filter())
         return DocumentQuery(query_index, queryset)
     
     def on_save(self, doc_class, collection, doc_id, data):
-        RegisteredIndex.objects.on_save(collection, doc_id, data, None)
+        RegisteredIndex.objects.on_save(collection, doc_id, data)
     
     def on_delete(self, doc_class, collection, doc_id):
         RegisteredIndex.objects.on_delete(collection, doc_id)

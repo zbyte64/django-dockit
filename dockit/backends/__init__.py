@@ -37,11 +37,70 @@ class CompositeIndexRouter(object):
         self.registered_querysets = dict()
     
     def get_effective_queryset(self, queryset):
-        return queryset
         if queryset._index_hash() in self.registered_querysets:
-            return queryset
-        for val in self.registered_querysets.itervalues():
-            pass
+            return {'queryset':queryset,
+                    'score':0,
+                    'inclusions':[],
+                    'exclusions':[],}
+        
+        best_match = None
+        query_inclusions = set(queryset.inclusions)
+        query_exclusions = set(queryset.exclusions)
+        query_indexes = set(queryset.indexes)
+        
+        collection = queryset.document._meta.collection
+        
+        for val in self.registered_querysets[collection].itervalues():
+            val_indexes = set(val.indexes)
+            val_inclusions = set(val.inclusions)
+            val_exclusions = set(val.exclusions)
+            
+            #if not val_indexes.issuperset(query_indexes):
+            #    #val doesn't have all the indexes that is requested
+            #    continue
+            #if not val_inclusions.
+            score = 0
+            
+            inclusions = query_inclusions - val_inclusions #inclusions queryset has but val does not
+            exclusions = query_exclusions - val_exclusions #exclusions queryset has but val does not
+            
+            disqualified = False
+            
+            for inclusion in inclusions:
+                match = False
+                for index in val_indexes:
+                    if inclusion.key == index.key and inclusion.operation == index.operation:
+                        match = True
+                        break
+                if match:
+                    score += 1
+                else:
+                    disqualified = True
+                    break
+            if disqualified:
+                continue
+            
+            for exclusion in exclusions:
+                match = False
+                for index in val_indexes:
+                    if exclusion.key == index.key and exclusion.operation == index.operation:
+                        match = True
+                        break
+                if match:
+                    score += 1
+                else:
+                    disqualified = True
+                    break
+            if disqualified:
+                continue
+            
+            if not best_match or score > best_match['score']:
+                best_match = {'queryset':val,
+                              'score':score,
+                              'inclusions':list(inclusions),
+                              'exclusions':list(exclusions),}
+        assert best_match, 'Queryset not registered'
+        return best_match
     
     def get_index_for_read(self, document, queryset):
         name = self.get_index_name_for_read(document, queryset)

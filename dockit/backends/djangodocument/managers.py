@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import simplejson
+from django.core.serializers.json import DjangoJSONEncoder
 
 from dockit.schema.common import DotPathTraverser, DotPathNotFound
 
@@ -53,7 +55,7 @@ class RegisteredIndexManager(models.Manager):
         for doc in documents:
             self.evaluate_query_index(obj, query_index, doc.pk, doc.to_python(doc))
     
-    def on_save(self, collection, doc_id, data, encoded_data=None):
+    def on_save(self, collection, doc_id, data):
         from dockit.backends import INDEX_ROUTER
         registered_queries = self.filter(collection=collection)
         for query in registered_queries:
@@ -89,7 +91,11 @@ class RegisteredIndexManager(models.Manager):
                     return False
         
         #index params
-        index_doc, created = RegisteredIndexDocument.objects.get_or_create(index=registered_index, doc_id=doc_id)
+        encoded_data = simplejson.dumps(data, cls=DjangoJSONEncoder)
+        index_doc, created = RegisteredIndexDocument.objects.get_or_create(index=registered_index, doc_id=doc_id, defaults={'data':encoded_data})
+        if not created:
+            index_doc.data = encoded_data
+            index_doc.save()
         for param in query_index.indexes:
             dotpath = param.dotpath()
             traverser = DotPathTraverser(dotpath)
