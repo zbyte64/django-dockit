@@ -11,13 +11,13 @@ The Schema Class
     The :class:`~dockit.schema.schema.Schema` class provides a basic datatype
     for building up more complex Schemas and Documents. Schemas may embed other schemas.
 
-    .. class method:: to_primitive(val)
+    .. method:: to_primitive(val)
 
         Returns a primitive representation of the schema that uses only built-in
         python structures and is json serializable
         
 
-    .. class method:: to_python(val)
+    .. method:: to_python(val)
 
         Returns an instantiaded schema with the passed in value as the primitive data
 
