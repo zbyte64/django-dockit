@@ -31,6 +31,14 @@ DOCKIT_BACKENDS = {
                 'PORT':27017,}
 }
 
+DOCKIT_INDEX_BACKENDS = {
+    'default': {'ENGINE':'dockit.backends.mongo.backend.MongoIndexStorage',
+                'USER':'travis',
+                'PASSWORD':'test',
+                'DB':'mydb_test',
+                'HOST':'127.0.0.1',
+                'PORT':27017,}
+}
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
