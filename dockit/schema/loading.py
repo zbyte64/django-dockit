@@ -48,14 +48,20 @@ class DockitAppCache(AppCache):
         """
         if seed_cache:
             self._populate()
+        if self.pending_documents and self.app_cache_ready():
+            self.post_app_ready()
         if only_installed and app_label not in self.app_labels:
             return None
         return self.app_documents.get(app_label, SortedDict()).get(document_name.lower())
     
     def get_documents(self):
+        if self.pending_documents and self.app_cache_ready():
+            self.post_app_ready()
         return self.documents.values()
     
     def get_base_document(self, key):
+        if self.pending_documents and self.app_cache_ready():
+            self.post_app_ready()
         return self.documents[key]
     
     def register_schemas(self, app_label, *schemas):
