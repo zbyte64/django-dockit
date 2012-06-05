@@ -90,8 +90,8 @@ class QueryIndex(object):
         return self._add_filter_parts(indexes=items)
     
     def commit(self):
-        from . import get_index_router
-        get_index_router().register_queryset(self)
+        from dockit.schema.loading import register_indexes
+        register_indexes(self.document._meta.app_label, self)
     
     def setname(self, name):
         self.name = name

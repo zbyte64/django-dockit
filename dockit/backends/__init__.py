@@ -44,7 +44,7 @@ class CompositeDocumentRouter(object):
 class CompositeIndexRouter(object):
     def __init__(self, routers):
         self.routers = routers
-        self.registered_querysets = dict()
+        self.registered_querysets = dict() #TODO this is redundant of the loading.appcache object
     
     def get_effective_queryset(self, queryset):
         if queryset._index_hash() in self.registered_querysets:

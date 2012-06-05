@@ -69,7 +69,7 @@ class DockitAppCache(AppCache):
     def register_indexes(self, app_label, *indexes):
         index_dict = self.app_indexes.setdefault(app_label, SortedDict())
         for index in indexes:
-            index_name = index._query_hash()
+            index_name = index._index_hash()
             if index_name in index_dict:
                 continue
             index_dict[index_name] = index
