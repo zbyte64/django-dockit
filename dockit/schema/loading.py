@@ -4,6 +4,8 @@ import sys
 from django.db.models.loading import AppCache
 from django.utils.datastructures import SortedDict
 
+from signals import document_registered
+
 class DockitAppCache(AppCache):
     def register_documents(self, app_label, *documents):
         document_dict = self.app_documents.setdefault(app_label, SortedDict())
@@ -24,6 +26,9 @@ class DockitAppCache(AppCache):
             self.documents[document._meta.collection] = document
         if self.app_cache_ready():
             self.register_documents_with_backend(documents)
+            self.post_app_ready() #TODO find a better solution, like on_app_ready
+        else:
+            self.pending_documents.extend(documents)
     
     def register_documents_with_backend(self, documents):
         from dockit.backends import get_document_router
@@ -31,6 +36,7 @@ class DockitAppCache(AppCache):
         
         for document in documents:
             router.register_document(document)
+            document_registered.send_robust(sender=document._meta.collection, document=document)
     
     def get_document(self, app_label, document_name,
                   seed_cache=True, only_installed=True):
@@ -69,6 +75,9 @@ class DockitAppCache(AppCache):
             index_dict[index_name] = index
         if self.app_cache_ready():
             self.register_indexes_with_backend(indexes)
+            self.post_app_ready() #TODO find a better solution, like on_app_ready
+        else:
+            self.pending_indexes.extend(indexes)
     
     def register_indexes_with_backend(self, indexes):
         from dockit.backends import get_index_router
@@ -78,14 +87,24 @@ class DockitAppCache(AppCache):
             router.register_queryset(index)
     
     def post_app_ready(self):
-        pass
+        self.write_lock.acquire()
+        try:
+            self.register_documents_with_backend(self.pending_documents)
+            self.pending_documents = list()
+            
+            self.register_indexes_with_backend(self.pending_indexes)
+            self.pending_indexes = list()
+        finally:
+            self.write_lock.release()
+
+AppCache._AppCache__shared_state.update({'app_indexes': dict(),
+                                         'app_documents': SortedDict(),
+                                         'app_schemas': SortedDict(),
+                                         'documents': dict(),
+                                         'pending_documents': list(),
+                                         'pending_indexes': list(),})
 
 cache = DockitAppCache()
-
-cache.__dict__.update({'app_indexes': dict(),
-                       'app_documents': SortedDict(),
-                       'app_schemas': SortedDict(),
-                       'documents': dict()})
 
 register_documents = cache.register_documents
 register_schemas = cache.register_schemas

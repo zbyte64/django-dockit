@@ -3,13 +3,12 @@ import sys
 from django.utils.encoding import force_unicode
 from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
-from django.db.models.loading import app_cache_ready
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from manager import Manager
 from loading import register_documents
 from common import DotPathTraverser, UnSet
-from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init, document_registered
+from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
 import options
 
 def subclass_exception(name, parents, module):
@@ -257,22 +256,6 @@ class Schema(object):
     def __hash__(self):
         return hash(self.to_primitive(self))
 
-_pending_registered_documents = list()
-
-#TODO loading.register_documents to absorb this
-def _register_document(document_cls):
-    if app_cache_ready():
-        while document_cls:
-            backend = document_cls._meta.get_backend()
-            backend.register_document(document_cls)
-            register_documents(document_cls)
-            document_registered.send_robust(sender=document_cls._meta.collection, document=document_cls)
-            if not _pending_registered_documents:
-                break
-            document_cls = _pending_registered_documents.pop()
-    else:
-        _pending_registered_documents.append(document_cls)
-
 class DocumentBase(SchemaBase):
     options_module = options.DocumentOptions
     
@@ -283,7 +266,7 @@ class DocumentBase(SchemaBase):
             objects.contribute_to_class(new_class, 'objects')
         
         if not new_class._meta.virtual and not new_class._meta.proxy:
-            _register_document(new_class)
+            register_documents(new_class._meta.app_label, new_class)
         
         parents = [b for b in bases if isinstance(b, DocumentBase)]
         
