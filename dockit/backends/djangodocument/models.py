@@ -1,6 +1,6 @@
 from django.db import models
 
-from dockit.schema.common import get_base_document
+from dockit.schema.loading import get_base_document
 
 import datetime
 from decimal import Decimal

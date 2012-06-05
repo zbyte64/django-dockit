@@ -30,6 +30,16 @@ class CompositeDocumentRouter(object):
             if name is not None:
                 return name
         return 'default'
+    
+    def register_document(self, document):
+        collection = document._meta.collection
+        
+        backend = self.get_storage_for_read(document)
+        backend.register_document(document)
+        
+        backend2 = self.get_storage_for_write(document)
+        if backend != backend2:
+            backend2.register_document(document)
 
 class CompositeIndexRouter(object):
     def __init__(self, routers):

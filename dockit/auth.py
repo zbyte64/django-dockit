@@ -1,6 +1,6 @@
 from dockit.models import DockitPermission
 from dockit.schema.signals import document_registered
-from dockit.schema.common import COLLECTIONS
+from dockit.schema.loading import get_documents
 
 from django.contrib.auth import models as auth_app
 from django.contrib.contenttypes.models import ContentType
@@ -58,7 +58,7 @@ def on_document_registered(document, **kwargs):
 document_registered.connect(on_document_registered)
 
 try:
-    create_permissions(COLLECTIONS.values(), 1)
+    create_permissions(get_documents(), 1)
 except DatabaseError:
     pass
 

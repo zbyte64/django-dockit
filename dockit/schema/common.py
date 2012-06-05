@@ -1,13 +1,5 @@
 from exceptions import DotPathNotFound
 
-COLLECTIONS = dict()
-
-def register_collection(cls):
-    COLLECTIONS[cls._meta.collection] = cls
-
-def get_base_document(key):
-    return COLLECTIONS[key]
-
 class UnSet(object):
     def __nonzero__(self):
         return False

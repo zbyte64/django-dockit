@@ -7,7 +7,8 @@ from django.db.models.loading import app_cache_ready
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from manager import Manager
-from common import register_collection, DotPathTraverser, UnSet
+from loading import register_documents
+from common import DotPathTraverser, UnSet
 from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init, document_registered
 import options
 
@@ -258,12 +259,13 @@ class Schema(object):
 
 _pending_registered_documents = list()
 
+#TODO loading.register_documents to absorb this
 def _register_document(document_cls):
     if app_cache_ready():
         while document_cls:
             backend = document_cls._meta.get_backend()
             backend.register_document(document_cls)
-            register_collection(document_cls)
+            register_documents(document_cls)
             document_registered.send_robust(sender=document_cls._meta.collection, document=document_cls)
             if not _pending_registered_documents:
                 break
