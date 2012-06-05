@@ -58,7 +58,7 @@ class ModelIndexStorage(BaseIndexStorage):
     _indexers = dict() #TODO this should be automatic
     
     def __init__(self):
-        self._tables_exist = True
+        self._tables_exist = False
         self.indexes = dict()
         import indexers
     
@@ -69,7 +69,7 @@ class ModelIndexStorage(BaseIndexStorage):
             indexer.on_document_save(instance)
     
     def register_index(self, query_index):
-        if self._tables_exist or db_table_exists(RegisteredIndex._meta.table_name): #if the table doesn't exists then we are likely syncing the db
+        if self._tables_exist or db_table_exists(RegisteredIndex._meta.db_table): #if the table doesn't exists then we are likely syncing the db
             self._tables_exist = True
             RegisteredIndex.objects.register_index(query_index)
     
