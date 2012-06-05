@@ -15,6 +15,8 @@ class RouterTestCase(unittest.TestCase):
         #create a new queryset object
         sub_queryset = SimpleDocument.objects.filter(featured=True).exclude(published=False)
         
-        found_queryset = self.router.get_effective_queryset(sub_queryset)['queryset']
-        self.assertEqual(original_queryset._index_hash(), found_queryset._index_hash())
+        result = self.router.get_effective_queryset(sub_queryset)
+        self.assertFalse(result['inclusions']) #no extra inclusions or exclusions should be necessary
+        self.assertFalse(result['exclusions'])
+        self.assertEqual(original_queryset._index_hash(), result['queryset']._index_hash())
 

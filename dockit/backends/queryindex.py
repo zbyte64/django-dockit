@@ -23,6 +23,11 @@ class QueryFilterOperation(object):
     
     def __repr__(self):
         return '<QueryFilterOperation: key=%s, operation=%s, value=%s>' % (self.key, self.operation, self.value)
+    
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return hash(self) == hash(other)
 
 class QueryIndex(object):
     def __init__(self, document):

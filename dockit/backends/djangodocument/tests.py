@@ -8,6 +8,8 @@ from models import RegisteredIndex, RegisteredIndexDocument, StringIndex
 class Book(schema.Document):
     title = schema.CharField()
     slug = schema.SlugField()
+    published = schema.BooleanField()
+    featured = schema.BooleanField()
 
 class MockedDocumentRouter(backends.CompositeDocumentRouter):
     def __init__(self):
@@ -38,6 +40,7 @@ class DjangoDocumentTestCase(unittest.TestCase):
         backends.DOCUMENT_ROUTER = MockedDocumentRouter()
         backends.INDEX_ROUTER = MockedIndexRouter()
         self.clear_books()
+        RegisteredIndex.objects.all().delete()
     
     def tearDown(self):
         backends.DOCUMENT_ROUTER = self._original_document_router
@@ -60,14 +63,13 @@ class DjangoDocumentTestCase(unittest.TestCase):
         query_hash = queryset._index_hash()
         self.assertTrue(Book._meta.collection in backends.INDEX_ROUTER.registered_querysets)
         self.assertTrue(query_hash in backends.INDEX_ROUTER.registered_querysets[Book._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[Book._meta.collection]))
+        self.assertTrue(RegisteredIndex.objects.filter(query_hash=query_hash, collection=Book._meta.collection).exists())
         
         book = Book(title='test title', slug='test')
         book.save()
         
-        self.assertTrue(RegisteredIndex.objects.filter(query_hash=query_hash, collection=Book._meta.collection).exists())
         self.assertTrue(RegisteredIndexDocument.objects.filter(doc_id=book.pk, index__query_hash=query_hash).exists())
         
-        self.assertTrue(StringIndex.objects.filter(param_name='slug', document__doc_id=book.pk, document__index__query_hash=query_hash).exists())
         self.assertTrue(StringIndex.objects.filter(value='test', param_name='slug', document__doc_id=book.pk, document__index__query_hash=query_hash).exists())
         
         vquery = RegisteredIndexDocument.objects.filter(doc_id=book.pk, index__query_hash=query_hash, index__collection=Book._meta.collection,
@@ -80,4 +82,28 @@ class DjangoDocumentTestCase(unittest.TestCase):
         self.assertEqual(query.count(), 1, '%s != %s' % (msg, vquery.query))
         book.delete()
         self.assertEqual(Book.objects.all().filter(slug='test').count(), 0)
+    
+    def test_sparse_document_index(self):
+        queryset = Book.objects.filter(featured=True).exclude(published=False).index('slug')
+        queryset.commit()
+        query_hash = queryset._index_hash()
+        self.assertTrue(Book._meta.collection in backends.INDEX_ROUTER.registered_querysets)
+        self.assertTrue(query_hash in backends.INDEX_ROUTER.registered_querysets[Book._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[Book._meta.collection]))
+        self.assertTrue(RegisteredIndex.objects.filter(query_hash=query_hash, collection=Book._meta.collection).exists())
+        
+        book = Book(title='test title', slug='test', featured=True, published=True)
+        book.save()
+        book2 = Book(title='test title2', slug='test2', featured=False, published=True)
+        book2.save()
+        
+        self.assertTrue(RegisteredIndexDocument.objects.filter(doc_id=book.pk, index__query_hash=query_hash).exists())
+        self.assertTrue(StringIndex.objects.filter(value='test', param_name='slug', document__doc_id=book.pk, document__index__query_hash=query_hash).exists())
+        
+        query = Book.objects.all().filter(featured=True).exclude(published=False)
+        msg = str(query.queryset.query.queryset.query)
+        self.assertEqual(query.count(), 1, msg)
+        
+        book.delete()
+        query = Book.objects.all().filter(featured=True).exclude(published=False)
+        self.assertEqual(query.count(), 0)
 
