@@ -71,6 +71,7 @@ class CompositeIndexRouter(object):
             #if not val_inclusions.
             score = 0
             
+            #set subtraction does not appear to behave purely by __hash__
             inclusions = query_inclusions - val_inclusions #inclusions queryset has but val does not
             exclusions = query_exclusions - val_exclusions #exclusions queryset has but val does not
             
@@ -78,7 +79,7 @@ class CompositeIndexRouter(object):
             
             for inclusion in inclusions:
                 match = False
-                for index in val_indexes:
+                for index in val_indexes | val_inclusions:
                     if inclusion.key == index.key and inclusion.operation == index.operation:
                         match = True
                         break
@@ -92,7 +93,7 @@ class CompositeIndexRouter(object):
             
             for exclusion in exclusions:
                 match = False
-                for index in val_indexes:
+                for index in val_indexes | val_exclusions:
                     if exclusion.key == index.key and exclusion.operation == index.operation:
                         match = True
                         break

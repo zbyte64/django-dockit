@@ -9,9 +9,12 @@ class RouterTestCase(unittest.TestCase):
         self.router = CompositeIndexRouter([])
     
     def test_get_effective_query_index(self):
-        queryset = SimpleDocument.objects.filter(featured=True).exclude(published=False).index('charfield')
-        self.router.register_queryset(queryset)
+        original_queryset = SimpleDocument.objects.filter(featured=True).exclude(published=False).index('charfield')
+        self.router.register_queryset(original_queryset)
         
-        found_queryset = self.router.get_effective_queryset(queryset)['queryset']
-        self.assertEqual(queryset, found_queryset)
+        #create a new queryset object
+        sub_queryset = SimpleDocument.objects.filter(featured=True).exclude(published=False)
+        
+        found_queryset = self.router.get_effective_queryset(sub_queryset)['queryset']
+        self.assertEqual(original_queryset._index_hash(), found_queryset._index_hash())
 
