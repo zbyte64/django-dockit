@@ -20,6 +20,9 @@ class QueryFilterOperation(object):
     def dotpath(self):
         parts = self.key.split('__')
         return '.'.join(parts)
+    
+    def __repr__(self):
+        return '<QueryFilterOperation: key=%s, operation=%s, value=%s>' % (self.key, self.operation, self.value)
 
 class QueryIndex(object):
     def __init__(self, document):
