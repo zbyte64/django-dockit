@@ -92,7 +92,7 @@ class DockitAppCache(AppCache):
         for index in indexes:
             router.register_queryset(index)
     
-    def post_app_ready(self):
+    def post_app_ready(self): #TODO this should be called when the connection is ready, not when the app is ready;
         self.write_lock.acquire()
         try:
             self.register_documents_with_backend(self.pending_documents)

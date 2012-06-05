@@ -6,6 +6,7 @@ from dockit.backends.queryset import BaseDocumentQuery
 from dockit.backends import get_index_router
 
 from models import DocumentStore, RegisteredIndex, RegisteredIndexDocument
+from utils import db_table_exists
 
 class DocumentQuery(BaseDocumentQuery):
     def __init__(self, query_index, queryset):
@@ -52,10 +53,12 @@ class DocumentQuery(BaseDocumentQuery):
             return self.wrap(self.queryset[val])
 
 class ModelIndexStorage(BaseIndexStorage):
+    thread_safe = True #we use the django orm which takes care of thread safety for us
     name = "djangomodel"
     _indexers = dict() #TODO this should be automatic
     
     def __init__(self):
+        self._tables_exist = True
         self.indexes = dict()
         import indexers
     
@@ -66,7 +69,9 @@ class ModelIndexStorage(BaseIndexStorage):
             indexer.on_document_save(instance)
     
     def register_index(self, query_index):
-        RegisteredIndex.objects.register_index(query_index)
+        if self._tables_exist or db_table_exists(RegisteredIndex._meta.table_name): #if the table doesn't exists then we are likely syncing the db
+            self._tables_exist = True
+            RegisteredIndex.objects.register_index(query_index)
     
     def get_query(self, query_index):
         #lookup the appropriate query index
@@ -89,6 +94,7 @@ class ModelIndexStorage(BaseIndexStorage):
         RegisteredIndex.objects.on_delete(collection, doc_id)
 
 class ModelDocumentStorage(BaseDocumentStorage):
+    thread_safe = True #we use the django orm which takes care of thread safety for us
     name = "djangomodel"
     
     def get_id_field_name(self):
