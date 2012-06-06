@@ -88,21 +88,29 @@ class ModelIndexStorage(BaseIndexStorage):
     def __init__(self):
         self._tables_exist = False
         self.indexes = dict()
+        self.pending_indexes = set()
         import indexers
     
-    def _index_document(self, instance):
-        indexes = self.indexes.get(instance._meta.collection, set())
-        for index in indexes:
-            indexer = self._get_indexer_for_operation(type(instance), index)
-            indexer.on_document_save(instance)
+    def _register_pending_indexes(self):
+        if not self.pending_indexes:
+            return
+        if not db_table_exists(RegisteredIndex._meta.db_table):
+            return
+        for query_index in self.pending_indexes:
+            RegisteredIndex.objects.register_index(query_index)
+        self.pending_indexes = set()
     
     def register_index(self, query_index):
         if self._tables_exist or db_table_exists(RegisteredIndex._meta.db_table): #if the table doesn't exists then we are likely syncing the db
             self._tables_exist = True
             RegisteredIndex.objects.register_index(query_index)
+            self._register_pending_indexes()
+        else:
+            self.pending_indexes.add(query_index)
     
     def get_query(self, query_index):
         #lookup the appropriate query index
+        self._register_pending_indexes()
         match = get_index_router().get_effective_queryset(query_index)
         query_index = match['queryset']
         document = query_index.document
@@ -116,9 +124,11 @@ class ModelIndexStorage(BaseIndexStorage):
         return IndexedDocumentQuery(query_index, queryset)
     
     def on_save(self, doc_class, collection, doc_id, data):
+        self._register_pending_indexes()
         RegisteredIndex.objects.on_save(collection, doc_id, data)
     
     def on_delete(self, doc_class, collection, doc_id):
+        self._register_pending_indexes()
         RegisteredIndex.objects.on_delete(collection, doc_id)
 
 class ModelDocumentStorage(BaseDocumentStorage):
