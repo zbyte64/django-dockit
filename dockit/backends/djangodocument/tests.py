@@ -11,6 +11,7 @@ class Book(schema.Document):
     published = schema.BooleanField()
     featured = schema.BooleanField()
     countries = schema.ListField(schema.CharField())
+    number_list = schema.ListField(schema.IntegerField())
 
 class MockedDocumentRouter(backends.CompositeDocumentRouter):
     def __init__(self):
@@ -111,13 +112,15 @@ class DjangoDocumentTestCase(unittest.TestCase):
     def test_multi_value_index(self):
         queryset = Book.objects.index('countries')
         queryset.commit()
+        queryset = Book.objects.index('number_list')
+        queryset.commit()
         
         query = Book.objects.filter(countries="US")
         self.assertEqual(query.count(), 0)
         
         book = Book(title='test title', slug='test', featured=True, published=True, countries=['US', 'GB'])
         book.save()
-        book = Book(title='test title2', slug='test2', featured=True, published=True)
+        book = Book(title='test title2', slug='test2', featured=True, published=True, number_list=[1,5])
         book.save()
         
         query = Book.objects.filter(countries="US")

@@ -691,6 +691,7 @@ class DictField(BaseField):
 
 class ReferenceField(BaseField):
     form_field_class = SchemaChoiceField
+    data_type = 'char'
     
     def __init__(self, document, *args, **kwargs):
         if document == 'self':
@@ -790,6 +791,7 @@ class DocumentSetField(SetField):
 class ModelReferenceField(BaseField):
     form_field_class = forms.ModelChoiceField
     form_field_choices_class = forms.ModelChoiceField
+    data_type = 'char'
     
     def __init__(self, model, *args, **kwargs):
         self.model = model
