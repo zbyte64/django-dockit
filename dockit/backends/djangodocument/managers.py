@@ -66,7 +66,7 @@ class RegisteredIndexManager(models.Manager):
         #TODO do a reindex in a task
         documents = obj.get_document().objects.all()
         for doc in documents:
-            self.evaluate_query_index(obj, query_index, doc.pk, doc.to_python(doc))
+            self.evaluate_query_index(obj, query_index, doc.pk, doc.to_primitive(doc))
     
     def on_save(self, collection, doc_id, data):
         from dockit.backends import INDEX_ROUTER
