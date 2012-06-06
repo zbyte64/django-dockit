@@ -7,7 +7,14 @@ except ImportError:
 from dockit.backends.base import BaseDocumentStorage, BaseIndexStorage
 from dockit.backends.queryset import BaseDocumentQuery
 
-from django.conf import settings
+class ValuesResultClass(dict):
+    def __getitem__(self, key):
+        try:
+            return dict.__getitem__(self, key)
+        except KeyError:
+            if key == 'pk':
+                return dict.__getitem__(self, '_id')
+            raise
 
 class DocumentQuery(BaseDocumentQuery):
     def _build_params(self, include_indexes=False):
@@ -64,9 +71,12 @@ class DocumentQuery(BaseDocumentQuery):
             raise self.document.DoesNotExist
         return self.wrap(ret)
     
-    def values(self):
+    def values(self, *limit_to, **kwargs):
         params = self._build_params(include_indexes=True)
-        raise NotImplementedError
+        fields = limit_to or None
+        if params:
+            return self.collection.find(params, fields=fields, as_class=ValuesResultClass)
+        return self.collection.find(fields=fields, as_class=ValuesResultClass)
     
     def __len__(self):
         return self.queryset.count()

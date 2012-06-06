@@ -35,7 +35,7 @@ class BaseDocumentQuery(object):
     def get_from_filter_operations(self, filter_operations):
         raise NotImplementedError
     
-    def values(self):
+    def values(self, *limit_to, **kwargs):
         raise NotImplementedError
     
     def __getitem__(self, val):
@@ -61,8 +61,9 @@ class QuerySet(object):
     def delete(self):
         return self.query.delete()
     
-    def values(self):
-        return self.query.values()
+    def values(self, *limit_to, **kwargs):
+        #TODO cache
+        return self.query.values(*limit_to, **kwargs)
     
     def get(self, **kwargs):
         #TODO cache

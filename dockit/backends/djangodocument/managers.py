@@ -119,8 +119,14 @@ class BaseIndexManager(models.Manager):
         filter_kwargs['%s__value__%s' % (prefix, operation.operation)] = operation.value
         return filter_kwargs
     
-    def unique_values(self, index):
-        return self.filter(param_name=index).values_list('value', flat=True).distinct()
+    def values(self, operation):
+        if operation.key in ('pk', '_pk'):
+            return {'values':'pk',
+                    'extra': {'select': {'doc_id': 'pk'}}}
+        prefix = self.model._meta.get_field('document').related.var_name
+        response = {'filters': {'%s__param_name' % prefix: operation.key},
+                    'values': ['%s__value' % prefix]}
+        return response
     
     def clear_db_index(self, index_document, param_name=None):
         if param_name is None:

@@ -3,9 +3,8 @@ from django.db.models import Model, Q
 from dockit.backends.indexer import BaseIndexer
 from dockit.schema import fields#, Document
 
-from models import DocumentStore, StringIndex
 import models as indexes
-from backend import ModelIndexStorage, DocumentQuery
+from backend import ModelIndexStorage
 
 #TODO need a mechanism for back populating indexes, must be task based
 
@@ -61,16 +60,16 @@ class ExactIndexer(BaseIndexer):
             subindex = self._lookup_index(field.subfield)
         
         if subindex is None:
-            subindex = StringIndex
+            subindex = indexes.StringIndex
             #raise TypeError("Could not identify an apropriate index for: %s" % field)
         
         self.subindex = subindex
         func = Indexer(self.document, subindex.objects.db_index, self.dotpath, self.filter_operation.key)
         filt = subindex.objects.filter_kwargs_for_operation
-        unique_values = subindex.objects.unique_values
+        values = subindex.objects.values
         clear = subindex.objects.clear_db_index
         
-        self.index_functions = {'map':func, 'filter':filt, 'unique_values':unique_values, 'clear':clear}
+        self.index_functions = {'map':func, 'filter':filt, 'values':values, 'clear':clear}
     
     def _lookup_index(self, field):
         for key, val in self.INDEXES:
@@ -87,7 +86,7 @@ class ExactIndexer(BaseIndexer):
         return Q(**self.index_functions['filter'](self.filter_operation))
     
     def values(self):
-        return self.index_functions['unique_values'](self.filter_operation.key)
+        return self.index_functions['values'](self.filter_operation)
 
 ModelIndexStorage.register_indexer(ExactIndexer, 'exact', 'iexact', 'startswith', 'endswith', 'istartswith', 'iendswith', 'year', 'month', 'day', 'lt', 'gt', 'lte', 'gte')
 

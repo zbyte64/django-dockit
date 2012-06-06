@@ -31,11 +31,14 @@ class DocumentQuery(BaseDocumentQuery):
         except self.queryset.model.DoesNotExist:
             raise self.document.DoesNotExist
     
-    def values(self):
+    def values(self, *limit_to, **kwargs):
         queryset = self.queryset
-        for op in query_index.indexes:
-            indexer = self._get_indexer_for_operation(self.document, op)
-        raise NotImplementedError
+        limit_to = set(limit_to)
+        values_args = list()
+        if 'pk' in limit_to:
+            queryset = queryset.extra(select={'pk':'id'})
+            values_args.append('pk')
+        return queryset.values(*values_args)
     
     def __len__(self):
         return self.queryset.count()
@@ -51,6 +54,31 @@ class DocumentQuery(BaseDocumentQuery):
             return results
         else:
             return self.wrap(self.queryset[val])
+
+class IndexedDocumentQuery(DocumentQuery):
+    def values(self, *limit_to, **kwargs):
+        queryset = self.queryset
+        limit_to = set(limit_to)
+        values_args = list()
+        for op in self.query_index.indexes:
+            if limit_to and op.key not in limit_to:
+                continue
+            indexer = self._get_indexer_for_operation(self.document, op)
+            response = indexer.values()
+            if 'values' in response:
+                values_args.extend(response['values'])
+            if 'filters' in response:
+                queryset = queryset.filter(**response['filters'])
+            if 'extra' in response:
+                queryset = queryset.extra(**response['extra'])
+            if limit_to:
+                limit_to.remove(op.key)
+                if not limit_to:
+                    break
+        if 'pk' in limit_to:
+            queryset = queryset.extra(select={'pk':'doc_id'})
+            values_args.append('pk')
+        return queryset.values(*values_args)
 
 class ModelIndexStorage(BaseIndexStorage):
     thread_safe = True #we use the django orm which takes care of thread safety for us
@@ -85,7 +113,7 @@ class ModelIndexStorage(BaseIndexStorage):
         for op in match['exclusions']:
             indexer = self._get_indexer_for_operation(document, op)
             queryset = queryset.exclude(indexer.filter())
-        return DocumentQuery(query_index, queryset)
+        return IndexedDocumentQuery(query_index, queryset)
     
     def on_save(self, doc_class, collection, doc_id, data):
         RegisteredIndex.objects.on_save(collection, doc_id, data)

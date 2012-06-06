@@ -121,7 +121,17 @@ class QueryIndex(object):
     def count(self):
         return self.__len__()
     
+    def values(self, *limit_to, **kwargs):
+        return self.queryset.values(*limit_to, **kwargs)
+    
     def delete(self):
+        #CONSIDER we are taking from an index a list of doc ids
+        from dockit.backends import get_index_router
+        #TODO index_router should detect if there are any userspace indexes, if not skip notifying indexes
+        #TODO if there are userspace indexes, they should be notified in a task
+        index_router = get_index_router()
+        for doc in self.values('pk'):
+            index_router.on_delete(self.document, self.collection, doc['pk'])
         return self.queryset.delete()
     
     def all(self):
