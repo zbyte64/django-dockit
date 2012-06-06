@@ -196,22 +196,27 @@ class BaseTypedField(BaseField):
 
 class CharField(BaseTypedField):
     coerce_function = unicode
+    data_type = 'char'
 
 class TextField(BaseTypedField):
     coerce_function = unicode
     form_widget_class = forms.Textarea
+    data_type = 'text'
 
 class IntegerField(BaseTypedField):
     coerce_function = int
     form_field_class = forms.IntegerField
+    data_type = 'int'
 
 class BigIntegerField(BaseTypedField):
     coerce_function = long
     form_field_class = forms.IntegerField
+    data_type = 'long'
 
 class BooleanField(BaseTypedField):
     coerce_function = bool
     form_field_class = forms.BooleanField
+    data_type = 'bool'
     
     def __init__(self, *args, **kwargs):
         super(BooleanField, self).__init__(*args, **kwargs)
@@ -219,6 +224,7 @@ class BooleanField(BaseTypedField):
 
 class DateField(BaseField):
     form_field_class = forms.DateField
+    data_type = 'date'
     
     def __init__(self, *args, **kwargs):
         self.input_formats = kwargs.pop('input_formats', list())
@@ -244,6 +250,7 @@ class DateField(BaseField):
 
 class DateTimeField(BaseField):
     form_field_class = forms.DateTimeField
+    data_type = 'datetime'
     
     def __init__(self, *args, **kwargs):
         self.input_formats = kwargs.pop('input_formats', list())
@@ -269,6 +276,7 @@ class DateTimeField(BaseField):
 
 class DecimalField(BaseField):
     form_field_class = forms.DecimalField
+    data_type = 'decimal'
     
     def __init__(self, *args, **kwargs):
         self.max_digits = kwargs.pop('max_digits', None)
@@ -292,6 +300,7 @@ class EmailField(CharField):
 class FloatField(BaseTypedField):
     coerce_function = float
     form_field_class = forms.FloatField
+    data_type = 'float'
 
 #TODO imagefield
 
@@ -319,6 +328,7 @@ class SlugField(CharField):
 class TimeField(BaseTypedField):
     coerce_function = datetime.time
     form_field_class = forms.TimeField
+    data_type = 'time'
 
 #TODO URLField
 #TODO XMLField

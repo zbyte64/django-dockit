@@ -49,6 +49,10 @@ class IntegerIndex(BaseIndex):
     value = models.IntegerField(null=True)
 RegisteredIndex.objects.register_index_model('int', IntegerIndex, int)
 
+class LongIndex(BaseIndex):
+    value = models.IntegerField(null=True)
+RegisteredIndex.objects.register_index_model('long', LongIndex, long)
+
 class BooleanIndex(BaseIndex):
     value = models.BooleanField()
 RegisteredIndex.objects.register_index_model('bool', BooleanIndex, bool)
@@ -59,7 +63,7 @@ RegisteredIndex.objects.register_index_model('char', StringIndex, (basestring, t
 
 class TextIndex(BaseIndex):
     value = models.TextField()
-#RegisteredIndex.objects.register_index_model('text', TextIndex, basestring)
+RegisteredIndex.objects.register_index_model('text', TextIndex, basestring)
 
 class DateTimeIndex(BaseIndex):
     value = models.DateTimeField(null=True)

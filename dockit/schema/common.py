@@ -28,10 +28,16 @@ class DotPathTraverser(object):
         self.resolved_paths = [entry]
         self._resolve_loop()
     
-    def resolve_for_raw_data(self, data):
-        from fields import DictField
+    def resolve_for_raw_data(self, data, schema=None):
+        from fields import DictField, SchemaField
+        field = None
+        if schema:
+            field = SchemaField(schema=schema)
+            data = schema.to_python(data)
+        else:
+            field = DictField()
         entry = {'value':data,
-                 'field':DictField(),
+                 'field':field,
                  'part':None,}
         self.resolved_paths = [entry]
         self._resolve_loop()
@@ -70,6 +76,10 @@ class DotPathTraverser(object):
     @property
     def current_value(self):
         return self.current['value']
+    
+    @property
+    def current_field(self):
+        return self.current['field']
     
     def end(self, field=None, value=None):
         last_entry = self.resolved_paths[-1]

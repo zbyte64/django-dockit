@@ -7,22 +7,35 @@ from dockit.schema.common import DotPathTraverser, DotPathNotFound
 class DocumentManager(models.Manager):
     pass
 
+class NotGiven(object):
+    def __nonzero__(self):
+        return False
+
 class RegisteredIndexManager(models.Manager):
     def __init__(self, *args, **kwargs):
         super(RegisteredIndexManager, self).__init__(*args, **kwargs)
         self.index_models = dict()
     
-    def register_index_model(self, key, model, instance_types):
-        self.index_models[key] = {'model':model,
-                                  'instance_types':instance_types}
+    def register_index_model(self, data_type, model, instance_types):
+        self.index_models[data_type] = {'model':model,
+                                        'instance_types':instance_types}
     
     def get_index(self, key):
         return self.index_models[key]
     
-    def get_index_for_value(self, value):
-        for entry in self.index_models.itervalues():
-            if isinstance(value, entry['instance_types']):
-                return entry['model']
+    def lookup_index(self, value=NotGiven(), field=NotGiven()):
+        if not isinstance(field, NotGiven):
+            for data_type, entry in self.index_models.iteritems():
+                if field and data_type == getattr(field, 'data_type', None):
+                    return entry['model']
+        
+        if not isinstance(value, NotGiven):
+            for entry in self.index_models.itervalues():
+                if isinstance(value, entry['instance_types']):
+                    return entry['model']
+        
+        if field and getattr(field, 'subfield', None):
+            return self.lookup_index(field=field.subfield)
         assert False, str(type(value))
         return None
     
@@ -69,12 +82,14 @@ class RegisteredIndexManager(models.Manager):
     def evaluate_query_index(self, registered_index, query_index, doc_id, data):
         from models import RegisteredIndexDocument
         
+        schema = query_index.document
+        
         #evaluate if document passes filters
         for inclusion in query_index.inclusions:
             dotpath = inclusion.dotpath()
             traverser = DotPathTraverser(dotpath)
             try:
-                traverser.resolve_for_raw_data(data)
+                traverser.resolve_for_raw_data(data, schema=schema)
             except DotPathNotFound:
                 return False
             if traverser.current_value != inclusion.value:
@@ -83,7 +98,7 @@ class RegisteredIndexManager(models.Manager):
             dotpath = exclusion.dotpath()
             traverser = DotPathTraverser(dotpath)
             try:
-                traverser.resolve_for_raw_data(data)
+                traverser.resolve_for_raw_data(data, schema=schema)
             except DotPathNotFound:
                 pass
             else:
@@ -100,12 +115,14 @@ class RegisteredIndexManager(models.Manager):
             dotpath = param.dotpath()
             traverser = DotPathTraverser(dotpath)
             try:
-                traverser.resolve_for_raw_data(data)
+                traverser.resolve_for_raw_data(data, schema=schema)
             except DotPathNotFound:
                 value = None
+                field = None
             else:
                 value = traverser.current_value
-            index_model = self.get_index_for_value(value) #TODO if value is None there is ambiguity, use schema to resolve this
+                field = traverser.current_field
+            index_model = self.lookup_index(value=value, field=field)
             #now create a BaseIndex entry associated to a registered index document
             index_model.objects.db_index(index_doc, param.key, value)
 
@@ -135,6 +152,13 @@ class BaseIndexManager(models.Manager):
     
     def db_index(self, index_document, param_name, value):
         self.filter(document=index_document, param_name=param_name).delete()
+        if isinstance(value, (list, set)):
+            for val in value:
+                self._db_index(index_document, param_name, val)
+        else:
+            self._db_index(index_document, param_name, value)
+    
+    def _db_index(self, index_document, param_name, value):
         from dockit.schema import Document
         if isinstance(value, models.Model):
             value = value.pk
