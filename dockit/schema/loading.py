@@ -30,6 +30,19 @@ class DockitAppCache(AppCache):
         else:
             self.pending_documents.extend(documents)
     
+    def force_register_documents(self, app_label, *documents):
+        document_dict = self.app_documents.setdefault(app_label, SortedDict())
+        for document in documents:
+            doc_name = document._meta.object_name.lower()
+            #TODO detect if any other documents use this as a base document
+            document_dict[doc_name] = document
+            self.documents[document._meta.collection] = document
+        if self.app_cache_ready():
+            self.register_documents_with_backend(documents)
+            self.post_app_ready() #TODO find a better solution, like on_app_ready
+        else:
+            self.pending_documents.extend(documents)
+    
     def register_documents_with_backend(self, documents):
         from dockit.backends import get_document_router
         router = get_document_router()
@@ -113,6 +126,7 @@ AppCache._AppCache__shared_state.update({'app_indexes': dict(),
 cache = DockitAppCache()
 
 register_documents = cache.register_documents
+force_register_documents = cache.force_register_documents
 register_schemas = cache.register_schemas
 register_indexes = cache.register_indexes
 get_base_document = cache.get_base_document
