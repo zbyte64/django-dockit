@@ -84,6 +84,9 @@ class DjangoDocumentTestCase(unittest.TestCase):
         msg = str(query.queryset.query.queryset.query)
         self.assertEqual(len(list(query)), query.count())
         self.assertEqual(query.count(), 1, '%s != %s' % (msg, vquery.query))
+        
+        Book.objects.get(slug='test')
+        
         book.delete()
         self.assertEqual(Book.objects.all().filter(slug='test').count(), 0)
     

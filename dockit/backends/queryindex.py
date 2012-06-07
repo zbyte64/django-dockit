@@ -140,7 +140,8 @@ class QueryIndex(object):
         return ret
     
     def get(self, **kwargs):
-        return self.queryset.get(**kwargs)
+        inclusions = self._parse_kwargs(kwargs)
+        return self._add_filter_parts(inclusions=inclusions).queryset.get()
     
     def exists(self):
         return self.queryset.exists()
