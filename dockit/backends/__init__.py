@@ -47,7 +47,14 @@ class CompositeIndexRouter(object):
         self.registered_querysets = dict() #TODO this is redundant of the loading.appcache object
     
     def get_effective_queryset(self, queryset):
-        if queryset._index_hash() in self.registered_querysets:
+        collection = queryset.document._meta.collection
+        
+        if collection not in self.registered_querysets: 
+            #the loader hasn't registered the querysets with us yet, force it to do so.
+            from dockit.schema.loading import cache
+            cache.post_app_ready()
+        
+        if queryset._index_hash() in self.registered_querysets[collection]:
             return {'queryset':queryset,
                     'score':0,
                     'inclusions':[],
@@ -58,17 +65,11 @@ class CompositeIndexRouter(object):
         query_exclusions = set(queryset.exclusions)
         query_indexes = set(queryset.indexes)
         
-        collection = queryset.document._meta.collection
-        
         for val in self.registered_querysets[collection].itervalues():
             val_indexes = set(val.indexes)
             val_inclusions = set(val.inclusions)
             val_exclusions = set(val.exclusions)
             
-            #if not val_indexes.issuperset(query_indexes):
-            #    #val doesn't have all the indexes that is requested
-            #    continue
-            #if not val_inclusions.
             score = 0
             
             inclusions = query_inclusions - val_inclusions #inclusions queryset has but val does not
