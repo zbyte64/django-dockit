@@ -16,6 +16,7 @@ from dockit.schema.schema import Schema
 
 from urllib import urlencode
 from urlparse import parse_qsl
+import inspect
 
 CALL_BACK = "" #TODO
 
@@ -53,7 +54,7 @@ class DocumentViewMixin(AdminViewMixin):
         opts = self.document._meta
         obj = self.object
         context = AdminViewMixin.get_context_data(self, **kwargs)
-        context.update({'root_path': self.admin_site.root_path,
+        context.update({'root_path': getattr(self.admin_site, 'root_path', None),
                         'app_label': opts.app_label,
                         'opts': opts,
                         'module_name': force_unicode(opts.verbose_name_plural),
@@ -287,7 +288,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         if hasattr(self, 'object'):
             obj = self.object
         
-        context.update({'root_path': self.admin_site.root_path,
+        context.update({'root_path': getattr(self.admin_site, 'root_path', None),
                         'app_label': opts.app_label,
                         'opts': opts,
                         'original': obj,
@@ -500,6 +501,12 @@ class FragmentViewMixin(BaseFragmentViewMixin):
             return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
         return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_changelist'))
 
+'''
+(self, request, model, list_display, list_display_links,
+            list_filter, date_hierarchy, search_fields, list_select_related,
+            list_per_page, list_max_show_all, list_editable, model_admin):
+'''
+
 class IndexView(DocumentViewMixin, views.ListView):
     template_suffix = 'change_list'
     
@@ -515,9 +522,13 @@ class IndexView(DocumentViewMixin, views.ListView):
                       'search_fields':self.admin.search_fields,
                       'list_select_related':self.admin.list_select_related,
                       'list_per_page':self.admin.list_per_page,
-                      #'list_max_show_all':self.admin.list_max_show_all,
+                      'list_max_show_all':self.admin.list_max_show_all,
                       'list_editable':self.admin.list_editable,
                       'model_admin':self.admin,}
+            argspec = inspect.getargspec(changelist_cls.__init__)
+            for key in kwargs.keys():#argspec.keywords:
+                if key not in argspec.args:
+                    del kwargs[key]
             self.changelist = changelist_cls(**kwargs)
         return self.changelist
     
