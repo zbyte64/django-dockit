@@ -44,7 +44,13 @@ class SchemaBase(type):
         
         if getattr(meta, 'app_label', None) is None:
             document_module = sys.modules[new_class.__module__]
-            app_label = document_module.__name__.split('.')[-2]
+            parts = document_module.__name__.split('.')
+            #dockitcms.models.submodule.MyModel => applabel=dockitcms, objectname=MyModel
+            if 'models' in parts:
+                index = parts.index('models')
+                app_label = parts[index-1]
+            else:
+                app_label = parts[-2]
         else:
             app_label = getattr(meta, 'app_label')
         
