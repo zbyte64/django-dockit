@@ -168,5 +168,11 @@ class ModelDocumentStorage(BaseDocumentStorage):
     def get_query(self, query_index):
         document = query_index.document
         queryset = DocumentStore.objects.filter(collection=query_index.document._meta.collection)
+        for op in query_index.inclusions:
+            assert op.key == 'pk'
+            queryset = queryset.filter(pk=op.value)
+        for op in query_index.exclusions:
+            assert op.key == 'pk'
+            queryset = queryset.exclude(pk=op.value)
         return DocumentQuery(query_index, queryset)
 

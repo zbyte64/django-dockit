@@ -89,6 +89,13 @@ class DjangoDocumentTestCase(unittest.TestCase):
         Book.objects.get(slug='test')
         Book.objects.get(pk=book.pk)
         
+        try:
+            bad_book = Book.objects.get(pk=int(book.pk)+500)
+        except Book.DoesNotExist:
+            pass
+        else:
+            self.fail('Pk lookup of non-existant object returned an object: %s' % bad_book)
+        
         book.delete()
         self.assertEqual(Book.objects.all().filter(slug='test').count(), 0)
     
