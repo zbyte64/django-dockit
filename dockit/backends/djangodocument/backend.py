@@ -56,6 +56,11 @@ class DocumentQuery(BaseDocumentQuery):
             return self.wrap(self.queryset[val])
 
 class IndexedDocumentQuery(DocumentQuery):
+    def wrap(self, entry):
+        data = simplejson.loads(entry.data)
+        data['_pk'] = entry.doc_id
+        return self.document.to_python(data)
+    
     def values(self, *limit_to, **kwargs):
         queryset = self.queryset
         limit_to = set(limit_to)
