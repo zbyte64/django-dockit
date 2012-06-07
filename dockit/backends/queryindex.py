@@ -64,8 +64,17 @@ class QueryIndex(object):
     def _clone(self):
         return self._add_filter_parts()
     
+    def _pk_only(self):
+        for inclusion in self.inclusions:
+            if inclusion.key != 'pk' or inclusion.operation != 'exact':
+                return False
+        for exclusion in self.exclusions:
+            if exclusion.key != 'pk' or exclusion.operation != 'exact':
+                return False
+        return True
+    
     def _build_queryset(self):
-        if self.inclusions or self.exclusions or self.indexes:
+        if (not self._pk_only() and (self.inclusions or self.exclusions or self.indexes)):
             backend = self.document._meta.get_index_backend_for_read(self)
         else:
             backend = self.document._meta.get_document_backend_for_read()
@@ -141,7 +150,8 @@ class QueryIndex(object):
     
     def get(self, **kwargs):
         inclusions = self._parse_kwargs(kwargs)
-        return self._add_filter_parts(inclusions=inclusions).queryset.get()
+        queryset = self._add_filter_parts(inclusions=inclusions).queryset
+        return queryset.get()
     
     def exists(self):
         return self.queryset.exists()

@@ -29,7 +29,7 @@ class DocumentQuery(BaseDocumentQuery):
         try:
             return self.wrap(queryset.get())
         except self.queryset.model.DoesNotExist:
-            raise self.document.DoesNotExist
+            raise self.document.DoesNotExist(str(queryset.query))
     
     def values(self, *limit_to, **kwargs):
         queryset = self.queryset

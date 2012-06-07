@@ -54,12 +54,6 @@ class CompositeIndexRouter(object):
             from dockit.schema.loading import cache
             cache.post_app_ready()
         
-        if queryset._index_hash() in self.registered_querysets[collection]:
-            return {'queryset':queryset,
-                    'score':0,
-                    'inclusions':[],
-                    'exclusions':[],}
-        
         best_match = None
         query_inclusions = set(queryset.inclusions)
         query_exclusions = set(queryset.exclusions)
@@ -79,6 +73,8 @@ class CompositeIndexRouter(object):
             
             for inclusion in inclusions:
                 match = False
+                if inclusion.key == 'pk' and inclusion.operation == 'exact':
+                    continue
                 for index in val_indexes:
                     if inclusion.key == index.key and inclusion.operation == index.operation:
                         match = True
@@ -93,6 +89,8 @@ class CompositeIndexRouter(object):
             
             for exclusion in exclusions:
                 match = False
+                if exclusion.key == 'pk' and exclusion.operation == 'exact':
+                    continue
                 for index in val_indexes:
                     if exclusion.key == index.key and exclusion.operation == index.operation:
                         match = True
