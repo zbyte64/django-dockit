@@ -20,7 +20,7 @@ class DocumentStore(models.Model):
 class RegisteredIndex(models.Model):
     name = models.CharField(max_length=128, db_index=True)
     collection = models.CharField(max_length=128, db_index=True)
-    query_hash = models.IntegerField()
+    query_hash = models.BigIntegerField()
     
     objects = RegisteredIndexManager()
     
@@ -50,7 +50,7 @@ class IntegerIndex(BaseIndex):
 RegisteredIndex.objects.register_index_model('int', IntegerIndex, int)
 
 class LongIndex(BaseIndex):
-    value = models.IntegerField(null=True)
+    value = models.BigIntegerField(null=True)
 RegisteredIndex.objects.register_index_model('long', LongIndex, long)
 
 class BooleanIndex(BaseIndex):
