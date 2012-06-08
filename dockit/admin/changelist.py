@@ -23,7 +23,10 @@ class ChangeList(BaseChangeList):
 
         # Get the list of objects to display on this page.
         if (self.show_all and can_show_all) or not multi_page:
-            result_list = self.query_set._clone()
+            if isinstance(self.query_set, list):
+                result_list = list(self.query_set)
+            else:
+                result_list = self.query_set._clone()
         else:
             try:
                 result_list = paginator.page(self.page_num+1).object_list
@@ -38,9 +41,9 @@ class ChangeList(BaseChangeList):
         self.paginator = paginator
 
 class ListFieldChangeList(ChangeList):
-    def __init__(self, **kwargs):
-        self.instance = kwargs.pop('instance')
-        self.dotpath = kwargs.pop('dotpath')
+    def __init__(self, instance, dotpath, **kwargs):
+        self.instance = instance
+        self.dotpath = dotpath
         self.request = kwargs['request']
         super(ListFieldChangeList, self).__init__(**kwargs)
     

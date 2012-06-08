@@ -5,4 +5,5 @@ class SimpleSchema(schema.Schema): #TODO make a more complex testcase
 
 class SimpleDocument(schema.Document): #TODO make a more complex testcase
     charfield = schema.CharField()
+    complex_list = schema.ListField(schema.SchemaField(SimpleSchema))
 

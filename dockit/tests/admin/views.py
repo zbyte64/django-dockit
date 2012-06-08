@@ -3,14 +3,17 @@ from django.test.client import RequestFactory
 from django.contrib.auth.models import User
 from django.contrib import admin
 
-from dockit.admin.documentadmin import DocumentAdmin
-from dockit.admin.views import DocumentProxyView, DeleteView, IndexView, HistoryView
+from dockit.admin.documentadmin import DocumentAdmin, SchemaAdmin
+from dockit.admin.views import DocumentProxyView, DeleteView, IndexView, HistoryView, ListFieldIndexView
 
-from common import SimpleDocument
+from common import SimpleDocument, SimpleSchema
+
+from urllib import urlencode
 
 class AdminViewsTestCase(unittest.TestCase):
     def setUp(self):
         self.admin_model = DocumentAdmin(SimpleDocument, admin.site)
+        self.schema_model = SchemaAdmin(SimpleDocument, admin.site, schema=SimpleSchema, documentadmin=self.admin_model)
         self.factory = RequestFactory()
         User.objects.all().delete() #why?
         self.super_user = User.objects.create(is_staff=True, is_active=True, is_superuser=True, username='admin_testuser')
@@ -21,6 +24,7 @@ class AdminViewsTestCase(unittest.TestCase):
         request = self.factory.get('/')
         request.user = self.super_user
         response = view(request)
+        self.assertEqual(response.status_code, 200)
     
     def test_create_view(self):
         kwargs = self.admin_model.get_view_kwargs()
@@ -28,4 +32,17 @@ class AdminViewsTestCase(unittest.TestCase):
         request = self.factory.get('/add/')
         request.user = self.super_user
         response = view(request)
+        self.assertEqual(response.status_code, 200)
+    
+    def test_list_field_index_view(self):
+        kwargs = self.schema_model.get_view_kwargs()
+        #kwargs['schema'] = SimpleSchema #TODO why does this break things?
+        #assert False, str(dir(ListFieldIndexView))
+        view = ListFieldIndexView.as_view(**kwargs)
+        view.schema = SimpleSchema
+        params = {'_dotpath': 'complex_list'}
+        request = self.factory.get('/add/?%s' % urlencode(params))
+        request.user = self.super_user
+        response = view(request)
+        self.assertEqual(response.status_code, 200)
 

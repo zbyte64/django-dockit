@@ -501,12 +501,6 @@ class FragmentViewMixin(BaseFragmentViewMixin):
             return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_add'))
         return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_changelist'))
 
-'''
-(self, request, model, list_display, list_display_links,
-            list_filter, date_hierarchy, search_fields, list_select_related,
-            list_per_page, list_max_show_all, list_editable, model_admin):
-'''
-
 class IndexView(DocumentViewMixin, views.ListView):
     template_suffix = 'change_list'
     
@@ -526,7 +520,7 @@ class IndexView(DocumentViewMixin, views.ListView):
                       'list_editable':self.admin.list_editable,
                       'model_admin':self.admin,}
             argspec = inspect.getargspec(changelist_cls.__init__)
-            for key in kwargs.keys():#argspec.keywords:
+            for key in kwargs.keys():
                 if key not in argspec.args:
                     del kwargs[key]
             self.changelist = changelist_cls(**kwargs)
@@ -559,19 +553,26 @@ class ListFieldIndexView(BaseFragmentViewMixin, views.DetailView):
             dotpath = self.dotpath()
             changelist_cls = self.get_changelist_class()
             #CONSIDER: schemaadmin should have these values
-            self.changelist = changelist_cls(request=self.request,
-                                        model=self.schema,
-                                        instance=instance,
-                                        dotpath=dotpath,
-                                        list_display=self.admin.list_display,
-                                        list_display_links=self.admin.list_display_links,
-                                        list_filter=self.admin.list_filter,
-                                        date_hierarchy=self.admin.date_hierarchy,
-                                        search_fields=self.admin.search_fields,
-                                        list_select_related=self.admin.list_select_related,
-                                        list_per_page=self.admin.list_per_page,
-                                        list_editable=self.admin.list_editable,
-                                        model_admin=self.admin,)
+            kwargs = {'request':self.request,
+                      'model':self.schema,
+                      'list_display':self.admin.list_display,
+                      'list_display_links':self.admin.list_display_links,
+                      'list_filter':self.admin.list_filter,
+                      'date_hierarchy':self.admin.date_hierarchy,
+                      'search_fields':self.admin.search_fields,
+                      'list_select_related':self.admin.list_select_related,
+                      'list_per_page':self.admin.list_per_page,
+                      'list_max_show_all':self.admin.list_max_show_all,
+                      'list_editable':self.admin.list_editable,
+                      'model_admin':self.admin,}
+            from changelist import ChangeList #hack for Django 1.3 & 1.4 compatibility
+            argspec = inspect.getargspec(ChangeList.__init__)
+            for key in kwargs.keys():
+                if key not in argspec.args:
+                    del kwargs[key]
+            kwargs.update({'instance':instance,
+                           'dotpath':dotpath,})
+            self.changelist = changelist_cls(**kwargs)
         return self.changelist
     
     def get_breadcrumbs(self):
