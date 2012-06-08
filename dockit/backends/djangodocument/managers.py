@@ -70,8 +70,12 @@ class RegisteredIndexManager(models.Manager):
     
     def on_save(self, collection, doc_id, data):
         from dockit.backends import INDEX_ROUTER
+        if collection not in INDEX_ROUTER.registered_querysets:
+            return #no querysets have been registered
         registered_queries = self.filter(collection=collection)
         for query in registered_queries:
+            if query.query_hash not in INDEX_ROUTER.registered_querysets[collection]:
+                continue #TODO stale index, perhaps we should remove
             query_index = INDEX_ROUTER.registered_querysets[collection][query.query_hash]
             self.evaluate_query_index(query, query_index, doc_id, data)
     

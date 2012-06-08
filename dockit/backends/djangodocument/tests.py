@@ -43,6 +43,7 @@ class DjangoDocumentTestCase(unittest.TestCase):
         
         backends.DOCUMENT_ROUTER = MockedDocumentRouter()
         backends.INDEX_ROUTER = MockedIndexRouter()
+        backends.DOCUMENT_ROUTER.register_document(Book)
         self.clear_books()
         RegisteredIndex.objects.all().delete()
     
@@ -146,4 +147,11 @@ class DjangoDocumentTestCase(unittest.TestCase):
         
         query = Book.objects.filter(sites=Site.objects.get_current())
         self.assertEqual(query.count(), 1)
+    
+    def test_stale_index(self):
+        RegisteredIndex.objects.create(query_hash=0, collection=Book._meta.collection)
+        RegisteredIndex.objects.on_save(Book._meta.collection, 127, {})
+        
+        backends.INDEX_ROUTER.registered_querysets[Book._meta.collection] = {}
+        RegisteredIndex.objects.on_save(Book._meta.collection, 127, {})
 
