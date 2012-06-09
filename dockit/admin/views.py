@@ -755,13 +755,19 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         return FragmentViewMixin.form_valid(self, form)
 
 class DeleteView(DocumentViewMixin, views.DetailView):
-    template_suffix = 'delete_selected_confirmation'
+    template_suffix = 'schema_delete_confirmation'
     title = _('Delete')
     key = 'delete'
     
+    def get_breadcrumbs(self):
+        breadcrumbs = DocumentViewMixin.get_breadcrumbs(self)
+        breadcrumbs.append(self.admin.get_instance_breadcrumb(self.object))
+        breadcrumbs.append(Breadcrumb(_('Delete')))
+        return breadcrumbs
+    
     def get_context_data(self, **kwargs):
         context = views.DetailView.get_context_data(self, **kwargs)
-        #context.update(FragmentViewMixin.get_context_data(self, **kwargs))
+        context.update(DocumentViewMixin.get_context_data(self, **kwargs))
         #TODO add what will be deleted
         return context
     
@@ -770,7 +776,10 @@ class DeleteView(DocumentViewMixin, views.DetailView):
         object_repr = unicode(self.object)
         self.object.delete()
         self.admin.log_deletion(request, self.object, object_repr)
-        return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_changelist'))
+        return HttpResponseRedirect(self.get_success_url())
+    
+    def get_success_url(self):
+        return self.admin.reverse(self.admin.app_name+'_changelist')
 
 class HistoryView(DocumentViewMixin, views.ListView):
     title = _('History')

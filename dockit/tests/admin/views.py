@@ -10,6 +10,16 @@ from common import SimpleDocument, SimpleSchema
 
 from urllib import urlencode
 
+class TestableDeleteView(DeleteView):
+    def get_object(self):
+        obj = SimpleDocument()
+        obj.save()
+        return obj
+    
+    def get_success_url(self):
+        #TODO resolve strange import error "No module named urls"
+        return '/'
+
 class AdminViewsTestCase(unittest.TestCase):
     def setUp(self):
         self.admin_model = DocumentAdmin(SimpleDocument, admin.site)
@@ -45,4 +55,19 @@ class AdminViewsTestCase(unittest.TestCase):
         request.user = self.super_user
         response = view(request)
         self.assertEqual(response.status_code, 200)
+    
+    def test_delete_view(self):
+        kwargs = self.admin_model.get_view_kwargs()
+        kwargs['object'] = SimpleDocument()
+        view = TestableDeleteView.as_view(**kwargs)
+        
+        request = self.factory.get('/1/delete/')
+        request.user = self.super_user
+        response = view(request)
+        self.assertEqual(response.status_code, 200)
+        
+        request = self.factory.post('/1/delete/')
+        request.user = self.super_user
+        response = view(request)
+        self.assertEqual(response.status_code, 302)
 
