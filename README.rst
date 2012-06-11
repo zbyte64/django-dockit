@@ -31,7 +31,7 @@ Installation
 Requirements
 ------------
 
-* Python 2.5 or later
+* Python 2.6 or later
 * Django 1.3
 
 

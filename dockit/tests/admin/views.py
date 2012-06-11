@@ -6,6 +6,8 @@ from django.contrib import admin
 from dockit.admin.documentadmin import DocumentAdmin, SchemaAdmin
 from dockit.admin.views import DocumentProxyView, DeleteView, IndexView, HistoryView, ListFieldIndexView
 
+from django.contrib import admin
+
 from common import SimpleDocument, SimpleSchema
 
 from urllib import urlencode
@@ -15,10 +17,8 @@ class TestableDeleteView(DeleteView):
         obj = SimpleDocument()
         obj.save()
         return obj
-    
-    def get_success_url(self):
-        #TODO resolve strange import error "No module named urls"
-        return '/'
+
+admin.site.register([SimpleDocument], DocumentAdmin)
 
 class AdminViewsTestCase(unittest.TestCase):
     def setUp(self):

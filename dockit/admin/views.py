@@ -3,9 +3,11 @@ from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext as _
 from django.utils.html import escape, escapejs
 from django.views.generic import TemplateView, View
+from django.contrib.contenttypes.models import ContentType
 
 from base import AdminViewMixin
 from breadcrumbs import Breadcrumb
+from objecttools import LinkObjectTool
 import helpers
 
 from dockit import views
@@ -38,7 +40,7 @@ class DocumentViewMixin(AdminViewMixin):
         if self.template_name:
             return [self.template_name]
         opts = self.document._meta
-        app_label = opts.app_label
+        app_label = opts.app_label.lower()
         object_name = opts.object_name.lower()
         return ['admin/%s/%s/%s.html' % (app_label, object_name, self.template_suffix),
                 'admin/%s/%s.html' % (app_label, self.template_suffix),
@@ -334,7 +336,8 @@ class FragmentViewMixin(BaseFragmentViewMixin):
     
     def get_object_tools(self, context):
         object_tools = list()
-        for object_tool in self.admin.get_object_tools(self.request):
+        obj = getattr(self, 'object', None)
+        for object_tool in self.admin.get_object_tools(self.request, obj):
             object_tools.append(object_tool.render(self.request, context))
         return object_tools
     
@@ -751,6 +754,7 @@ class UpdateView(FragmentViewMixin, views.UpdateView):
         return context
     
     def form_valid(self, form):
+        #TODO construct a change message
         self.admin.log_change(self.request, self.object, '')
         return FragmentViewMixin.form_valid(self, form)
 
@@ -761,8 +765,8 @@ class DeleteView(DocumentViewMixin, views.DetailView):
     
     def get_breadcrumbs(self):
         breadcrumbs = DocumentViewMixin.get_breadcrumbs(self)
-        breadcrumbs.append(self.admin.get_instance_breadcrumb(self.object))
-        breadcrumbs.append(Breadcrumb(_('Delete')))
+        breadcrumbs.append(self.admin.get_instance_breadcrumb(self.object, include_link=True))
+        breadcrumbs.append(Breadcrumb(self.title))
         return breadcrumbs
     
     def get_context_data(self, **kwargs):
@@ -781,7 +785,30 @@ class DeleteView(DocumentViewMixin, views.DetailView):
     def get_success_url(self):
         return self.admin.reverse(self.admin.app_name+'_changelist')
 
-class HistoryView(DocumentViewMixin, views.ListView):
+class HistoryView(DocumentViewMixin, views.DetailView):
+    template_suffix = 'schema_history'
     title = _('History')
     key = 'history'
+    
+    def get_breadcrumbs(self):
+        breadcrumbs = DocumentViewMixin.get_breadcrumbs(self)
+        breadcrumbs.append(self.admin.get_instance_breadcrumb(self.object, include_link=True))
+        breadcrumbs.append(Breadcrumb(self.title))
+        return breadcrumbs
+    
+    def get_object_tool(self, request, obj):
+        return LinkObjectTool(self.title, self.admin.reverse('%s_%s' % (self.admin.app_name, self.key), obj.pk), css_class='historylink')
+    
+    def get_context_data(self, **kwargs):
+        context = views.DetailView.get_context_data(self, **kwargs)
+        context.update(DocumentViewMixin.get_context_data(self, **kwargs))
+        context['action_list'] = self.get_action_list()
+        return context
+    
+    def get_action_list(self):
+        obj = self.object
+        from django.contrib.admin.models import LogEntry
+        content_type = ContentType.objects.get_for_model(self.admin.proxy_django_model).pk
+        object_id = '%s:%s' % (obj._meta.collection, obj.pk)
+        return LogEntry.objects.filter(object_id=object_id, content_type_id=content_type)
 

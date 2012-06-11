@@ -4,11 +4,13 @@ from django.utils.encoding import force_unicode
 from django.core.urlresolvers import reverse
 from django.contrib.admin import widgets
 from django.contrib.admin.options import get_ul_class
+from django.contrib.contenttypes.models import ContentType
 from django import forms
 
 from dockit.paginator import Paginator
 from dockit.forms import DocumentForm
 from dockit.forms.fields import PrimitiveListField
+from dockit.models import DockitPermission
 
 import views
 from widgets import AdminPrimitiveListWidget
@@ -35,6 +37,7 @@ class SchemaAdmin(object):
     create = views.CreateView
     update = views.UpdateView
     delete = views.DeleteView
+    history = views.HistoryView
     select_schema = views.SchemaTypeSelectionView
     field_list_index = views.ListFieldIndexView
     
@@ -78,6 +81,8 @@ class SchemaAdmin(object):
     object_history_template = None
     
     schema = None
+    
+    proxy_django_model = DockitPermission #if we really need to give a model to django, let it be this one
 
     def __init__(self, model, admin_site, schema=None, documentadmin=None):
         self.model = model
@@ -332,8 +337,10 @@ class SchemaAdmin(object):
         return self.paginator(query_set, paginate_by)
     
     def get_object_tools(self, request, object=None):
-        #TODO object tools are renderable object that are displayed at the top the admin
-        #TODO return history object tool if there is an object
+        #object tools are renderable object that are displayed at the top the admin
+        if object:
+            init = self.get_view_kwargs()
+            return [self.history(**init).get_object_tool(request, object)]
         return []
     
     def get_field(self, schema, dotpath, obj=None):
@@ -376,7 +383,6 @@ class DocumentAdmin(SchemaAdmin):
     
     delete = views.DeleteView
     index = views.IndexView
-    history = views.HistoryView
     detail_views = [views.HistoryView, views.DeleteView]
     default_schema_admin = SchemaAdmin
     schema_inlines = [] # [(Schema, SchemaAdminCls),]
@@ -458,11 +464,11 @@ class DocumentAdmin(SchemaAdmin):
         The default implementation creates an admin LogEntry object.
         """
         from django.contrib.admin.models import LogEntry, ADDITION
+        object_id = '%s:%s' % (object._meta.collection, object.pk)
         LogEntry.objects.log_action(
             user_id         = request.user.pk,
-            #content_type_id = ContentType.objects.get_for_model(object).pk,
-            content_type_id = None,
-            object_id       = object.get_id(),
+            content_type_id = ContentType.objects.get_for_model(self.proxy_django_model).pk,
+            object_id       = object_id,
             object_repr     = force_unicode(object),
             action_flag     = ADDITION
         )
@@ -474,11 +480,11 @@ class DocumentAdmin(SchemaAdmin):
         The default implementation creates an admin LogEntry object.
         """
         from django.contrib.admin.models import LogEntry, CHANGE
+        object_id = '%s:%s' % (object._meta.collection, object.pk)
         LogEntry.objects.log_action(
             user_id         = request.user.pk,
-            #content_type_id = ContentType.objects.get_for_model(object).pk,
-            content_type_id = None,
-            object_id       = object.get_id(),
+            content_type_id = ContentType.objects.get_for_model(self.proxy_django_model).pk,
+            object_id       = object_id,
             object_repr     = force_unicode(object),
             action_flag     = CHANGE,
             change_message  = message
@@ -492,11 +498,11 @@ class DocumentAdmin(SchemaAdmin):
         The default implementation creates an admin LogEntry object.
         """
         from django.contrib.admin.models import LogEntry, DELETION
+        object_id = '%s:%s' % (object._meta.collection, object.pk)
         LogEntry.objects.log_action(
             user_id         = request.user.pk,
-            #content_type_id = ContentType.objects.get_for_model(self.model).pk,
-            content_type_id = None,
-            object_id       = object.get_id(),
+            content_type_id = ContentType.objects.get_for_model(self.proxy_django_model).pk,
+            object_id       = object_id,
             object_repr     = object_repr,
             action_flag     = DELETION
         )
@@ -512,8 +518,10 @@ class DocumentAdmin(SchemaAdmin):
         ]
         return breadcrumbs
     
-    def get_instance_breadcrumb(self, obj=None):
+    def get_instance_breadcrumb(self, obj=None, include_link=False):
         if obj:
+            if include_link:
+                return Breadcrumb(unicode(obj), self.reverse(self.app_name+'_change', obj.pk))
             return Breadcrumb(unicode(obj))
         return Breadcrumb('Add %s' % self.model._meta.verbose_name)
     
