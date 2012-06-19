@@ -364,11 +364,11 @@ class SchemaAdmin(object):
                 assert field
         return field
     
-    def get_base_breadcrumbs(self):
-        return self.documentadmin.get_base_breadcrumbs()
+    def get_base_breadcrumbs(self, top=False):
+        return self.documentadmin.get_base_breadcrumbs(top)
     
-    def get_instance_breadcrumb(self, obj=None):
-        return self.documentadmin.get_instance_breadcrumb(obj)
+    def get_instance_breadcrumb(self, obj=None, include_link=False):
+        return self.documentadmin.get_instance_breadcrumb(obj, include_link)
 
 class DocumentAdmin(SchemaAdmin):
     # Actions
