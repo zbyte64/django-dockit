@@ -505,7 +505,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         return HttpResponseRedirect(self.admin.reverse(self.admin.app_name+'_changelist'))
 
 class IndexView(DocumentViewMixin, views.ListView):
-    template_suffix = 'change_list'
+    template_suffix = 'schema_change_list'
     
     def get_changelist(self):
         if not hasattr(self, 'changelist'):
@@ -540,12 +540,18 @@ class IndexView(DocumentViewMixin, views.ListView):
                         'title': cl.title,
                         'is_popup': cl.is_popup,
                         'breadcrumbs': self.get_breadcrumbs(),})
-        
+        context['object_tools'] = self.get_object_tools(context)
         return context
     
     def get_queryset(self):
         cl = self.get_changelist()
         return cl.get_query_set()
+    
+    def get_object_tools(self, context):
+        object_tools = list()
+        for object_tool in self.admin.get_object_tools(self.request, add=True):
+            object_tools.append(object_tool.render(self.request, context))
+        return object_tools
 
 class ListFieldIndexView(BaseFragmentViewMixin, views.DetailView):
     template_suffix = 'listfield_change_list'

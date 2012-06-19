@@ -1,6 +1,7 @@
 from django.conf.urls.defaults import patterns, url
 from django.utils.functional import update_wrapper
 from django.utils.encoding import force_unicode
+from django.utils.translation import ugettext as _
 from django.core.urlresolvers import reverse
 from django.contrib.admin import widgets
 from django.contrib.admin.options import get_ul_class
@@ -15,6 +16,7 @@ from dockit.models import DockitPermission
 import views
 from widgets import AdminPrimitiveListWidget
 from breadcrumbs import Breadcrumb
+from objecttools import LinkObjectTool
 
 FORMFIELD_FOR_FIELD_DEFAULTS = {
     forms.DateTimeField: {
@@ -337,11 +339,18 @@ class SchemaAdmin(object):
     def get_paginator(self, request, query_set, paginate_by):
         return self.paginator(query_set, paginate_by)
     
-    def get_object_tools(self, request, object=None):
+    def get_object_tools(self, request, object=None, add=False):
         #object tools are renderable object that are displayed at the top the admin
+        init = self.get_view_kwargs()
         if object:
-            init = self.get_view_kwargs()
             return [self.history(**init).get_object_tool(request, object)]
+        elif add:
+            if self.schema:
+                opts = self.schema._meta
+            else:
+                opts = self.model._meta
+            title = _('Add %s') % force_unicode(opts.verbose_name)
+            return [LinkObjectTool(title, self.reverse('%s_add' % self.app_name), css_class='addlink')]
         return []
     
     def get_field(self, schema, dotpath, obj=None):

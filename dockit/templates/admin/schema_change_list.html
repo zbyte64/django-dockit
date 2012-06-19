@@ -1,0 +1,26 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_modify adminmedia staticfiles %}
+{% load url from future %}
+
+{% block breadcrumbs %}{% if not is_popup %}
+<div class="breadcrumbs">
+    {% for breadcrumb in breadcrumbs %}
+    {% if breadcrumb.url %}
+    <a href="{{breadcrumb.get_absolute_url}}">{{breadcrumb.name}}</a>
+    {% else %}
+    {{breadcrumb.name}}
+    {% endif %}
+    {% if not forloop.last %}&rsaquo;{% endif %}
+    {% endfor %}
+</div>
+{% endif %}{% endblock %}
+
+{% block object-tools %}
+{% if object_tools %}
+  <ul class="object-tools">
+  {% for object_tool in object_tools %}
+  <li>{{object_tool}}</li>
+  {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

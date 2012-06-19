@@ -34,7 +34,6 @@
   {% for object_tool in object_tools %}
   <li>{{object_tool}}</li>
   {% endfor %}
-  {% comment %}<li><a href="history/" class="historylink">{% trans "History" %}</a></li>{% endcomment %}
   {% if has_absolute_url and original %}<li><a href="{{original.get_absolute_url}}" class="viewsitelink">{% trans "View on site" %}</a></li>{% endif%}
   </ul>
 {% endif %}
