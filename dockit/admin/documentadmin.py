@@ -88,6 +88,7 @@ class SchemaAdmin(object):
         self.model = model
         self.admin_site = admin_site
         self.app_name = model._meta.app_label +'_'+ model._meta.module_name
+        self.app_label = model._meta.app_label
         overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
         overrides.update(self.formfield_overrides)
         self.formfield_overrides = overrides
@@ -112,7 +113,7 @@ class SchemaAdmin(object):
         #if self.opts.get_ordered_objects():
         #    js.extend(['js/getElementsBySelector.js', 'js/dom-drag.js' , 'js/admin/ordering.js'])
 
-        return forms.Media(js=['%s%s' % (settings.ADMIN_MEDIA_PREFIX, url_s) for url_s in js])
+        return forms.Media(js=['%s%s' % (getattr(settings, 'ADMIN_MEDIA_PREFIX', 'admin'), url_s) for url_s in js])
     media = property(_media)
     
     def has_add_permission(self, request):
@@ -507,15 +508,18 @@ class DocumentAdmin(SchemaAdmin):
             action_flag     = DELETION
         )
     
-    def get_base_breadcrumbs(self):
+    def get_base_breadcrumbs(self, top=False):
         admin_name = self.admin_site.name
         model_name = self.model._meta.verbose_name
         opts = self.model._meta
         breadcrumbs = [
             Breadcrumb('Home', ['%s:index' % admin_name]),
-            Breadcrumb(opts.app_label, ['%s:app_list' % admin_name, (self.app_name,), {}]),
-            Breadcrumb(opts.verbose_name_plural, ['%s:%s_changelist' % (admin_name, self.app_name)]),
+            Breadcrumb(opts.app_label, ['%s:app_list' % admin_name, (self.app_label,), {}]),
         ]
+        if top:
+            breadcrumbs.append(Breadcrumb(opts.verbose_name_plural))
+        else:
+            breadcrumbs.append(Breadcrumb(opts.verbose_name_plural, ['%s:%s_changelist' % (admin_name, self.app_name)]))
         return breadcrumbs
     
     def get_instance_breadcrumb(self, obj=None, include_link=False):

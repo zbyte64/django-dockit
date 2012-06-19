@@ -529,13 +529,17 @@ class IndexView(DocumentViewMixin, views.ListView):
             self.changelist = changelist_cls(**kwargs)
         return self.changelist
     
+    def get_breadcrumbs(self):
+        return self.admin.get_base_breadcrumbs(top=True)
+    
     def get_context_data(self, **kwargs):
         context = views.ListView.get_context_data(self, **kwargs)
         context.update(DocumentViewMixin.get_context_data(self, **kwargs))
         cl = self.get_changelist()
         context.update({'cl': cl,
                         'title': cl.title,
-                        'is_popup': cl.is_popup,})
+                        'is_popup': cl.is_popup,
+                        'breadcrumbs': self.get_breadcrumbs(),})
         
         return context
     
