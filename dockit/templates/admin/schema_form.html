@@ -1,5 +1,5 @@
 {% extends "admin/base_site.html" %}
-{% load i18n admin_modify adminmedia %}
+{% load i18n admin_modify adminmedia staticfiles %}
 {% load url from future %}
 
 {% block extrahead %}{{ block.super }}
@@ -8,7 +8,7 @@
 {{ media }}
 {% endblock %}
 
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% admin_media_prefix %}css/forms.css" />{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />{% endblock %}
 
 {% block coltype %}{% if ordered_objects %}colMS{% else %}colM{% endif %}{% endblock %}
 
@@ -34,7 +34,6 @@
   {% for object_tool in object_tools %}
   <li>{{object_tool}}</li>
   {% endfor %}
-  {% comment %}<li><a href="history/" class="historylink">{% trans "History" %}</a></li>{% endcomment %}
   {% if has_absolute_url and original %}<li><a href="{{original.get_absolute_url}}" class="viewsitelink">{% trans "View on site" %}</a></li>{% endif%}
   </ul>
 {% endif %}

@@ -1,6 +1,7 @@
 from django.conf.urls.defaults import patterns, url
 from django.utils.functional import update_wrapper
 from django.utils.encoding import force_unicode
+from django.utils.translation import ugettext as _
 from django.core.urlresolvers import reverse
 from django.contrib.admin import widgets
 from django.contrib.admin.options import get_ul_class
@@ -15,6 +16,7 @@ from dockit.models import DockitPermission
 import views
 from widgets import AdminPrimitiveListWidget
 from breadcrumbs import Breadcrumb
+from objecttools import LinkObjectTool
 
 FORMFIELD_FOR_FIELD_DEFAULTS = {
     forms.DateTimeField: {
@@ -88,6 +90,7 @@ class SchemaAdmin(object):
         self.model = model
         self.admin_site = admin_site
         self.app_name = model._meta.app_label +'_'+ model._meta.module_name
+        self.app_label = model._meta.app_label
         overrides = FORMFIELD_FOR_FIELD_DEFAULTS.copy()
         overrides.update(self.formfield_overrides)
         self.formfield_overrides = overrides
@@ -112,7 +115,7 @@ class SchemaAdmin(object):
         #if self.opts.get_ordered_objects():
         #    js.extend(['js/getElementsBySelector.js', 'js/dom-drag.js' , 'js/admin/ordering.js'])
 
-        return forms.Media(js=['%s%s' % (settings.ADMIN_MEDIA_PREFIX, url_s) for url_s in js])
+        return forms.Media(js=['%s%s' % (getattr(settings, 'ADMIN_MEDIA_PREFIX', 'admin'), url_s) for url_s in js])
     media = property(_media)
     
     def has_add_permission(self, request):
@@ -336,11 +339,18 @@ class SchemaAdmin(object):
     def get_paginator(self, request, query_set, paginate_by):
         return self.paginator(query_set, paginate_by)
     
-    def get_object_tools(self, request, object=None):
+    def get_object_tools(self, request, object=None, add=False):
         #object tools are renderable object that are displayed at the top the admin
+        init = self.get_view_kwargs()
         if object:
-            init = self.get_view_kwargs()
             return [self.history(**init).get_object_tool(request, object)]
+        elif add:
+            if self.schema:
+                opts = self.schema._meta
+            else:
+                opts = self.model._meta
+            title = _('Add %s') % force_unicode(opts.verbose_name)
+            return [LinkObjectTool(title, self.reverse('%s_add' % self.app_name), css_class='addlink')]
         return []
     
     def get_field(self, schema, dotpath, obj=None):
@@ -363,11 +373,11 @@ class SchemaAdmin(object):
                 assert field
         return field
     
-    def get_base_breadcrumbs(self):
-        return self.documentadmin.get_base_breadcrumbs()
+    def get_base_breadcrumbs(self, top=False):
+        return self.documentadmin.get_base_breadcrumbs(top)
     
-    def get_instance_breadcrumb(self, obj=None):
-        return self.documentadmin.get_instance_breadcrumb(obj)
+    def get_instance_breadcrumb(self, obj=None, include_link=False):
+        return self.documentadmin.get_instance_breadcrumb(obj, include_link)
 
 class DocumentAdmin(SchemaAdmin):
     # Actions
@@ -507,15 +517,18 @@ class DocumentAdmin(SchemaAdmin):
             action_flag     = DELETION
         )
     
-    def get_base_breadcrumbs(self):
+    def get_base_breadcrumbs(self, top=False):
         admin_name = self.admin_site.name
         model_name = self.model._meta.verbose_name
         opts = self.model._meta
         breadcrumbs = [
             Breadcrumb('Home', ['%s:index' % admin_name]),
-            Breadcrumb(opts.app_label, ['%s:app_list' % admin_name, (self.app_name,), {}]),
-            Breadcrumb(opts.verbose_name_plural, ['%s:%s_changelist' % (admin_name, self.app_name)]),
+            Breadcrumb(opts.app_label, ['%s:app_list' % admin_name, (self.app_label,), {}]),
         ]
+        if top:
+            breadcrumbs.append(Breadcrumb(opts.verbose_name_plural))
+        else:
+            breadcrumbs.append(Breadcrumb(opts.verbose_name_plural, ['%s:%s_changelist' % (admin_name, self.app_name)]))
         return breadcrumbs
     
     def get_instance_breadcrumb(self, obj=None, include_link=False):
