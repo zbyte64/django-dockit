@@ -3,45 +3,17 @@ from django.utils import unittest
 from dockit import schema
 from dockit import backends
 from dockit.models import TemporaryDocument
+from dockit.tests.backends.common import BackendTestCase
 
 class TestDocument(TemporaryDocument):
     charfield = schema.CharField()
     listfield = schema.ListField(schema.CharField())
 
-class MockedDocumentRouter(backends.CompositeDocumentRouter):
-    def __init__(self):
-        super(MockedDocumentRouter, self).__init__([])
-    
-    def get_storage_name_for_read(self, document):
-        return 'mongo'
-    
-    def get_storage_name_for_write(self, document):
-        return 'mongo'
-
-class MockedIndexRouter(backends.CompositeIndexRouter):
-    def __init__(self):
-        super(MockedIndexRouter, self).__init__([])
-    
-    def get_index_name_for_read(self, document, queryset):
-        return 'mongo'
-    
-    def get_index_name_for_write(self, document, queryset):
-        return 'mongo'
-
-class MongoBackendTestCase(unittest.TestCase):
+class MongoBackendTestCase(BackendTestCase):
     def setUp(self):
-        #TODO use mock instead
-        self._original_document_router = backends.DOCUMENT_ROUTER
-        self._original_index_router = backends.INDEX_ROUTER
-        
-        backends.DOCUMENT_ROUTER = MockedDocumentRouter()
-        backends.INDEX_ROUTER = MockedIndexRouter()
+        super(MongoBackendTestCase, self).setUp()
         
         TestDocument.objects.all().delete()
-    
-    def tearDown(self):
-        backends.DOCUMENT_ROUTER = self._original_document_router
-        backends.INDEX_ROUTER = self._original_index_router
     
     def test_get_nonexistant_document_raises_error(self):
         try:

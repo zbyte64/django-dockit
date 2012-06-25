@@ -150,14 +150,14 @@ class CompositeIndexRouter(object):
         collection = queryset.document._meta.collection
         key = queryset._index_hash()
         
+        self.registered_querysets.setdefault(collection, {})
+        self.registered_querysets[collection][key] = queryset
+        
         backend = document._meta.get_index_backend_for_write(queryset)
         backend.register_index(queryset)
         backend2 = document._meta.get_index_backend_for_read(queryset)
         if backend != backend2:
             backend2.register_index(queryset)
-        
-        self.registered_querysets.setdefault(collection, {})
-        self.registered_querysets[collection][key] = queryset
 
 DYNAMIC_IMPORT_CACHE = dict()
 

@@ -32,6 +32,7 @@ setup(name='django-dockit',
         'pep8==1.3.1',
         'coverage',
         'django',
+        'Mock',
       ),
       include_package_data = True,
   )

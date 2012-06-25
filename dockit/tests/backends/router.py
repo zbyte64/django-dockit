@@ -3,10 +3,12 @@ from django.utils import unittest
 from common import SimpleDocument
 
 from dockit.backends import CompositeIndexRouter
+from dockit import backends
 
 class RouterTestCase(unittest.TestCase):
     def setUp(self):
-        self.router = CompositeIndexRouter([])
+        self.router = backends.INDEX_ROUTER#CompositeIndexRouter([])
+        
     
     def test_get_effective_query_index(self):
         original_queryset = SimpleDocument.objects.filter(featured=True).exclude(published=False).index('charfield')

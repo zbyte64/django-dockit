@@ -3,6 +3,7 @@ from django.contrib.sites.models import Site
 
 from dockit import backends
 from dockit import schema
+from dockit.tests.backends.common import BackendTestCase
 
 from models import RegisteredIndex, RegisteredIndexDocument, StringIndex
 
@@ -15,41 +16,14 @@ class Book(schema.Document):
     number_list = schema.ListField(schema.IntegerField())
     sites = schema.ModelSetField(Site)
 
-class MockedDocumentRouter(backends.CompositeDocumentRouter):
-    def __init__(self):
-        super(MockedDocumentRouter, self).__init__([])
+class DjangoDocumentTestCase(BackendTestCase):
+    backend_name = 'djangodocument'
     
-    def get_storage_name_for_read(self, document):
-        return 'djangodocument'
-    
-    def get_storage_name_for_write(self, document):
-        return 'djangodocument'
-
-class MockedIndexRouter(backends.CompositeIndexRouter):
-    def __init__(self):
-        super(MockedIndexRouter, self).__init__([])
-    
-    def get_index_name_for_read(self, document, queryset):
-        return 'djangodocument'
-    
-    def get_index_name_for_write(self, document, queryset):
-        return 'djangodocument'
-
-class DjangoDocumentTestCase(unittest.TestCase):
     def setUp(self):
-        #TODO use mock instead
-        self._original_document_router = backends.DOCUMENT_ROUTER
-        self._original_index_router = backends.INDEX_ROUTER
+        super(DjangoDocumentTestCase, self).setUp()
         
-        backends.DOCUMENT_ROUTER = MockedDocumentRouter()
-        backends.INDEX_ROUTER = MockedIndexRouter()
-        backends.DOCUMENT_ROUTER.register_document(Book)
         self.clear_books()
         RegisteredIndex.objects.all().delete()
-    
-    def tearDown(self):
-        backends.DOCUMENT_ROUTER = self._original_document_router
-        backends.INDEX_ROUTER = self._original_index_router
     
     def clear_books(self):
         Book.objects.all().delete()
