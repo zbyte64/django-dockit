@@ -3,7 +3,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from dockit.backends.base import BaseDocumentStorage, BaseIndexStorage
 from dockit.backends.queryset import BaseDocumentQuery
-from dockit.backends import get_index_router
+from dockit.backends import get_index_router, dynamic_import
 
 from models import DocumentStore, RegisteredIndex, RegisteredIndexDocument
 from utils import db_table_exists
@@ -90,14 +90,11 @@ class ModelIndexStorage(BaseIndexStorage):
     name = "djangomodel"
     _indexers = dict() #TODO this should be automatic
     
-    def __init__(self, index_tasks=None):
+    def __init__(self, INDEX_TASKS='dockit.backends.djangodocument.tasks.IndexTasks'):
         self._tables_exist = False
         self.indexes = dict()
         self.pending_indexes = set()
-        if not index_tasks: #TODO settings powered, celery or ztask
-            from tasks import IndexTasks
-            index_tasks = IndexTasks()
-        self.index_tasks = index_tasks
+        self.index_tasks = dynamic_import(INDEX_TASKS)()
         import indexers
     
     def _register_pending_indexes(self):

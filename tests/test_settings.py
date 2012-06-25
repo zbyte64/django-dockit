@@ -178,6 +178,18 @@ if 'TRAVIS' in os.environ:
     if 'dockit.backends.mongo' not in INSTALLED_APPS:
         INSTALLED_APPS.append('dockit.backends.mongo')
 
+if os.environ.get('TASK_BACKEND', None) == 'celery':
+    DOCKIT_INDEX_BACKENDS['djangodocument']['INDEX_TASKS'] = 'dockit.backends.djangodocument.tasks.CeleryIndexTasks'
+    INSTALLED_APPS += ["djcelery"]
+    CELERY_ALWAYS_EAGER = True
+    
+    import djcelery
+    djcelery.setup_loader()
+if os.environ.get('TASK_BACKEND', None) == 'ztask':
+    DOCKIT_INDEX_BACKENDS['djangodocument']['INDEX_TASKS'] = 'dockit.backends.djangodocument.tasks.ZTaskIndexTasks'
+    INSTALLED_APPS += ["django_ztask"]
+    ZTASKD_ALWAYS_EAGER = True
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.

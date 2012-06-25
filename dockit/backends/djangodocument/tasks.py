@@ -50,6 +50,7 @@ class IndexTasks(object):
 
 class ZTaskIndexTasks(IndexTasks):
     def __init__(self):
+        super(ZTaskIndexTasks, self).__init__()
         from django_ztask.decorators import task
         self._register_index = task(register_index)
         self._reindex = task(reindex)
@@ -70,6 +71,7 @@ class ZTaskIndexTasks(IndexTasks):
 
 class CeleryIndexTasks(IndexTasks):
     def __init__(self):
+        super(CeleryIndexTasks, self).__init__()
         from celery.task import task
         self._register_index = task(register_index, ignore_result=True)
         self._reindex = task(reindex, ignore_result=True)
@@ -77,14 +79,14 @@ class CeleryIndexTasks(IndexTasks):
         self._on_delete = task(on_delete, ignore_result=True)
         
     def schedule_register_index(self, **params):
-        self._register_index.async(**params)
+        self._register_index.delay(**params)
     
     def schedule_reindex(self, **params):
-        self._reindex.async(**params)
+        self._reindex.delay(**params)
     
     def schedule_on_save(self, collection, doc_id, data):
-        self._on_save.async(collection, doc_id, data)
+        self._on_save.delay(collection, doc_id, data)
     
     def schedule_on_delete(self, collection, doc_id):
-        self._on_delete.async(collection, doc_id)
+        self._on_delete.delay(collection, doc_id)
 
