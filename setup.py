@@ -29,7 +29,7 @@ setup(name='django-dockit',
       packages=find_packages(exclude=['test_environment', 'tests']),
       test_suite='tests.setuptest.SetupTestSuite',
       tests_require=(
-        'pep8',
+        'pep8==1.3.1',
         'coverage',
         'django',
       ),

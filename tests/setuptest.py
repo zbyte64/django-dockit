@@ -139,12 +139,8 @@ class SetupTestSuite(unittest.TestSuite):
             sys.stdout = mystdout = StringIO()
 
             # Run Pep8 checks.
-            pep8.options, pep8.args = pep8.process_options()
-            pep8.args = self.packages
-            pep8.options.repeat = True
-            pep8.options.ignore = ['E2', 'E3', 'E4', 'E501', 'W']
-            for package in self.packages:
-                pep8.input_dir(package)
+            pep8_style = pep8.StyleGuide(ignore=['E2', 'E3', 'E4', 'E501', 'W'])
+            pep8_style.check_files([pkg.replace('.', '/') for pkg in self.packages])
 
             # Restore stdout.
             sys.stdout = old_stdout

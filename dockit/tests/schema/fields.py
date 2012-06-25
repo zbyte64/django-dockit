@@ -12,6 +12,7 @@ from common import SimpleSchema, SimpleDocument
 class BaseFieldTestCase(unittest.TestCase):
     EXAMPLE_VALUES = []
     EXAMPLE_PRIMITIVE_VALUES = []
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = []
     NULL_VALUE = None
     field_class = fields.BaseField
     
@@ -20,6 +21,9 @@ class BaseFieldTestCase(unittest.TestCase):
     
     def get_example_primitive_values(self):
         return self.EXAMPLE_PRIMITIVE_VALUES
+    
+    def get_example_portable_primitive_values(self):
+        return self.EXAMPLE_PORTABLE_PRIMITIVE_VALUES
     
     def get_field_kwargs(self):
         return {}
@@ -34,6 +38,9 @@ class BaseFieldTestCase(unittest.TestCase):
     
     def compare_primitives(self, prim1, prim2):
         self.assertEqual(prim1, prim2)
+    
+    def compare_portable_primitives(self, prim1, prim2):
+        return self.compare_primitives(prim1, prim2)
     
     def test_handles_null_value(self):
         field = self.get_field(null=True)
@@ -52,6 +59,11 @@ class BaseFieldTestCase(unittest.TestCase):
             py_val = field.to_python(val)
             primitive = field.to_primitive(py_val)
             self.compare_primitives(val, primitive)
+        
+        for val in self.get_example_portable_primitive_values():
+            py_val = field.from_portable_primitive(val)
+            primitive = field.to_portable_primitive(py_val)
+            self.compare_portable_primitives(val, primitive)
         
     def test_form_field(self):
         field = self.get_field()
@@ -72,42 +84,65 @@ class BaseFieldTestCase(unittest.TestCase):
 
 class CharFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = ["abc", u"def"] #TODO good unicode values
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.CharField
 
 class IntegerFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = [1, 3243455]
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.IntegerField
 
 class BigIntegerFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = [1, 3243455, 2**32+1]
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.BigIntegerField
 
 class BooleanFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = [True, False]
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.BooleanField
 
 class DateFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = [datetime.date(2001,1,1)]
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.DateField
 
 class DateTimeFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = [datetime.datetime(2001,1,1)]
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.DateTimeField
 
 class DecimalFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = [1, 2, Decimal('1.5')]
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.DecimalField
+    
+    def compare_primitives(self, prim1, prim2):
+        self.assertEqual(str(prim1), str(prim2))
 
 class EmailFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = ['z@z.com']
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.EmailField
 
 class IPAddressFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = ['127.0.0.1']
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.IPAddressField
 
 class SlugFieldTestCase(BaseFieldTestCase):
     EXAMPLE_VALUES = ['slug']
+    EXAMPLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
+    EXAMPLE_PORTABLE_PRIMITIVE_VALUES = EXAMPLE_VALUES
     field_class = fields.SlugField
 
 class TimeFieldTestCase(BaseFieldTestCase):

@@ -126,6 +126,27 @@ class Schema(object):
         return val
     
     @classmethod
+    def to_portable_primitive(cls, val):
+        #CONSIDER shouldn't val be a schema?
+        if cls._meta.typed_field and cls._meta.typed_key:
+            val[cls._meta.typed_field] = cls._meta.typed_key
+        if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
+            data = {}
+            for name, entry in val._python_data.iteritems():
+                if name in val._meta.fields:
+                    try:
+                        data[name] = val._meta.fields[name].to_portable_primitive(entry)
+                    except:
+                        print name, val._meta.fields[name], entry
+                        raise
+                else:
+                    #TODO run entry through generic primitive processor
+                    data[name] = entry
+            return data
+        assert isinstance(val, (dict, list, type(None))), str(type(val))
+        return val
+    
+    @classmethod
     def to_python(cls, val, parent=None):
         if val is None:
             val = dict()
@@ -139,6 +160,33 @@ class Schema(object):
                     #TODO emit a warning
                     pass
         return cls(_primitive_data=val, _parent=parent)
+    
+    @classmethod
+    def from_portable_primitive(cls, val, parent=None):
+        if val is None:
+            val = dict()
+        if cls._meta.typed_field:
+            field = cls._meta.fields[cls._meta.typed_field]
+            key = val.get(cls._meta.typed_field, None)
+            if key:
+                try:
+                    cls = field.schemas[key]
+                except KeyError:
+                    #TODO emit a warning
+                    pass
+        
+        data = dict()
+        for name, entry in val.iteritems():
+            if name in cls._meta.fields:
+                try:
+                    data[name] = cls._meta.fields[name].from_portable_primitive(entry)
+                except:
+                    print name, cls._meta.fields[name], entry
+                    raise
+            else:
+                #TODO run entry through generic primitive processor
+                data[name] = entry
+        return cls(_python_data=data, _parent=parent)
     
     def __getattribute__(self, name):
         fields = object.__getattribute__(self, '_meta').fields

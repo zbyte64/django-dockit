@@ -106,8 +106,14 @@ class BaseField(object):
         """
         return val
     
+    def to_portable_primitive(self, val):
+        return self.to_primitive(val)
+    
     def to_python(self, val, parent=None):
         return val
+    
+    def from_portable_primitive(self, val, parent=None):
+        return self.to_python(val, parent)
     
     def get_form_field_class(self):
         if self.choices:
@@ -516,6 +522,17 @@ class ListField(BaseField):
             return PRIMITIVE_PROCESSOR.to_primitive(ret)
         return PRIMITIVE_PROCESSOR.to_primitive(val)
     
+    def to_portable_primitive(self, val):
+        if self.subfield:
+            ret = list()
+            if val is None:
+                return ret
+            for item in val:
+                ret.append(self.subfield.to_portable_primitive(item))
+            #run data through the primitive processor
+            return PRIMITIVE_PROCESSOR.to_primitive(ret)
+        return PRIMITIVE_PROCESSOR.to_primitive(val)
+    
     def to_python(self, val, parent=None):
         if self.subfield:
             ret = DotPathList()
@@ -525,6 +542,20 @@ class ListField(BaseField):
             for item in val:
                 if not self.subfield.is_instance(item):
                     item = self.subfield.to_python(item)
+                ret.append(item)
+            #run data through the primitive processor
+            return PRIMITIVE_PROCESSOR.to_python(ret)
+        return PRIMITIVE_PROCESSOR.to_python(val)
+    
+    def from_portable_primitive(self, val, parent=None):
+        if self.subfield:
+            ret = DotPathList()
+            if val is None:
+                return ret
+            #TODO pass in parent
+            for item in val:
+                if not self.subfield.is_instance(item):
+                    item = self.subfield.from_portable_primitive(item)
                 ret.append(item)
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_python(ret)
@@ -633,6 +664,20 @@ class DictField(BaseField):
         ret = PRIMITIVE_PROCESSOR.to_primitive(ret)
         return ret
     
+    def to_portable_primitive(self, val):
+        ret = dict()
+        if val is None:
+            return ret
+        for key, value in val.iteritems():
+            if hasattr(value, 'to_portable_primitive'):
+                value = type(value).to_portable_primitive(value)
+            if hasattr(key, 'to_portable_primitive'):
+                key = type(key).to_portable_primitive(key)
+            ret[key] = value
+        #TODO run data through the primitive processor
+        ret = PRIMITIVE_PROCESSOR.to_primitive(ret)
+        return ret
+    
     def to_python(self, val, parent=None):
         ret = DotPathDict()
         if val is None:
@@ -644,6 +689,22 @@ class DictField(BaseField):
             if self.key_subfield:
                 if not self.key_subfield.is_instance(key):
                     key = self.key_subfield.to_python(key)
+            ret[key] = value
+        #TODO run data through the primitive processor
+        ret = PRIMITIVE_PROCESSOR.to_python(ret)
+        return ret
+    
+    def from_portable_primitive(self, val, parent=None):
+        ret = DotPathDict()
+        if val is None:
+            return ret
+        for key, value in val.iteritems():
+            if self.value_subfield:
+                if not self.value_subfield.is_instance(value):
+                    value = self.value_subfield.from_portable_primitive(value)
+            if self.key_subfield:
+                if not self.key_subfield.is_instance(key):
+                    key = self.key_subfield.from_portable_primitive(key)
             ret[key] = value
         #TODO run data through the primitive processor
         ret = PRIMITIVE_PROCESSOR.to_python(ret)
@@ -720,6 +781,15 @@ class ReferenceField(BaseField):
             return val
         return val.get_id()
     
+    def to_portable_primitive(self, val):
+        if isinstance(val, basestring): #CONSIDER, should this happen?
+            return val
+        if val is None:
+            return val
+        if hasattr(val, 'natural_key'):
+            return val.natural_key()
+        return val.get_id()
+    
     def to_python(self, val, parent=None):
         if self.self_reference:
             if val is None:
@@ -731,6 +801,25 @@ class ReferenceField(BaseField):
             if self.is_instance(val):
                 return val
             document = self.document
+        try:
+            return document.objects.get(pk=val)
+        except ObjectDoesNotExist:
+            if self.null:
+                return None
+            raise
+    
+    def from_portable_primitive(self, val, parent=None):
+        if self.self_reference:
+            if val is None:
+                return val
+            document = type(parent)
+            if isinstance(val, document):
+                return val
+        else:
+            if self.is_instance(val):
+                return val
+            document = self.document
+        #TODO use natural key lookup
         try:
             return document.objects.get(pk=val)
         except ObjectDoesNotExist:
@@ -807,9 +896,23 @@ class ModelReferenceField(BaseField):
             return None
         return val.pk
     
+    def to_portable_primitive(self, val):
+        if val is None:
+            return None
+        if hasattr(val, 'natural_key'):
+            return val.natural_key()
+        return val.pk
+    
     def to_python(self, val, parent=None):
         if val is None:
             return None
+        return self.model.objects.get(pk=val)
+    
+    def from_portable_primitive(self, val, parent=None):
+        if val is None:
+            return None
+        if hasattr(self.model.objects, 'get_by_natural_key'):
+            return self.model.objects.get_by_natural_key(*val)
         return self.model.objects.get(pk=val)
     
     def formfield_kwargs(self, **kwargs):
