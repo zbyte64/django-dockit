@@ -90,10 +90,14 @@ class ModelIndexStorage(BaseIndexStorage):
     name = "djangomodel"
     _indexers = dict() #TODO this should be automatic
     
-    def __init__(self):
+    def __init__(self, index_tasks=None):
         self._tables_exist = False
         self.indexes = dict()
         self.pending_indexes = set()
+        if not index_tasks: #TODO settings powered, celery or ztask
+            from tasks import IndexTasks
+            index_tasks = IndexTasks(RegisteredIndex)
+        self.index_tasks = index_tasks
         import indexers
     
     def _register_pending_indexes(self):
@@ -102,16 +106,19 @@ class ModelIndexStorage(BaseIndexStorage):
         if not db_table_exists(RegisteredIndex._meta.db_table):
             return
         for query_index in self.pending_indexes:
-            RegisteredIndex.objects.register_index(query_index)
+            self.index_tasks.register_index(query_index)
         self.pending_indexes = set()
     
     def register_index(self, query_index):
         if self._tables_exist or db_table_exists(RegisteredIndex._meta.db_table): #if the table doesn't exists then we are likely syncing the db
             self._tables_exist = True
-            RegisteredIndex.objects.register_index(query_index)
+            self.index_tasks.register_index(query_index)
             self._register_pending_indexes()
         else:
             self.pending_indexes.add(query_index)
+    
+    def reindex(self, query_index):
+        self.index_tasks.reindex(query_index)
     
     def get_query(self, query_index):
         #lookup the appropriate query index
@@ -130,11 +137,13 @@ class ModelIndexStorage(BaseIndexStorage):
     
     def on_save(self, doc_class, collection, doc_id, data):
         self._register_pending_indexes()
-        RegisteredIndex.objects.on_save(collection, doc_id, data)
+        self.index_tasks.on_save(collection, doc_id, data)
+        #RegisteredIndex.objects.on_save(collection, doc_id, data)
     
     def on_delete(self, doc_class, collection, doc_id):
         self._register_pending_indexes()
-        RegisteredIndex.objects.on_delete(collection, doc_id)
+        self.index_tasks.on_delete(collection, doc_id)
+        #RegisteredIndex.objects.on_delete(collection, doc_id)
 
 class ModelDocumentStorage(BaseDocumentStorage):
     thread_safe = True #we use the django orm which takes care of thread safety for us

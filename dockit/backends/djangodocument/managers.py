@@ -49,11 +49,7 @@ class RegisteredIndexManager(models.Manager):
         collection = query_index.collection
         return self.filter(name=name, collection=collection).delete()
     
-    def register_index(self, query_index):
-        name = self.get_query_index_name(query_index)
-        collection = query_index.collection
-        #TODO the rest should be done in a task
-        query_hash = query_index._index_hash()
+    def register_index(self, name, collection, query_hash):
         obj, created = self.get_or_create(name=name, collection=collection, defaults={'query_hash':query_hash})
         if not created:
             if obj.query_hash == query_hash:
@@ -63,7 +59,13 @@ class RegisteredIndexManager(models.Manager):
                 index['model'].objects.filter(document__index=obj).delete()
             obj.save()
         
-        #TODO do a reindex in a task
+        self.reindex(name, collection, query_hash)
+        
+    def reindex(self, name, collection, query_hash):
+        obj, created = self.get_or_create(name=name, collection=collection, defaults={'query_hash':query_hash})
+        
+        from dockit.backends import INDEX_ROUTER
+        query_index = INDEX_ROUTER.registered_querysets[collection][query_hash]
         documents = obj.get_document().objects.all()
         for doc in documents:
             self.evaluate_query_index(obj, query_index, doc.pk, doc.to_primitive(doc))
