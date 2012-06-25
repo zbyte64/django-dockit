@@ -10,6 +10,8 @@ class TestDocument(TemporaryDocument):
     listfield = schema.ListField(schema.CharField())
 
 class MongoBackendTestCase(BackendTestCase):
+    backend_name = 'mongo'
+    
     def setUp(self):
         super(MongoBackendTestCase, self).setUp()
         
