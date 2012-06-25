@@ -1,8 +1,21 @@
+from models import RegisteredIndex 
+
+#core index functions; do not call directly
+def register_index(name, collection, query_hash):
+    RegisteredIndex.objects.register_index(name, collection, query_hash)
+
+def reindex(name, collection, query_hash):
+    RegisteredIndex.objects.reindex(name, collection, query_hash)
+
+def on_save(collection, doc_id, data):
+    RegisteredIndex.objects.on_save(collection, doc_id, data)
+
+def on_delete(collection, doc_id):
+    RegisteredIndex.objects.on_delete(collection, doc_id)
 
 class IndexTasks(object):
-    def __init__(self, model):
-        self.model = model
-        self.manager = model.objects
+    def __init__(self):
+        self.manager = RegisteredIndex.objects
     
     def get_query_index_params(self, query_index):
         return {'name': self.manager.get_query_index_name(query_index),
@@ -11,19 +24,67 @@ class IndexTasks(object):
     
     def register_index(self, query_index):
         params = self.get_query_index_params(query_index)
-        
-        #TODO the rest should be done in a task
-        self.manager.register_index(**params)
+        self.schedule_register_index(**params)
+    
+    def schedule_register_index(self, **params):
+        register_index(**params)
     
     def reindex(self, query_index):
         params = self.get_query_index_params(query_index)
-        
-        #TODO the rest should be done in a task
-        self.manager.reindex(**params)
+        self.schedule_reindex(**params)
+    
+    def schedule_reindex(self, **params):
+        reindex(**params)
     
     def on_save(self, collection, doc_id, data):
-        self.manager.on_save(collection, doc_id, data)
+        self.schedule_on_save(collection, doc_id, data)
+    
+    def schedule_on_save(self, collection, doc_id, data):
+        on_save(collection, doc_id, data)
     
     def on_delete(self, collection, doc_id):
-        self.manager.on_delete(collection, doc_id)
+        self.schedule_on_delete(collection, doc_id)
+    
+    def schedule_on_delete(self, collection, doc_id):
+        on_delete(collection, doc_id)
+
+class ZTaskIndexTasks(IndexTasks):
+    def __init__(self):
+        from django_ztask.decorators import task
+        self._register_index = task(register_index)
+        self._reindex = task(reindex)
+        self._on_save = task(on_save)
+        self._on_delete = task(on_delete)
+        
+    def schedule_register_index(self, **params):
+        self._register_index.async(**params)
+    
+    def schedule_reindex(self, **params):
+        self._reindex.async(**params)
+    
+    def schedule_on_save(self, collection, doc_id, data):
+        self._on_save.async(collection, doc_id, data)
+    
+    def schedule_on_delete(self, collection, doc_id):
+        self._on_delete.async(collection, doc_id)
+
+class CeleryIndexTasks(IndexTasks):
+    def __init__(self):
+        from celery.task import task
+        self._register_index = task(register_index, ignore_result=True)
+        self._reindex = task(reindex, ignore_result=True)
+        self._on_save = task(on_save, ignore_result=True)
+        self._on_delete = task(on_delete, ignore_result=True)
+        
+    def schedule_register_index(self, **params):
+        self._register_index.async(**params)
+    
+    def schedule_reindex(self, **params):
+        self._reindex.async(**params)
+    
+    def schedule_on_save(self, collection, doc_id, data):
+        self._on_save.async(collection, doc_id, data)
+    
+    def schedule_on_delete(self, collection, doc_id):
+        self._on_delete.async(collection, doc_id)
 

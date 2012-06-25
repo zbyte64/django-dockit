@@ -96,7 +96,7 @@ class ModelIndexStorage(BaseIndexStorage):
         self.pending_indexes = set()
         if not index_tasks: #TODO settings powered, celery or ztask
             from tasks import IndexTasks
-            index_tasks = IndexTasks(RegisteredIndex)
+            index_tasks = IndexTasks()
         self.index_tasks = index_tasks
         import indexers
     
