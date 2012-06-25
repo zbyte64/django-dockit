@@ -52,10 +52,10 @@ class ZTaskIndexTasks(IndexTasks):
     def __init__(self):
         super(ZTaskIndexTasks, self).__init__()
         from django_ztask.decorators import task
-        self._register_index = task(register_index)
-        self._reindex = task(reindex)
-        self._on_save = task(on_save)
-        self._on_delete = task(on_delete)
+        self._register_index = task()(register_index)
+        self._reindex = task()(reindex)
+        self._on_save = task()(on_save)
+        self._on_delete = task()(on_delete)
         
     def schedule_register_index(self, **params):
         self._register_index.async(**params)
