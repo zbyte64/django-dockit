@@ -69,6 +69,10 @@ class ZipfileDataSource(DataSource):
     
     @classmethod
     def to_payload(self, source, data, **options):
-        #TODO write data to options['archive']
+        #write data to options['archive']
+        adaptor = get_adaptor(options['format'])
+        encoded_data = adaptor.serialize(data)
+        options['archive'].writestr(options['filename'], encoded_data)
+        
         return {'source':source, 'filename':options['filename'], 'format':options['format']}
 
