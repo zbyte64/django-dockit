@@ -62,12 +62,17 @@ class ManifestLoader(object):
 
 class Manifest(object):
     def __init__(self, **options):
-        self.data_sources = list()
         self.options = options
     
+    def parse_data_sources(self, loader, alist):
+        data_sources = list()
+        for data in alist:
+            data_source = self.load_data_source(loader, data)
+            data_sources.append(data_source)
+        return data_sources
+    
     def load_data_sources(self, loader):
-        for data in self.options.pop('data', []):
-            self.load_data_source(loader, data)
+        self.data_sources = self.parse_data_sources(loader, self.options.pop('data', []))
     
     def get_data_source_kwargs(self, **kwargs):
         return kwargs
@@ -77,7 +82,6 @@ class Manifest(object):
         data_source_cls = loader.data_sources[data_source_options.pop('source')]
         data_source_kwargs = self.get_data_source_kwargs(**data_source_options)
         data_source = data_source_cls(**data_source_kwargs)
-        self.data_sources.append(data_source)
         return data_source
     
     def load(self):
