@@ -12,6 +12,11 @@ class URLDataSource(DataSource):
         adaptor = get_adaptor(self.options['format'])
         data = adaptor.deserialize(response)
         return data
+    
+    @classmethod
+    def to_payload(cls, source, data, **options):
+        #TODO write data to url
+        return {'source':source, 'url':options['url'], 'format':options['format']}
 
 class InlineDataSource(DataSource):
     def __init__(self, data, **options):
@@ -20,6 +25,10 @@ class InlineDataSource(DataSource):
     
     def get_data(self):
         return self.data
+    
+    @classmethod
+    def to_payload(cls, source, data, **options):
+        return {'source':source, 'data':data}
 
 class LocalDataSource(DataSource):
     def __init__(self, filename, **options):
@@ -36,6 +45,11 @@ class LocalDataSource(DataSource):
         adaptor = get_adaptor(self.options['format'])
         data = adaptor.deserialize(source)
         return data
+    
+    @classmethod
+    def to_payload(cls, source, data, **options):
+        #TODO write data to filename
+        return {'source':source, 'filename':options['filename'], 'format':options['format']}
 
 class ZipfileDataSource(DataSource):
     def __init__(self, filename, archive, **options):
@@ -52,4 +66,9 @@ class ZipfileDataSource(DataSource):
         adaptor = get_adaptor(self.options['format'])
         data = adaptor.deserialize(source)
         return data
+    
+    @classmethod
+    def to_payload(self, source, data, **options):
+        #TODO write data to options['archive']
+        return {'source':source, 'filename':options['filename'], 'format':options['format']}
 

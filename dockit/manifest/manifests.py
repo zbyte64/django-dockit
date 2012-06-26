@@ -22,4 +22,9 @@ class DockitFixtureManifest(Manifest):
                 obj.save()
                 results.append(obj)
         return results
+    
+    @classmethod
+    def dump(self, python_objects):
+        results = dockit_serializers.serialize('python', python_objects)
+        return results
 

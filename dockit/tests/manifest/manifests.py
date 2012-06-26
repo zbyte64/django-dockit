@@ -10,7 +10,7 @@ class ManifestTestCase(unittest.TestCase):
                                                          'dockitfixture':DockitFixtureManifest,},
                                               data_sources={'inline':InlineDataSource})
     
-    def test_create_dockitfixture_manifest(self):
+    def test_load_dockitfixture_manifest(self):
         data = {'loader':'dockitfixture',
                 'data':[{'source':'inline',
                          'data':[{
@@ -25,12 +25,12 @@ class ManifestTestCase(unittest.TestCase):
                          }],
                        }]
                }
-        manifest = self.manifest_loader.create_manifest(data)
+        manifest = self.manifest_loader.load_manifest(data)
         objects = manifest.load()
         self.assertEqual(len(objects), 1)
         self.assertEqual(objects[0].object['extrafield'], 1)
     
-    def test_create_djangofixture_manifest(self):
+    def test_load_djangofixture_manifest(self):
         data = {'loader':'djangofixture',
                 'data':[{'source':'inline',
                          'data':[{
@@ -45,8 +45,15 @@ class ManifestTestCase(unittest.TestCase):
                           }],
                        }]
                }
-        manifest = self.manifest_loader.create_manifest(data)
+        manifest = self.manifest_loader.load_manifest(data)
         objects = manifest.load()
         self.assertEqual(len(objects), 1)
         self.assertEqual(objects[0].object.username, 'fixtureuser')
+    
+    def test_create_dockitfixture_manifest(self):
+        from dockit.models import TemporaryDocument
+        foo = TemporaryDocument(extrafield=1)
+        data_sources = [(InlineDataSource, [foo], {})]
+        payload = self.manifest_loader.create_manifest_payload('dockitfixture', data_sources)
+        self.assertEqual(len(payload['data']), 1)
 

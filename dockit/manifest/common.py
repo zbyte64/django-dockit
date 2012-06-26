@@ -9,12 +9,22 @@ def get_adaptor(format):
 class DataAdaptor(object):
     def deserialize(self, file_obj):
         raise NotImplementedError
+    
+    def serialize(self, python_objects):
+        raise NotImplementedError
 
 class DataSource(object):
     def __init__(self, **options):
         self.options = options
     
     def get_data(self):
+        raise NotImplementedError
+    
+    @classmethod
+    def to_payload(cls, source, data, **options):
+        '''
+        Returns the manifest payload representation
+        '''
         raise NotImplementedError
 
 class ManifestLoader(object):
@@ -25,7 +35,7 @@ class ManifestLoader(object):
     def get_manifest_kwargs(self, **kwargs):
         return kwargs
     
-    def create_manifest(self, manifest_data):
+    def load_manifest(self, manifest_data):
         manifest_options = dict(manifest_data)
         manifest_cls = self.manifests[manifest_options.pop('loader')]
         data_sources = list()
@@ -44,6 +54,23 @@ class ManifestLoader(object):
         data_source_kwargs = self.get_data_source_kwargs(**data_source_options)
         data_source = data_source_cls(**data_source_kwargs)
         return data_source
+    
+    def create_manifest_payload(self, loader, data_sources):
+        '''
+        data_sources = [(data_source_cls, objects, options)...]
+        '''
+        manifest_cls = self.manifests[loader]
+        payload = {'loader':loader,
+                   'data':[]}
+        for data_source_cls, objects, options in data_sources:
+            source = None
+            for key, cls in self.data_sources.iteritems():
+                if data_source_cls == cls:
+                    source = key
+                    break
+            data = manifest_cls.dump(objects)
+            payload['data'].append(data_source_cls.to_payload(source, data, **options))
+        return payload
 
 class Manifest(object):
     def __init__(self, data_sources, **options):
@@ -51,4 +78,15 @@ class Manifest(object):
         self.options = options
     
     def load(self):
+        '''
+        Returns the loaded objects
+        '''
         raise NotImplementedError
+    
+    @classmethod
+    def dump(cls, objects):
+        '''
+        Returns primitive python objects that is compatible with data sources
+        '''
+        raise NotImplementedError
+
