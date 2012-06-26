@@ -9,7 +9,7 @@ from django.db import models, DEFAULT_DB_ALIAS
 from django.utils.encoding import smart_unicode, is_protected_type
 
 from dockit.core.serializers import base
-from dockit.schema.common import get_base_document
+from dockit.schema.loading import get_base_document
 
 class Serializer(base.Serializer):
     """
