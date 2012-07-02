@@ -5,7 +5,7 @@ Installation
 Requirements
 ------------
 
-* Python 2.5 or later
+* Python 2.6 or later
 * Django 1.3
 
 
@@ -35,6 +35,12 @@ Set the following in your settings file::
             'ENGINE': 'dockit.backends.djangodocument.backend.ModelIndexStorage',
         },
     }
+
+    #Uncomment to use django-ztask for indexing
+    #DOCKIT_INDEX_BACKENDS['default']['INDEX_TASKS'] = 'dockit.backends.djangodocument.tasks.ZTaskIndexTasks'
+    
+    #Uncomment to use django-celery for indexing
+    #DOCKIT_INDEX_BACKENDS['default']['INDEX_TASKS'] = 'dockit.backends.djangodocument.tasks.CeleryIndexTasks'
 
 Then add 'dockit.backends.djangodocument' to ``INSTALLED_APPS``
 

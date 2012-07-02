@@ -11,8 +11,9 @@ django-dockitcms provides a Document ORM in django. Dockitcms attempts to provid
 Features
 --------
 
-* Mongodb support
-* Backend for using django models to store documents (see Django Document)
+* Backendable support for document and index storage
+ * Mongodb
+ * Django Model with support for celery or ztask indexing
 * Integrates with the django admin
  * Supports inlines
  * List Field support
@@ -61,6 +62,12 @@ Set the following in your settings file::
             'ENGINE': 'dockit.backends.djangodocument.backend.ModelIndexStorage',
         },
     }
+
+    #Uncomment to use django-ztask for indexing
+    #DOCKIT_INDEX_BACKENDS['default']['INDEX_TASKS'] = 'dockit.backends.djangodocument.tasks.ZTaskIndexTasks'
+    
+    #Uncomment to use django-celery for indexing
+    #DOCKIT_INDEX_BACKENDS['default']['INDEX_TASKS'] = 'dockit.backends.djangodocument.tasks.CeleryIndexTasks'
 
 Then add 'dockit.backends.djangodocument' to ``INSTALLED_APPS``
 
