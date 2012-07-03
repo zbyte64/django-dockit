@@ -10,7 +10,7 @@ from django import forms
 
 from dockit.paginator import Paginator
 from dockit.forms import DocumentForm
-from dockit.forms.fields import PrimitiveListField
+from dockit.forms.fields import PrimitiveListField, HiddenListField, HiddenJSONField
 from dockit.models import DockitPermission
 
 import views
@@ -235,7 +235,6 @@ class SchemaAdmin(object):
     def formfield_for_field(self, prop, field, view, **kwargs):
         from dockit import schema
         from fields import DotPathField
-        from dockit.forms.fields import HiddenJSONField
         
         if isinstance(prop, schema.ModelReferenceField):
             return self.formfield_for_foreignkey(prop, field, view, **kwargs)
@@ -269,7 +268,14 @@ class SchemaAdmin(object):
             if view.next_dotpath():
                 kwargs['required'] = False
             return field(**kwargs)
-        if issubclass(field, HiddenJSONField):
+        if issubclass(field, HiddenListField):
+            field = DotPathField
+            kwargs['dotpath'] = view.dotpath()
+            kwargs['params'] = request.GET.copy()
+            if view.next_dotpath():
+                kwargs['required'] = False
+            return field(**kwargs)
+        elif issubclass(field, HiddenJSONField):
             field = DotPathField
             kwargs['dotpath'] = view.dotpath()
             kwargs['params'] = request.GET.copy()

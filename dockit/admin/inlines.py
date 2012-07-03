@@ -71,7 +71,7 @@ class InlineSchemaAdmin(SchemaAdmin):
             "formset": self.formset,
             "fields": fields,
             "exclude": exclude,
-            "formfield_callback": curry(self.formfield_for_field, request=request),
+            "formfield_callback": curry(self.formfield_for_field, request=request), #view=None
             "extra": self.extra,
             "max_num": self.max_num,
             "can_delete": self.can_delete,

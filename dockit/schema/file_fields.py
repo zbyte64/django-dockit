@@ -81,3 +81,6 @@ class FileField(Field):
         ret.storage_path = val
         return ret
 
+class ImageField(FileField):
+    pass #TODO
+
