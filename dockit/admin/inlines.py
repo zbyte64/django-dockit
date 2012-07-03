@@ -87,6 +87,16 @@ class InlineSchemaAdmin(SchemaAdmin):
     
     def get_excludes(self):
         return list(self.exclude)
+    
+    def formfield_for_jsonfield(self, prop, field, view, **kwargs):
+        request = kwargs.pop('request', None)
+        from fields import DotPathField
+        field = DotPathField
+        kwargs['dotpath'] = self.dotpath
+        kwargs['params'] = request.GET.copy()
+        if view.next_dotpath(): #???
+            kwargs['required'] = False
+        return field(**kwargs)
 
 class StackedInline(InlineSchemaAdmin):
     template = 'admin/edit_inline/stacked.html'

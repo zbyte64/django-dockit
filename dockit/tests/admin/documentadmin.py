@@ -49,6 +49,7 @@ class AdminFormFieldTestCase(unittest.TestCase):
         kwargs['request'] = request
         view = MockView(request)
         admin_field = inline_admin.formfield_for_field(prop, field, view, **kwargs)
+        assert admin_field.dotpath, str(admin_field.dotpath)
         field_html = admin_field.widget.render('complex_list', [])
         self.assertTrue('value="add"' in field_html)
         
@@ -65,5 +66,7 @@ class AdminFormFieldTestCase(unittest.TestCase):
             assert form._meta.formfield_callback
             html.append(form.as_table())
         html = '\n'.join(html)
-        self.assertTrue('value="add"' in html)
+        self.assertTrue('value="add"' in html, html)
+        #TODO inlines muck this up, we need a UX review
+        #self.assertTrue('complex_list.*.gallery.0' in html, html)
 

@@ -10,7 +10,7 @@ from django import forms
 
 from dockit.paginator import Paginator
 from dockit.forms import DocumentForm
-from dockit.forms.fields import PrimitiveListField, HiddenListField, HiddenJSONField
+from dockit.forms.fields import PrimitiveListField, HiddenJSONField
 from dockit.models import DockitPermission
 
 import views
@@ -237,8 +237,6 @@ class SchemaAdmin(object):
     
     def formfield_for_field(self, prop, field, view, **kwargs):
         from dockit import schema
-        from fields import DotPathField
-        
         if isinstance(prop, schema.ModelReferenceField):
             return self.formfield_for_foreignkey(prop, field, view, **kwargs)
         if isinstance(prop, schema.ModelSetField):
@@ -271,20 +269,8 @@ class SchemaAdmin(object):
             if view.next_dotpath():
                 kwargs['required'] = False
             return field(**kwargs)
-        if issubclass(field, HiddenListField):
-            field = DotPathField
-            kwargs['dotpath'] = view.dotpath()
-            kwargs['params'] = request.GET.copy()
-            if view.next_dotpath():
-                kwargs['required'] = False
-            return field(**kwargs)
-        elif issubclass(field, HiddenJSONField):
-            field = DotPathField
-            kwargs['dotpath'] = view.dotpath()
-            kwargs['params'] = request.GET.copy()
-            if view.next_dotpath():
-                kwargs['required'] = False
-            return field(**kwargs)
+        if issubclass(field, HiddenJSONField):
+            return self.formfield_for_jsonfield(prop, field, view, request=request, **kwargs)
         if issubclass(field, PrimitiveListField) and 'subfield' in kwargs:
             subfield_kwargs = prop.subfield.formfield_kwargs()
             subfield_kwargs.pop('initial', None)
@@ -295,6 +281,16 @@ class SchemaAdmin(object):
             opts = dict(self.formfield_overrides[field])
             field = opts.pop('form_class', field)
             kwargs = dict(opts, **kwargs)
+        return field(**kwargs)
+    
+    def formfield_for_jsonfield(self, prop, field, view, **kwargs):
+        request = kwargs.pop('request', None)
+        from fields import DotPathField
+        field = DotPathField
+        kwargs['dotpath'] = view.dotpath()
+        kwargs['params'] = request.GET.copy()
+        if view.next_dotpath():
+            kwargs['required'] = False
         return field(**kwargs)
     
     def formfield_for_foreignkey(self, prop, field, view, **kwargs):
