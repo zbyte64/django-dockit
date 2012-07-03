@@ -228,8 +228,9 @@ class SchemaAdmin(object):
         #form = self.get_form(request, obj)
         #fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
         fields = list()
+        excludes = self.get_excludes()
         for key, field in self.schema._meta.fields.iteritems():
-            if key in self.exclude:
+            if key in excludes:
                 continue
             fields.append(key)
         return [(None, {'fields': fields})]

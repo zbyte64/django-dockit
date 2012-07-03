@@ -361,7 +361,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
             class Meta:
                 document = self.temp_document
                 schema = self.get_schema()
-                form_field_callback = self.formfield_for_field
+                formfield_callback = self.formfield_for_field
                 dotpath = self.dotpath() or None
                 exclude = self.admin.get_excludes() + self.get_readonly_fields()
                 #TODO fix readonly field behavior

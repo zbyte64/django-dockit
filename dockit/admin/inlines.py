@@ -85,17 +85,6 @@ class InlineSchemaAdmin(SchemaAdmin):
         defaults.update(kwargs)
         return inlinedocumentformset_factory(self.model, self.dotpath, **defaults)
 
-    def get_fieldsets(self, request, obj=None):
-        if self.declared_fieldsets:
-            return self.declared_fieldsets
-        
-        fields = list()
-        for key, field in self.schema._meta.fields.iteritems():
-            if key in self.exclude:
-                continue
-            fields.append(key)
-        return [(None, {'fields': fields})]
-
 class StackedInline(InlineSchemaAdmin):
     template = 'admin/edit_inline/stacked.html'
 
