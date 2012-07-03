@@ -84,6 +84,9 @@ class InlineSchemaAdmin(SchemaAdmin):
         }
         defaults.update(kwargs)
         return inlinedocumentformset_factory(self.model, self.dotpath, **defaults)
+    
+    def get_excludes(self):
+        return list(self.exclude)
 
 class StackedInline(InlineSchemaAdmin):
     template = 'admin/edit_inline/stacked.html'
