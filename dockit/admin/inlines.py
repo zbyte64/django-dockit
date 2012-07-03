@@ -50,8 +50,13 @@ class InlineSchemaAdmin(SchemaAdmin):
         media.add_css({'all': ['%sadmin/css/primitivelist.css' % settings.STATIC_URL]})
         return media
     media = property(_media)
-
-    def get_formset(self, request, obj=None, **kwargs):
+    '''
+    def formfield_for_field(self, *args, **kwargs):
+        ret = super(InlineSchemaAdmin, self).formfield_for_field(*args, **kwargs)
+        assert False
+        return ret
+    '''
+    def get_formset(self, request, view, obj=None, **kwargs):
         """Returns a BaseInlineFormSet class for use in admin add/change views."""
         if self.declared_fieldsets:
             fields = flatten_fieldsets(self.declared_fieldsets)
@@ -71,7 +76,7 @@ class InlineSchemaAdmin(SchemaAdmin):
             "formset": self.formset,
             "fields": fields,
             "exclude": exclude,
-            "formfield_callback": curry(self.formfield_for_field, request=request), #view=None
+            "formfield_callback": curry(self.formfield_for_field, request=request, view=view), #view=None
             "extra": self.extra,
             "max_num": self.max_num,
             "can_delete": self.can_delete,
@@ -83,8 +88,12 @@ class InlineSchemaAdmin(SchemaAdmin):
     def get_fieldsets(self, request, obj=None):
         if self.declared_fieldsets:
             return self.declared_fieldsets
-        form = self.get_formset(request).form
-        fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
+        
+        fields = list()
+        for key, field in self.schema._meta.fields.iteritems():
+            if key in self.exclude:
+                continue
+            fields.append(key)
         return [(None, {'fields': fields})]
 
 class StackedInline(InlineSchemaAdmin):

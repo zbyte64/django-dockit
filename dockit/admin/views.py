@@ -217,7 +217,7 @@ class FragmentViewMixin(BaseFragmentViewMixin):
         return self.admin.prepopulated_fields
     
     def get_formsets(self):
-        formsets_cls = self.admin.get_formsets(self.request, self.get_active_object())
+        formsets_cls = self.admin.get_formsets(self.request, obj=self.get_active_object(), view=self)
         
         prefixes = {}
         formsets = list()

@@ -119,7 +119,7 @@ def document_to_dict(document, instance, properties=None, exclude=None, dotpath=
         data[prop_name] = src_data[prop_name]
     return data
 
-def fields_for_document(document, properties=None, exclude=None, form_field_callback=None, dotpath=None):
+def fields_for_document(document, properties=None, exclude=None, formfield_callback=None, dotpath=None):
     """
     Returns a ``SortedDict`` containing form fields for the given document.
 
@@ -154,9 +154,9 @@ def fields_for_document(document, properties=None, exclude=None, form_field_call
         
         field = prop.formfield()
         
-        if field and form_field_callback:
+        if field and formfield_callback:
             defaults = prop.formfield_kwargs()
-            field = form_field_callback(prop, type(field), **defaults)
+            field = formfield_callback(prop, type(field), **defaults)
         if field:
             field_list.append((prop.name, field))
     return SortedDict(field_list)
@@ -167,7 +167,7 @@ class DocumentFormOptions(object):
         self.schema = getattr(options, 'schema', None)
         self.properties = getattr(options, 'properties', None)
         self.exclude = getattr(options, 'exclude', None)
-        self.form_field_callback = getattr(options, 'form_field_callback', None)
+        self.formfield_callback = getattr(options, 'formfield_callback', None)
         self.dotpath = getattr(options, 'dotpath', None)
         
         #lookup the appropriate schema if none is given
@@ -201,7 +201,7 @@ class DocumentFormMetaClass(type):
                                                 'Meta', None))
         if opts.schema:
             fields = fields_for_document(opts.schema, opts.properties,
-                                         opts.exclude, form_field_callback=opts.form_field_callback,)
+                                         opts.exclude, formfield_callback=opts.formfield_callback,)
             # Override default docuemnt fields with any custom declared ones
             # (plus, include all the other declared fields).
             new_class.serialized_fields = fields.keys()
@@ -209,7 +209,7 @@ class DocumentFormMetaClass(type):
         elif opts.document: #TODO this should no longer be necessary
             # If a document is defined, extract form fields from it.
             fields = fields_for_document(opts.document, opts.properties,
-                                         opts.exclude, form_field_callback=opts.form_field_callback,
+                                         opts.exclude, formfield_callback=opts.formfield_callback,
                                          dotpath=opts.dotpath)
             # Override default docuemnt fields with any custom declared ones
             # (plus, include all the other declared fields).

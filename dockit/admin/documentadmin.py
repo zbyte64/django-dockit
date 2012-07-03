@@ -216,10 +216,10 @@ class SchemaAdmin(object):
         
         return inline_instances
     
-    def get_formsets(self, request, obj=None):
+    def get_formsets(self, request, view, obj=None):
         inline_instances = self.get_inline_instances()
         for inline in inline_instances:
-            yield inline.get_formset(request, obj)
+            yield inline.get_formset(request, view=view, obj=obj)
     
     def get_fieldsets(self, request, obj=None):
         "Hook for specifying fieldsets for the add form."
@@ -229,7 +229,9 @@ class SchemaAdmin(object):
         #fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
         fields = list()
         for key, field in self.schema._meta.fields.iteritems():
-            fields.append(key) #TODO handle exclude
+            if key in self.exclude:
+                continue
+            fields.append(key)
         return [(None, {'fields': fields})]
     
     def formfield_for_field(self, prop, field, view, **kwargs):
