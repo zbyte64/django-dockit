@@ -228,6 +228,10 @@ class ModelReferenceFieldTestCase(BaseFieldTestCase):
     def get_example_primitive_values(self):
         return [ContentType.objects.all()[0].pk]
     
+    def compare_py_val_to_primitive(self, py_val, primitive):
+        self.assertTrue(isinstance(py_val, ContentType), "%s is not of type %s" % (type(py_val), ContentType))
+        super(ModelReferenceFieldTestCase, self).compare_py_val_to_primitive(py_val, primitive)
+    
     def get_field_kwargs(self):
         return {'model': ContentType}
 
@@ -240,6 +244,12 @@ class ModelSetFieldTestCase(BaseFieldTestCase):
     
     def get_example_primitive_values(self):
         return [[ContentType.objects.all()[0].pk]]
+    
+    def compare_py_val_to_primitive(self, py_val, primitive):
+        if len(py_val):
+            val = list(py_val)[0]
+            self.assertTrue(isinstance(val, ContentType), "%s is not of type %s" % (type(val), ContentType))
+        super(ModelSetFieldTestCase, self).compare_py_val_to_primitive(py_val, primitive)
     
     def get_field_kwargs(self):
         return {'model': ContentType}
