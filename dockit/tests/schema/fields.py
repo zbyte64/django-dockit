@@ -225,12 +225,21 @@ class ModelReferenceFieldTestCase(BaseFieldTestCase):
     def get_example_values(self):
         return [ContentType.objects.all()[0]]
     
+    def get_example_primitive_values(self):
+        return [ContentType.objects.all()[0].pk]
+    
     def get_field_kwargs(self):
         return {'model': ContentType}
 
 class ModelSetFieldTestCase(BaseFieldTestCase):
     field_class = fields.ModelSetField
     NULL_VALUE = set()
+    
+    def get_example_values(self):
+        return [set([ContentType.objects.all()[0]])]
+    
+    def get_example_primitive_values(self):
+        return [[ContentType.objects.all()[0].pk]]
     
     def get_field_kwargs(self):
         return {'model': ContentType}
