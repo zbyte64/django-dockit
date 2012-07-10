@@ -16,7 +16,7 @@ class Command(BaseCommand):
     #args = '[appname appname.ModelName ...]'
 
     def handle(self, *app_labels, **options):
-        from dockit.schema.common import COLLECTIONS
+        from dockit.schema.loading import get_documents
         format = options.get('format','json')
         indent = options.get('indent',None)
         show_traceback = options.get('traceback', False)
@@ -36,7 +36,7 @@ class Command(BaseCommand):
         # Now collate the objects to be serialized.
         objects = []
         excluded_documents = []
-        for document in COLLECTIONS.itervalues():
+        for document in get_documents():
             if document in excluded_documents:
                 continue
             objects.extend(document.objects.all())
