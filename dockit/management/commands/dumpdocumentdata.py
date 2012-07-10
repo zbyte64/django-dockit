@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
-from django.core import serializers
+
+from dockit.core import serializers
 
 from optparse import make_option
 

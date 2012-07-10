@@ -94,7 +94,7 @@ def Deserializer(object_list, **options):
 
             data[field_name] = field_value
 
-        yield base.DeserializedObject(Model(_primitive_data=data), m2m_data)
+        yield base.DeserializedObject(Model.to_python(data), m2m_data)
 
 def _get_model(model_identifier):
     """
