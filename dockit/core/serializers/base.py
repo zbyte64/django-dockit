@@ -4,17 +4,7 @@ Module for abstract serializer/unserializer base classes.
 
 from StringIO import StringIO
 
-from django.db import models
-from django.utils.encoding import smart_str, smart_unicode
-from django.utils import datetime_safe
-
-class SerializationError(Exception):
-    """Something bad happened during serialization."""
-    pass
-
-class DeserializationError(Exception):
-    """Something bad happened during deserialization."""
-    pass
+from django.core.serializers.base import SerializationError, DeserializationError
 
 class Serializer(object):
     """
@@ -32,33 +22,14 @@ class Serializer(object):
         self.options = options
 
         self.stream = options.pop("stream", StringIO())
-        self.selected_fields = options.pop("fields", None)
         self.use_natural_keys = options.pop("use_natural_keys", False)
 
         self.start_serialization()
         for obj in queryset:
             self.start_object(obj)
-            for field in obj._meta.local_fields:
-                if field.serialize:
-                    if field.rel is None:
-                        if self.selected_fields is None or field.attname in self.selected_fields:
-                            self.handle_field(obj, field)
-                    else:
-                        if self.selected_fields is None or field.attname[:-3] in self.selected_fields:
-                            self.handle_fk_field(obj, field)
-            for field in obj._meta.many_to_many:
-                if field.serialize:
-                    if self.selected_fields is None or field.attname in self.selected_fields:
-                        self.handle_m2m_field(obj, field)
             self.end_object(obj)
         self.end_serialization()
         return self.getvalue()
-
-    def get_string_value(self, obj, field):
-        """
-        Convert a field's value to a string.
-        """
-        return smart_unicode(field.value_to_string(obj))
 
     def start_serialization(self):
         """
@@ -83,24 +54,6 @@ class Serializer(object):
         Called when serializing of an object ends.
         """
         pass
-
-    def handle_field(self, obj, field):
-        """
-        Called to handle each individual (non-relational) field on an object.
-        """
-        raise NotImplementedError
-
-    def handle_fk_field(self, obj, field):
-        """
-        Called to handle a ForeignKey field.
-        """
-        raise NotImplementedError
-
-    def handle_m2m_field(self, obj, field):
-        """
-        Called to handle a ManyToManyField.
-        """
-        raise NotImplementedError
 
     def getvalue(self):
         """
@@ -127,7 +80,7 @@ class Deserializer(object):
         # hack to make sure that the models have all been loaded before
         # deserialization starts (otherwise subclass calls to get_model()
         # and friends might fail...)
-        models.get_apps()
+        #models.get_apps()
 
     def __iter__(self):
         return self
@@ -138,25 +91,23 @@ class Deserializer(object):
 
 class DeserializedObject(object):
     """
-    A deserialized model.
+    A deserialized document.
 
-    Basically a container for holding the pre-saved deserialized data along
-    with the many-to-many data saved with the object.
+    Basically a container for holding the pre-saved deserialized data.
 
     Call ``save()`` to save the object (with the many-to-many data) to the
     database; call ``save(save_m2m=False)`` to save just the object fields
     (and not touch the many-to-many stuff.)
     """
 
-    def __init__(self, obj, m2m_data=None):
+    def __init__(self, obj):
         self.object = obj
-        self.m2m_data = m2m_data
 
     def __repr__(self):
         return "<DeserializedObject: %s.%s(pk=%s)>" % (
             self.object._meta.app_label, self.object._meta.object_name, self.object.pk)
 
-    def save(self, save_m2m=True, using=None):
+    def save(self):
         # Call save on the Model baseclass directly. This bypasses any
         # model-defined save. The save is also forced to be raw.
         # This ensures that the data that is deserialized is literally
@@ -164,6 +115,3 @@ class DeserializedObject(object):
         # methods.
         self.object.save()
 
-        # prevent a second (possibly accidental) call to save() from saving
-        # the m2m data twice.
-        self.m2m_data = None
