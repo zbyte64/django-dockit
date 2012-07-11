@@ -96,8 +96,10 @@ class Schema(object):
         self._python_data = dict()
         self._parent = None #TODO make parent a configurable field
         for key, value in kwargs.iteritems():
-            #TODO check that key is a field or _data
-            setattr(self, key, value)
+            if key in self._meta.fields or key in ('_primitive_data', '_python_data', '_parent'):
+                setattr(self, key, value)
+            else:
+                self[key] = value
         assert isinstance(self._primitive_data, dict), str(type(self._primitive_data))
         assert isinstance(self._python_data, dict), str(type(self._python_data))
         if self._meta.typed_field and self._meta.typed_key:
