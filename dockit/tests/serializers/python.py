@@ -11,7 +11,10 @@ class PythonSerializerTestCase(unittest.TestCase):
     def test_serialize(self):
         child = ChildDocument(charfield='bar')
         parent = ParentDocument(title='foo', subdocument=child)
+        assert parent.natural_key
+        assert '@natural_key' in parent._primitive_data
         data = parent.to_portable_primitive(parent)
+        self.assertTrue('@natural_key' in data, str(data))
         result = self.serializer.serialize([child, parent])
         self.assertEqual(len(result), 2)
         entry = result[1]
@@ -20,8 +23,8 @@ class PythonSerializerTestCase(unittest.TestCase):
         self.assertEqual(entry['fields'], data)
     
     def test_deserialize(self):
-        payload = [{'natural_key': {'charfield': 'bar'}, 'pk': u'None', 'model': u'serializers.childdocument', 'fields': {'charfield': u'bar'}}, 
-                   {'natural_key': {'pk': 'None'}, 'pk': u'None', 'model': u'serializers.parentdocument', 'fields': {'subdocument': {'charfield': 'bar'}, 'title': u'foo'}}]
+        payload = [{'natural_key': {'charfield': 'bar'}, 'model': u'serializers.childdocument', 'fields': {'charfield': u'bar'}}, 
+                   {'natural_key': {'uuid': 'DEADBEEF'}, 'model': u'serializers.parentdocument', 'fields': {'subdocument': {'charfield': 'bar'}, 'title': u'foo'}}]
         objects = list(Deserializer(payload))
         self.assertEqual(len(objects), 2)
         obj = objects[1]

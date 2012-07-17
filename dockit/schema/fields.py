@@ -784,9 +784,7 @@ class ReferenceField(BaseField):
             return val
         if val is None:
             return val
-        if hasattr(val, 'natural_key'):
-            return val.natural_key()
-        return val.get_id()
+        return val.natural_key
     
     def to_python(self, val, parent=None):
         if self.self_reference:

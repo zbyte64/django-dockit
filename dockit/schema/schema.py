@@ -1,4 +1,5 @@
 import sys
+import uuid
 
 from django.utils.encoding import force_unicode
 from django.utils.datastructures import SortedDict
@@ -133,7 +134,7 @@ class Schema(object):
         if cls._meta.typed_field and cls._meta.typed_key:
             val[cls._meta.typed_field] = cls._meta.typed_key
         if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
-            data = {}
+            data = dict(val._primitive_data)
             for name, entry in val._python_data.iteritems():
                 if name in val._meta.fields:
                     try:
@@ -339,28 +340,37 @@ class Document(Schema):
     
     pk = property(get_id)
     
-    def natural_key(self):
-        #documents should overide this
-        #pk is a bad default, uuid may make more sense
-        return {'pk':self.get_id()}
+    def get_or_create_natural_key(self):
+        if '@natural_key' not in self._primitive_data:
+            self._primitive_data['@natural_key'] = self.create_natural_key()
+            self._primitive_data['@natural_key_hash'] = self._get_natural_key_hash(self._primitive_data['@natural_key'])
+        return self._primitive_data['@natural_key']
     
-    def natural_key_hash(self):
-        nkey = self.natural_key()
+    def create_natural_key(self):
+        '''
+        Documents may want to override this to return a dictionary of values representing the natural key of the document.
+        Other applications may want the natural key to be based off fields in the document rather then a UUID.
+        '''
+        return {'uuid': uuid.uuid4().hex}
+    
+    @property
+    def natural_key(self):
+        return self.get_or_create_natural_key()
+    
+    def _get_natural_key_hash(self, nkey):
         vals = tuple(nkey.items())
         return hash(vals)
     
     @classmethod
     def to_primitive(cls, val):
+        val.get_or_create_natural_key()
         ret = Schema.to_primitive(val)
-        ret['@natural_key'] = val.natural_key()
-        ret['@natural_key_hash'] = val.natural_key_hash()
         return ret
     
     @classmethod
     def to_portable_primitive(cls, val):
+        val.get_or_create_natural_key()
         ret = Schema.to_portable_primitive(val)
-        ret['@natural_key'] = val.natural_key()
-        ret['@natural_key_hash'] = val.natural_key_hash()
         return ret
     
     def save(self):

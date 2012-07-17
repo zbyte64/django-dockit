@@ -1,8 +1,6 @@
-from dockit.schema.schema import create_document, create_schema
-
 from django.utils import unittest
 
-from common import SimpleSchema
+from common import SimpleSchema, SimpleDocument
 
 class SchemaTestCase(unittest.TestCase):
     def test_to_primitive(self):
@@ -30,4 +28,10 @@ class SchemaTestCase(unittest.TestCase):
     def test_traverse(self):
         obj = SimpleSchema(charfield='charmander')
         self.assertEqual(obj.dot_notation('charfield'), 'charmander')
+    
+    def test_natural_key_creation(self):
+        obj = SimpleDocument()
+        obj.save()
+        self.assertTrue('@natural_key' in obj._primitive_data)
+        self.assertTrue('@natural_key_hash' in obj._primitive_data)
 

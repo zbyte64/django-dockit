@@ -30,7 +30,7 @@ class Serializer(base.Serializer):
         self.objects.append({
             "model"  : smart_unicode(obj._meta),
             "pk"     : smart_unicode(obj._get_pk_val(), strings_only=True),
-            "natural_key": obj.natural_key(),
+            "natural_key": obj.natural_key,
             "fields" : self._current,
         })
         self._current = None
@@ -49,8 +49,9 @@ def Deserializer(object_list, **options):
     for d in object_list:
         # Look up the model and starting build a dict of data for it.
         doc_cls = get_base_document(d["model"])
-        data = {doc_cls._meta.pk.attname : doc_cls._meta.pk.to_python(d["pk"])}
-        data.update(d['fields'])
+        #data = {doc_cls._meta.pk.attname : doc_cls._meta.pk.to_python(d["pk"])}
+        #data.update(d['fields'])
+        data = d['fields']
         
         yield base.DeserializedObject(doc_cls.to_python(data), natural_key=d['natural_key'])
 
