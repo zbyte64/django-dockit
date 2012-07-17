@@ -16,7 +16,7 @@ class PythonSerializerTestCase(unittest.TestCase):
         self.assertEqual(len(result), 2)
         entry = result[1]
         self.assertTrue('fields' in entry)
-        self.assertEqual(len(entry['fields']), 2)
+        self.assertEqual(len(entry['fields']), 4, str(entry))
         self.assertEqual(entry['fields'], data)
     
     def test_deserialize(self):

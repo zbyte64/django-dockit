@@ -31,8 +31,14 @@ class Manager(object):
     def get(self, **kwargs):
         return self.all().get(**kwargs)
     
-    #def natural_key(self, **kwargs):
-    #   return self.filter(**kwargs)
+    def natural_key(self, hashval=None, **kwargs):
+        if kwargs:
+            if len(kwargs) == 1 and '@natural_key_hash' in kwargs:
+                hashval = kwargs['@natural_key_hash']
+            else:
+                vals = tuple(kwargs.items())
+                hashval = hash(vals)
+        return self.get(**{'@natural_key_hash':hashval})
 
 '''
 register_indexer(backend, "equals", index_cls)

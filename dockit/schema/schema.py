@@ -323,6 +323,8 @@ class DocumentBase(SchemaBase):
                                     or (MultipleObjectsReturned,), module))
         if parents and new_class._meta.proxy:
             new_class._meta.module_name = parents[0]._meta.module_name
+        #ensure index on natural key hash
+        new_class.objects.index('@natural_key_hash__exact').commit()
         return new_class
 
 class Document(Schema):
@@ -339,7 +341,27 @@ class Document(Schema):
     
     def natural_key(self):
         #documents should overide this
+        #pk is a bad default, uuid may make more sense
         return {'pk':self.get_id()}
+    
+    def natural_key_hash(self):
+        nkey = self.natural_key()
+        vals = tuple(nkey.items())
+        return hash(vals)
+    
+    @classmethod
+    def to_primitive(cls, val):
+        ret = Schema.to_primitive(val)
+        ret['@natural_key'] = val.natural_key()
+        ret['@natural_key_hash'] = val.natural_key_hash()
+        return ret
+    
+    @classmethod
+    def to_portable_primitive(cls, val):
+        ret = Schema.to_portable_primitive(val)
+        ret['@natural_key'] = val.natural_key()
+        ret['@natural_key_hash'] = val.natural_key_hash()
+        return ret
     
     def save(self):
         from dockit.backends import get_index_router

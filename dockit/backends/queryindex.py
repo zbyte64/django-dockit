@@ -6,12 +6,13 @@ class QueryFilterOperation(object):
     def __init__(self, key, operation, value):
         self.key = key
         self.operation = operation
-        from dockit.schema import Document
-        from django.db.models import Model
-        if isinstance(value, Model):
-            value = value.pk
-        if isinstance(value, Document):
-            value = value.pk
+        if value is not None:
+            from dockit.schema import Document
+            from django.db.models import Model
+            if isinstance(value, Model):
+                value = value.pk
+            if isinstance(value, Document):
+                value = value.pk
         self.value = value
     
     def __hash__(self):
