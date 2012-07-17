@@ -163,32 +163,16 @@ class Schema(object):
                     pass
         return cls(_primitive_data=val, _parent=parent)
     
-    @classmethod
-    def from_portable_primitive(cls, val, parent=None):
-        if val is None:
-            val = dict()
-        if cls._meta.typed_field:
-            field = cls._meta.fields[cls._meta.typed_field]
-            key = val.get(cls._meta.typed_field, None)
-            if key:
-                try:
-                    cls = field.schemas[key]
-                except KeyError:
-                    #TODO emit a warning
-                    pass
-        
-        data = dict()
-        for name, entry in val.iteritems():
-            if name in cls._meta.fields:
-                try:
-                    data[name] = cls._meta.fields[name].from_portable_primitive(entry)
-                except:
-                    print name, cls._meta.fields[name], entry
-                    raise
-            else:
-                #TODO run entry through generic primitive processor
-                data[name] = entry
-        return cls(_python_data=data, _parent=parent)
+    def normalize_portable_primitives(self):
+        changed = False
+        for key, field in self._meta.fields.iteritems():
+            if key in self._primitive_data:
+                entry = self._primitive_data[key]
+                new_entry = field.normalize_portable_primitives(entry)
+                if entry != new_entry:
+                    changed = True
+                    self._primitive_data[key] = new_entry
+        return changed
     
     def __getattribute__(self, name):
         fields = object.__getattribute__(self, '_meta').fields
@@ -352,6 +336,10 @@ class Document(Schema):
         return self.get_id()
     
     pk = property(get_id)
+    
+    def natural_key(self):
+        #documents should overide this
+        return {'pk':self.get_id()}
     
     def save(self):
         from dockit.backends import get_index_router

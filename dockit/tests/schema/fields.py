@@ -61,7 +61,7 @@ class BaseFieldTestCase(unittest.TestCase):
             self.compare_primitives(val, primitive)
         
         for val in self.get_example_portable_primitive_values():
-            py_val = field.from_portable_primitive(val)
+            py_val = field.normalize_portable_primitives(val)
             primitive = field.to_portable_primitive(py_val)
             self.compare_portable_primitives(val, primitive)
         

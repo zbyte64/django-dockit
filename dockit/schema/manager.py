@@ -30,6 +30,9 @@ class Manager(object):
     
     def get(self, **kwargs):
         return self.all().get(**kwargs)
+    
+    #def natural_key(self, **kwargs):
+    #   return self.filter(**kwargs)
 
 '''
 register_indexer(backend, "equals", index_cls)

@@ -112,8 +112,8 @@ class BaseField(object):
     def to_python(self, val, parent=None):
         return val
     
-    def from_portable_primitive(self, val, parent=None):
-        return self.to_python(val, parent)
+    def normalize_portable_primitives(self, val, parent=None):
+        return val
     
     def get_form_field_class(self):
         if self.choices:
@@ -371,6 +371,13 @@ class SchemaField(BaseField):
     def to_python(self, val, parent=None):
         return self.schema.to_python(val, parent)
     
+    def normalize_portable_primitives(self, val, parent=None):
+        if val is not None and isinstance(val, dict):
+            entry = self.to_python(val, parent)
+            entry.normalize_portable_primitives()
+            return self.to_primitive(entry)
+        return val
+    
     def is_instance(self, val):
         if val is None:
             return True
@@ -547,19 +554,14 @@ class ListField(BaseField):
             return PRIMITIVE_PROCESSOR.to_python(ret)
         return PRIMITIVE_PROCESSOR.to_python(val)
     
-    def from_portable_primitive(self, val, parent=None):
-        if self.subfield:
-            ret = DotPathList()
-            if val is None:
-                return ret
-            #TODO pass in parent
-            for item in val:
-                if not self.subfield.is_instance(item):
-                    item = self.subfield.from_portable_primitive(item)
-                ret.append(item)
-            #run data through the primitive processor
-            return PRIMITIVE_PROCESSOR.to_python(ret)
-        return PRIMITIVE_PROCESSOR.to_python(val)
+    def normalize_portable_primitives(self, val, parent=None):
+        ret = list()
+        for entry in val:
+            if self.subfield:
+                ret.append(self.subfield.normalize_portable_primitive(entry))
+            else:
+                ret.append(entry)
+        return ret
     
     def is_instance(self, val):
         if val is None:
@@ -694,20 +696,16 @@ class DictField(BaseField):
         ret = PRIMITIVE_PROCESSOR.to_python(ret)
         return ret
     
-    def from_portable_primitive(self, val, parent=None):
-        ret = DotPathDict()
+    def normalize_portable_primitives(self, val, parent=None):
+        ret = dict()
         if val is None:
             return ret
         for key, value in val.iteritems():
             if self.value_subfield:
-                if not self.value_subfield.is_instance(value):
-                    value = self.value_subfield.from_portable_primitive(value)
+                value = self.value_subfield.normalize_portable_primitives(value)
             if self.key_subfield:
-                if not self.key_subfield.is_instance(key):
-                    key = self.key_subfield.from_portable_primitive(key)
+                key = self.key_subfield.normalize_portable_primitives(key)
             ret[key] = value
-        #TODO run data through the primitive processor
-        ret = PRIMITIVE_PROCESSOR.to_python(ret)
         return ret
     
     def is_instance(self, val):
@@ -802,30 +800,23 @@ class ReferenceField(BaseField):
                 return val
             document = self.document
         try:
+            if isinstance(val, dict):
+                return document.objects.get(**val)
             return document.objects.get(pk=val)
         except ObjectDoesNotExist:
             if self.null:
                 return None
             raise
     
-    def from_portable_primitive(self, val, parent=None):
-        if self.self_reference:
-            if val is None:
-                return val
-            document = type(parent)
-            if isinstance(val, document):
-                return val
-        else:
-            if self.is_instance(val):
-                return val
-            document = self.document
-        #TODO use natural key lookup
-        try:
-            return document.objects.get(pk=val)
-        except ObjectDoesNotExist:
-            if self.null:
-                return None
-            raise
+    def normalize_portable_primitives(self, val, parent=None):
+        if isinstance(val, dict):
+            try:
+                obj = self.to_python(val, parent)
+            except ObjectDoesNotExist:
+                return val #TODO should this be null instead?
+            else:
+                return obj.pk
+        return val
     
     def formfield_kwargs(self, **kwargs):
         kwargs = BaseField.formfield_kwargs(self, **kwargs)
@@ -906,14 +897,25 @@ class ModelReferenceField(BaseField):
     def to_python(self, val, parent=None):
         if val is None:
             return None
-        return self.model.objects.get(pk=val)
+        try:
+            if isinstance(val, (tuple, list)):
+                if hasattr(self.model.objects, 'get_by_natural_key'):
+                    return self.model.objects.get_by_natural_key(*val)
+            return self.model.objects.get(pk=val)
+        except ObjectDoesNotExist:
+            if self.null:
+                return None
+            raise
     
-    def from_portable_primitive(self, val, parent=None):
-        if val is None:
-            return None
-        if hasattr(self.model.objects, 'get_by_natural_key'):
-            return self.model.objects.get_by_natural_key(*val)
-        return self.model.objects.get(pk=val)
+    def normalize_portable_primitives(self, val, parent=None):
+        if isinstance(val, (tuple, list)):
+            try:
+                obj = self.to_python(val, parent)
+            except ObjectDoesNotExist:
+                return val #TODO should this be null instead?
+            else:
+                return obj.pk
+        return val
     
     def formfield_kwargs(self, **kwargs):
         kwargs = BaseField.formfield_kwargs(self, **kwargs)

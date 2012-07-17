@@ -16,6 +16,7 @@ class ManifestTestCase(unittest.TestCase):
                          'data':[{
                              "model":"dockit.temporarydocument",
                              "pk": 1,
+                             "natural_key": {"pk":1},
                              "fields": {
                                  "_tempinfo": {
                                     "user": None,

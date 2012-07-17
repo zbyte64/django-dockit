@@ -23,8 +23,9 @@ class SchemaTestCase(unittest.TestCase):
     def test_from_portable_primitive(self):
         obj = SimpleSchema(_primitive_data={'charfield':'charmander'})
         assert obj.charfield, 'Failed to initialize python data'
-        py_obj = obj.from_portable_primitive({'charfield':'charmander'})
-        self.assertEqual(obj._python_data, py_obj._python_data)
+        py_obj = obj.to_python({'charfield':'charmander'})
+        py_obj.normalize_portable_primitives()
+        self.assertEqual(obj._primitive_data, py_obj._primitive_data)
     
     def test_traverse(self):
         obj = SimpleSchema(charfield='charmander')

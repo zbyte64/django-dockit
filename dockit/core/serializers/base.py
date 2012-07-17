@@ -95,17 +95,16 @@ class DeserializedObject(object):
 
     Basically a container for holding the pre-saved deserialized data.
 
-    Call ``save()`` to save the object (with the many-to-many data) to the
-    database; call ``save(save_m2m=False)`` to save just the object fields
-    (and not touch the many-to-many stuff.)
+    Call ``save()`` to save the object
     """
 
-    def __init__(self, obj):
+    def __init__(self, obj, natural_key=None):
         self.object = obj
+        self.natural_key = natural_key
 
     def __repr__(self):
-        return "<DeserializedObject: %s.%s(pk=%s)>" % (
-            self.object._meta.app_label, self.object._meta.object_name, self.object.pk)
+        return "<DeserializedObject: %s.%s(%s)>" % (
+            self.object._meta.app_label, self.object._meta.object_name, self.natural_key)
 
     def save(self):
         # Call save on the Model baseclass directly. This bypasses any
@@ -114,4 +113,6 @@ class DeserializedObject(object):
         # what came from the file, not post-processed by pre_save/save
         # methods.
         self.object.save()
+        return self.object
+
 
