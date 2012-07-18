@@ -31,7 +31,7 @@ class BaseField(object):
                  validators=[],
                  db_index=False, unique=False,
                 #db_index=False,  db_column=None, primary_key=False, max_length=None
-                #db_tablespace=None, auto_created=False, 
+                #db_tablespace=None,
                 #unique_for_date=None, unique_for_month=None, unique_for_year=None, 
                  error_messages=None, auto_created=False):
         self.verbose_name = verbose_name

@@ -37,7 +37,7 @@ class Manager(object):
                 hashval = kwargs['@natural_key_hash']
             else:
                 vals = tuple(kwargs.items())
-                hashval = hash(vals)
+                hashval = str(hash(vals))
         return self.get(**{'@natural_key_hash':hashval})
 
 '''

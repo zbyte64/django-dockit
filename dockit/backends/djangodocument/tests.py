@@ -128,4 +128,17 @@ class DjangoDocumentTestCase(BackendTestCase):
         
         backends.INDEX_ROUTER.registered_querysets[Book._meta.collection] = {}
         RegisteredIndex.objects.on_save(Book._meta.collection, 127, {})
+    
+    def test_natural_key_index(self):
+        queryset = Book.objects.index('@natural_key_hash__exact')
+        queryset.commit()
+        
+        ibook = Book(title='test title2', slug='test2', featured=True, published=True, number_list=[1,5])
+        ibook.save()
+        
+        self.assertEqual(queryset.count(), 1)
+        
+        ibook2 = Book.objects.natural_key(**ibook.natural_key)
+        
+        self.assertEqual(ibook, ibook2)
 

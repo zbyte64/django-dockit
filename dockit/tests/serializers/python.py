@@ -33,9 +33,18 @@ class PythonSerializerTestCase(unittest.TestCase):
         
         saved_objects = list()
         for obj in objects:
-            saved_objects.append(obj.save())
+            saved_obj = obj.save()
+            self.assertTrue('@natural_key_hash' in saved_obj._primitive_data)
+            self.assertTrue(saved_obj.pk)
+            saved_objects.append(saved_obj)
         
         for obj in saved_objects:
             obj.normalize_portable_primitives()
             obj.save()
+        
+        #assert False, saved_objects[0]._primitive_data['@natural_key_hash'] #-5545305821442551595
+        self.assertEqual(saved_objects[1].subdocument, saved_objects[0])
+        
+        subdoc = saved_objects[1]._primitive_data['subdocument']
+        self.assertEqual(subdoc, saved_objects[0].pk)
 

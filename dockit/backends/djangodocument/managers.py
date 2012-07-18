@@ -130,6 +130,9 @@ class RegisteredIndexManager(models.Manager):
                 field = traverser.current_field
             index_model = self.lookup_index(value=value, field=field)
             #now create a BaseIndex entry associated to a registered index document
+            #if param.key == '@natural_key_hash':
+            #    assert value
+            #    assert False, str(value) +':'+ str(index_model)
             index_model.objects.db_index(index_doc, param.key, value)
 
 class BaseIndexManager(models.Manager):

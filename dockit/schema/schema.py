@@ -324,7 +324,10 @@ class DocumentBase(SchemaBase):
                                     or (MultipleObjectsReturned,), module))
         if parents and new_class._meta.proxy:
             new_class._meta.module_name = parents[0]._meta.module_name
+        
         #ensure index on natural key hash
+        from fields import CharField
+        new_class.add_to_class('@natural_key_hash', CharField(editable=False, null=False))
         new_class.objects.index('@natural_key_hash__exact').commit()
         return new_class
 
@@ -343,6 +346,7 @@ class Document(Schema):
     def get_or_create_natural_key(self):
         if '@natural_key' not in self._primitive_data:
             self._primitive_data['@natural_key'] = self.create_natural_key()
+        if '@natural_key_hash' not in self._primitive_data:
             self._primitive_data['@natural_key_hash'] = self._get_natural_key_hash(self._primitive_data['@natural_key'])
         return self._primitive_data['@natural_key']
     
@@ -359,7 +363,7 @@ class Document(Schema):
     
     def _get_natural_key_hash(self, nkey):
         vals = tuple(nkey.items())
-        return hash(vals)
+        return str(hash(vals)) #TODO convert to hex value
     
     @classmethod
     def to_primitive(cls, val):

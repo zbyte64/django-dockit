@@ -232,6 +232,8 @@ class SchemaAdmin(object):
         for key, field in self.schema._meta.fields.iteritems():
             if key in excludes:
                 continue
+            if not field.editable:
+                continue
             fields.append(key)
         return [(None, {'fields': fields})]
     

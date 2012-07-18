@@ -116,6 +116,9 @@ def document_to_dict(document, instance, properties=None, exclude=None, dotpath=
             continue
         if exclude and prop_name in exclude:
             continue
+        prop = document._meta.fields[prop_name]
+        if not properties and not prop.editable:
+            continue
         data[prop_name] = src_data[prop_name]
     return data
 
@@ -150,6 +153,8 @@ def fields_for_document(document, properties=None, exclude=None, formfield_callb
         if properties and not prop.name in properties:
             continue
         if exclude and prop.name in exclude:
+            continue
+        if not properties and not prop.editable:
             continue
         
         field = prop.formfield()
