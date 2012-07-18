@@ -135,7 +135,11 @@ class Schema(object):
             val[cls._meta.typed_field] = cls._meta.typed_key
         if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
             data = dict(val._primitive_data)
-            for name, entry in val._python_data.iteritems():
+            for name in val.keys():
+                try:
+                    entry = val[name]
+                except KeyError: #TODO this should not happen
+                    continue
                 if name in val._meta.fields:
                     try:
                         data[name] = val._meta.fields[name].to_portable_primitive(entry)
@@ -145,6 +149,7 @@ class Schema(object):
                 else:
                     #TODO run entry through generic primitive processor
                     data[name] = entry
+            #TODO proces any primitive_data
             return data
         assert isinstance(val, (dict, list, type(None))), str(type(val))
         return val

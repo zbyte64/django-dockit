@@ -40,11 +40,12 @@ class Command(BaseCommand):
         for document in get_documents():
             if document in excluded_documents:
                 continue
+            if app_labels and document._meta.app_label not in app_labels:
+                continue
             objects.extend(document.objects.all())
 
         try:
-            return serializers.serialize(format, objects, indent=indent,
-                        use_natural_keys=False)
+            return serializers.serialize(format, objects, indent=indent)
         except Exception, e:
             if show_traceback:
                 raise

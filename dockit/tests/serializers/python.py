@@ -14,6 +14,7 @@ class PythonSerializerTestCase(unittest.TestCase):
         assert parent.natural_key
         assert '@natural_key' in parent._primitive_data
         data = parent.to_portable_primitive(parent)
+        self.assertTrue(isinstance(data['subdocument'], dict), "Did not give a natural key: %s" % data['subdocument'])
         self.assertTrue('@natural_key' in data, str(data))
         result = self.serializer.serialize([child, parent])
         self.assertEqual(len(result), 2)
