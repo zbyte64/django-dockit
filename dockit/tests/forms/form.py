@@ -14,6 +14,15 @@ class FormUtilsTestCase(unittest.TestCase):
         self.assertTrue('charfield' in data)
         self.assertEqual(data['charfield'], 'charmander')
     
+    def test_document_to_dict_with_excess_data(self):
+        obj = SimpleDocument(_python_data={'charfield':'charmander'})
+        obj['extra'] = 1
+        assert 'extra' in obj.keys()
+        data = document_to_dict(SimpleDocument, obj)
+        self.assertTrue('charfield' in data)
+        self.assertEqual(data['charfield'], 'charmander')
+        #self.assertFalse('extra' in data)
+    
     def test_fields_for_document(self):
         fields = fields_for_document(SimpleDocument)
         self.assertTrue('charfield' in fields)

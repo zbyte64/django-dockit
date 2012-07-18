@@ -116,9 +116,10 @@ def document_to_dict(document, instance, properties=None, exclude=None, dotpath=
             continue
         if exclude and prop_name in exclude:
             continue
-        prop = document._meta.fields[prop_name]
-        if not properties and not prop.editable:
-            continue
+        if prop_name in document._meta.fields:
+            prop = document._meta.fields[prop_name]
+            if not properties and not prop.editable:
+                continue
         data[prop_name] = src_data[prop_name]
     return data
 
