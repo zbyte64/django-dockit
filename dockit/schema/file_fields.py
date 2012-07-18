@@ -69,6 +69,10 @@ class FileField(Field):
             return val
         if getattr(val, 'storage_path', False):
             return val.storage_path
+        
+        if hasattr(val, 'open'): 
+            #rewind file to the begining
+            val.open()
         name = self.generate_filename(val.name)
         name = self.storage.save(name, val)
         assert name
