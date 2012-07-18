@@ -361,6 +361,11 @@ class Document(Schema):
     def natural_key(self):
         return self.get_or_create_natural_key()
     
+    @property
+    def natural_key_hash(self):
+        self.get_or_create_natural_key()
+        return self._primitive_data['@natural_key_hash']
+    
     def _get_natural_key_hash(self, nkey):
         vals = tuple(nkey.items())
         return str(hash(vals)) #TODO convert to hex value
