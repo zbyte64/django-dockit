@@ -52,6 +52,7 @@ def Deserializer(object_list, **options):
         #data = {doc_cls._meta.pk.attname : doc_cls._meta.pk.to_python(d["pk"])}
         #data.update(d['fields'])
         data = d['fields']
+        data['@natural_key'] = d['natural_key']
         
         yield base.DeserializedObject(doc_cls.to_python(data), natural_key=d['natural_key'])
 
