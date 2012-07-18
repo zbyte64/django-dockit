@@ -231,7 +231,7 @@ class Schema(object):
     
     def keys(self):
         #TODO more dictionary like functionality
-        return set(self._primitive_data.keys() + self._python_data.keys() + self._meta.fields.keys())
+        return set(self._python_data.keys() + self._meta.fields.keys())
     
     def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
