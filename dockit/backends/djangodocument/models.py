@@ -54,15 +54,15 @@ class LongIndex(BaseIndex):
 RegisteredIndex.objects.register_index_model('long', LongIndex, long)
 
 class BooleanIndex(BaseIndex):
-    value = models.BooleanField()
+    value = models.NullBooleanField()
 RegisteredIndex.objects.register_index_model('bool', BooleanIndex, bool)
 
 class StringIndex(BaseIndex):
-    value = models.CharField(max_length=512)
+    value = models.CharField(max_length=512, null=True)
 RegisteredIndex.objects.register_index_model('char', StringIndex, (basestring, type(None)))
 
 class TextIndex(BaseIndex):
-    value = models.TextField()
+    value = models.TextField(null=True)
 RegisteredIndex.objects.register_index_model('text', TextIndex, basestring)
 
 class DateTimeIndex(BaseIndex):

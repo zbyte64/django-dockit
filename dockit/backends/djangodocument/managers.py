@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import simplejson
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.exceptions import ObjectDoesNotExist
 
 from dockit.schema.common import DotPathTraverser, DotPathNotFound
 
@@ -98,6 +99,8 @@ class RegisteredIndexManager(models.Manager):
                 traverser.resolve_for_raw_data(data, schema=schema)
             except DotPathNotFound:
                 return False
+            except ObjectDoesNotExist:
+                return False
             if traverser.current_value != inclusion.value:
                 return False
         for exclusion in query_index.exclusions:
@@ -106,6 +109,8 @@ class RegisteredIndexManager(models.Manager):
             try:
                 traverser.resolve_for_raw_data(data, schema=schema)
             except DotPathNotFound:
+                pass
+            except ObjectDoesNotExist:
                 pass
             else:
                 if traverser.current_value == exclusion.value:
@@ -123,6 +128,9 @@ class RegisteredIndexManager(models.Manager):
             try:
                 traverser.resolve_for_raw_data(data, schema=schema)
             except DotPathNotFound:
+                value = None
+                field = None
+            except ObjectDoesNotExist:
                 value = None
                 field = None
             else:
