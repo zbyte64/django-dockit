@@ -311,9 +311,6 @@ class DocumentBase(SchemaBase):
             objects = Manager()
             objects.contribute_to_class(new_class, 'objects')
         
-        if not new_class._meta.virtual and not new_class._meta.proxy:
-            register_documents(new_class._meta.app_label, new_class)
-        
         parents = [b for b in bases if isinstance(b, DocumentBase)]
         
         module = new_class.__module__
@@ -331,9 +328,15 @@ class DocumentBase(SchemaBase):
             new_class._meta.module_name = parents[0]._meta.module_name
         
         #ensure index on natural key hash
-        from fields import CharField
-        new_class.add_to_class('@natural_key_hash', CharField(editable=False, null=False))
-        new_class.objects.index('@natural_key_hash__exact').commit()
+        if not new_class._meta.virtual and not new_class._meta.proxy:
+            #TODO these fields should be definable at the document level
+            from fields import CharField, DictField
+            new_class.add_to_class('@natural_key_hash', CharField(editable=False, null=False))
+            new_class.add_to_class('@natural_key', DictField(editable=False, null=False))
+            
+            register_documents(new_class._meta.app_label, new_class)
+            
+            new_class.objects.index('@natural_key_hash__exact').commit()
         return new_class
 
 class Document(Schema):

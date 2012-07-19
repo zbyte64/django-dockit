@@ -20,7 +20,7 @@ class DockitAppCache(AppCache):
                 # Since the filename extension could be .py the first time and
                 # .pyc or .pyo the second time, ignore the extension when
                 # comparing.
-                if os.path.splitext(fname1)[0] == os.path.splitext(fname2)[0]:
+                if fname1.endswith('.'+fname2) or fname2.endswith('.'+fname1):
                     continue
             document_dict[doc_name] = document
             self.documents[document._meta.collection] = document
