@@ -28,12 +28,15 @@ class Serializer(base.Serializer):
         pk_field = obj._meta.get_id_field_name()
         if pk_field in self._current:
             del self._current[pk_field]
+        self._current.pop('@natural_key', None)
+        self._current.pop('@natural_key_hash', None)
 
     def end_object(self, obj):
         entry = {
             "model"  : smart_unicode(obj._meta),
             "pk"     : smart_unicode(obj._get_pk_val(), strings_only=True),
             "natural_key": obj.natural_key,
+            "natural_key_hash": obj.natural_key_hash,
             "fields" : self._current,
         }
         self.objects.append(entry)
