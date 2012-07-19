@@ -195,6 +195,9 @@ class SchemaOptions(object):
 
     def get_delete_permission(self):
         return '%s.delete' % self.collection
+    
+    def get_id_field_name(self):
+        return self.get_backend().get_id_field_name()
 
 class DocumentOptions(SchemaOptions):
     abstract = False

@@ -2,6 +2,8 @@ from copy import copy
 
 from dockit.backends.queryindex import QueryIndex
 
+from django.core.exceptions import MultipleObjectsReturned
+
 class Manager(object):
     def contribute_to_class(self, cls, name):
         new = copy(self)
@@ -31,14 +33,26 @@ class Manager(object):
     def get(self, **kwargs):
         return self.all().get(**kwargs)
     
-    def natural_key(self, hashval=None, **kwargs):
+    def _natural_key(self, hashval=None, **kwargs):
+        if isinstance(hashval, dict):
+            kwargs = hashval
+            hashval = None
         if kwargs:
             if len(kwargs) == 1 and '@natural_key_hash' in kwargs:
                 hashval = kwargs['@natural_key_hash']
             else:
                 vals = tuple(kwargs.items())
                 hashval = str(hash(vals))
-        return self.get(**{'@natural_key_hash':hashval})
+        assert isinstance(hashval, basestring)
+        return self.filter(**{'@natural_key_hash':hashval})
+    
+    def natural_key(self, hashval=None, **kwargs):
+        qs = self._natural_key(hashval, **kwargs)
+        try:
+            return qs.get()
+        except MultipleObjectsReturned, error:
+            raise MultipleObjectsReturned('Duplicate natural keys found! Lookup parameters were %s' % (hashval or kwargs))
+            raise
 
 '''
 register_indexer(backend, "equals", index_cls)

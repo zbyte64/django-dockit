@@ -396,7 +396,7 @@ class Document(Schema):
         backend.save(type(self), self._meta.collection, data)
         get_index_router().on_save(type(self), self._meta.collection, self.get_id(), data)
         post_save.send(sender=type(self), instance=self, created=created)
-        
+    
     def delete(self):
         from dockit.backends import get_index_router
         pre_delete.send(sender=type(self), instance=self)
@@ -414,7 +414,7 @@ class Document(Schema):
     
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.pk == other.pk
-
+    
     def __hash__(self):
         return hash((self._meta.collection, self.pk))
 

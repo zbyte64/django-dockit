@@ -25,14 +25,18 @@ class Serializer(base.Serializer):
 
     def start_object(self, obj):
         self._current = obj.to_portable_primitive(obj)
+        pk_field = obj._meta.get_id_field_name()
+        if pk_field in self._current:
+            del self._current[pk_field]
 
     def end_object(self, obj):
-        self.objects.append({
+        entry = {
             "model"  : smart_unicode(obj._meta),
             "pk"     : smart_unicode(obj._get_pk_val(), strings_only=True),
             "natural_key": obj.natural_key,
             "fields" : self._current,
-        })
+        }
+        self.objects.append(entry)
         self._current = None
 
     def getvalue(self):
@@ -46,13 +50,15 @@ def Deserializer(object_list, **options):
     stream or a string) to the constructor
     """
     #models.get_apps()
+    use_natural_keys = options.get('use_natural_keys', True)
     for d in object_list:
         # Look up the model and starting build a dict of data for it.
         doc_cls = get_base_document(d["model"])
-        #data = {doc_cls._meta.pk.attname : doc_cls._meta.pk.to_python(d["pk"])}
-        #data.update(d['fields'])
         data = d['fields']
-        data['@natural_key'] = d['natural_key']
+        if use_natural_keys:
+            data['@natural_key'] = d['natural_key']
+        else:
+            data[doc_cls._meta.pk.attname] = doc_cls._meta.pk.to_python(d["pk"])
         
         yield base.DeserializedObject(doc_cls.to_python(data), natural_key=d['natural_key'])
 

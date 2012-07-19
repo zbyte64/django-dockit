@@ -5,6 +5,7 @@ Module for abstract serializer/unserializer base classes.
 from StringIO import StringIO
 
 from django.core.serializers.base import SerializationError, DeserializationError
+from django.core.exceptions import ObjectDoesNotExist
 
 class Serializer(object):
     """
@@ -22,7 +23,7 @@ class Serializer(object):
         self.options = options
 
         self.stream = options.pop("stream", StringIO())
-        self.use_natural_keys = options.pop("use_natural_keys", False)
+        self.use_natural_keys = options.pop("use_natural_keys", True)
 
         self.start_serialization()
         for obj in queryset:
@@ -106,12 +107,27 @@ class DeserializedObject(object):
         return "<DeserializedObject: %s.%s(%s)>" % (
             self.object._meta.app_label, self.object._meta.object_name, self.natural_key)
 
-    def save(self):
+    def save(self, enforce_natural_key=True):
         # Call save on the Model baseclass directly. This bypasses any
         # model-defined save. The save is also forced to be raw.
         # This ensures that the data that is deserialized is literally
         # what came from the file, not post-processed by pre_save/save
         # methods.
+        
+        #if an object with the natural key already exists, replace it while preserving the data store id
+        if enforce_natural_key:
+            manager = type(self.object).objects
+            previous_objects = manager._natural_key(self.natural_key)
+            if previous_objects.count() > 1:
+                for obj in list(previous_objects)[1:]:
+                    obj.delete() #!!!!!! TODO emit a warning or something...
+            if previous_objects:
+                #Does this work?
+                previous_obj = previous_objects[0]
+                pk_field = previous_obj._meta.get_id_field_name()
+                pk_value = previous_obj._primitive_data[pk_field]
+                print 'Replacing id: %s\t natural key: %s' % (pk_value, self.natural_key)
+                self.object._primitive_data[pk_field] = pk_value
         self.object.save()
         return self.object
 
