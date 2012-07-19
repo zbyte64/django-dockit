@@ -117,7 +117,7 @@ class DeserializedObject(object):
         #if an object with the natural key already exists, replace it while preserving the data store id
         if enforce_natural_key:
             manager = type(self.object).objects
-            previous_objects = manager._natural_key(self.natural_key)
+            previous_objects = manager.filter_by_natural_key(self.natural_key)
             if previous_objects.count() > 1:
                 for obj in list(previous_objects)[1:]:
                     obj.delete() #!!!!!! TODO emit a warning or something...

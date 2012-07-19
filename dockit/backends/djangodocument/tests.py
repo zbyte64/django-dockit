@@ -138,7 +138,7 @@ class DjangoDocumentTestCase(BackendTestCase):
         
         self.assertEqual(queryset.count(), 1)
         
-        ibook2 = Book.objects.natural_key(**ibook.natural_key)
+        ibook2 = Book.objects.get_by_natural_key(**ibook.natural_key)
         
         self.assertEqual(ibook, ibook2)
 

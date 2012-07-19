@@ -804,7 +804,7 @@ class ReferenceField(BaseField):
             document = self.document
         try:
             if isinstance(val, dict):
-                return document.objects.natural_key(**val)
+                return document.objects.get_by_natural_key(**val)
             return document.objects.get(pk=val)
         except ObjectDoesNotExist:
             if self.null:
