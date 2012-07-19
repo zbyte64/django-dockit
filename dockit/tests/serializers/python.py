@@ -1,7 +1,9 @@
 from dockit.core.serializers.python import Serializer, Deserializer
-from django.utils import unittest
 
-from common import ParentDocument, ChildDocument
+from django.utils import unittest
+from django.contrib.contenttypes.models import ContentType
+
+from common import ParentDocument, ChildDocument, ChildSchema
 
 class PythonSerializerTestCase(unittest.TestCase):
     def setUp(self):
@@ -10,17 +12,18 @@ class PythonSerializerTestCase(unittest.TestCase):
     
     def test_serialize(self):
         child = ChildDocument(charfield='bar')
-        parent = ParentDocument(title='foo', subdocument=child)
+        parent = ParentDocument(title='foo', subdocument=child, subschema=ChildSchema(ct=ContentType.objects.all()[0]))
         assert parent.natural_key
         assert '@natural_key' in parent._primitive_data
         data = parent.to_portable_primitive(parent)
+        self.assertTrue(isinstance(data['subschema']['ct'], tuple))
         self.assertTrue(isinstance(data['subdocument'], dict), "Did not give a natural key: %s" % data['subdocument'])
         self.assertTrue('@natural_key' in data, str(data))
         result = self.serializer.serialize([child, parent])
         self.assertEqual(len(result), 2)
         entry = result[1]
         self.assertTrue('fields' in entry)
-        self.assertEqual(len(entry['fields']), 4, str(entry))
+        self.assertEqual(len(entry['fields']), 5, str(entry))
         self.assertEqual(entry['fields'], data)
     
     def test_deserialize(self):

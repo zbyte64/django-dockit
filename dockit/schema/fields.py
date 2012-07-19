@@ -371,6 +371,11 @@ class SchemaField(BaseField):
     def to_python(self, val, parent=None):
         return self.schema.to_python(val, parent)
     
+    def to_portable_primitive(self, val):
+        if val is None:
+            return None
+        return val.to_portable_primitive(val)
+    
     def normalize_portable_primitives(self, val, parent=None):
         if val is not None and isinstance(val, dict):
             entry = self.to_python(val, parent)
