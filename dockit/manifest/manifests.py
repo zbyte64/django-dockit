@@ -12,6 +12,12 @@ class DjangoFixtureManifest(Manifest):
                 obj.save()
                 results.append(obj)
         return results
+    
+    @classmethod
+    def dump(cls, objects, data_source, data_source_key, **options):
+        data = django_serializers.serialize('python', objects)
+        results = data_source.to_payload(data_source_key, data, **options)
+        return {'data': [results]}
 
 class DockitFixtureManifest(Manifest):
     def load(self):
@@ -32,7 +38,8 @@ class DockitFixtureManifest(Manifest):
         return obj
     
     @classmethod
-    def dump(self, python_objects):
-        results = dockit_serializers.serialize('python', python_objects)
-        return results
+    def dump(cls, objects, data_source, data_source_key, **options):
+        data = dockit_serializers.serialize('python', objects)
+        results = data_source.to_payload(data_source_key, data, **options)
+        return {'data': [results]}
 

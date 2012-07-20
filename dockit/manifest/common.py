@@ -48,16 +48,18 @@ class ManifestLoader(object):
         data_sources = [(data_source_cls, objects, options)...]
         '''
         manifest_cls = self.manifests[loader]
-        payload = {'loader':loader,
-                   'data':[]}
+        payload = {'loader':loader}
         for data_source_cls, objects, options in data_sources:
             source = None
             for key, cls in self.data_sources.iteritems():
                 if data_source_cls == cls:
                     source = key
                     break
-            data = manifest_cls.dump(objects)
-            payload['data'].append(data_source_cls.to_payload(source, data, **options))
+            if source:
+                data = manifest_cls.dump(objects, data_source_cls, source, **options)
+                payload.update(data)
+                break #no more data sources...
+            #payload['data'].append(data_source_cls.to_payload(source, data, **options))
         return payload
 
 class Manifest(object):
@@ -91,7 +93,7 @@ class Manifest(object):
         raise NotImplementedError
     
     @classmethod
-    def dump(cls, objects):
+    def dump(cls, objects, data_source, data_source_key, **options):
         '''
         Returns primitive python objects that is compatible with data sources
         '''
