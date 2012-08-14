@@ -16,6 +16,10 @@ class QueryFilterOperation(object):
         self.value = value
     
     def __hash__(self):
+        assert self.key is not None
+        assert self.operation is not None
+        if self.value is None:
+            return hash((self.key, self.operation))
         return hash((self.key, self.operation, self.value))
     
     def dotpath(self):
