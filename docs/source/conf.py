@@ -164,7 +164,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'DjangoFieldmakerdoc'
+htmlhelp_basename = 'DjangoDockitdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -178,7 +178,7 @@ htmlhelp_basename = 'DjangoFieldmakerdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'DjangoFieldmaker.tex', u'Django Fieldmaker Documentation',
+  ('index', 'DjangoDockit.tex', u'Django Dockit Documentation',
    'manual'),
 ]
 
@@ -211,7 +211,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'djangofieldmaker', u'Django Fieldmaker Documentation',
+    ('index', 'djangodockit', u'Django Dockit Documentation',
      [u'Jason Kraus'], 1)
 ]
 
