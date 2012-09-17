@@ -40,7 +40,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Django Fieldmaker'
+project = u'Django Dockit'
 copyright = u'2011'
 
 # The version info for the project you're documenting, acts as replacement for
