@@ -1,1 +1,2 @@
 pymongo
+-e git+git://github.com/zbyte64/django-hyperadmin.git#egg=django-hyperadmin
