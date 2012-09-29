@@ -1,4 +1,4 @@
-from dockit.manifest.manifests import DjangoFixtureManifest, DockitFixtureManifest
+from dockit.manifest.manifests import DjangoManifest, DockitManifest
 from dockit.manifest.datasources import InlineDataSource
 from dockit.manifest.common import ManifestLoader
 
@@ -6,8 +6,8 @@ from django.utils import unittest
 
 class ManifestTestCase(unittest.TestCase):
     def setUp(self):
-        self.manifest_loader = ManifestLoader(manifests={'djangofixture':DjangoFixtureManifest,
-                                                         'dockitfixture':DockitFixtureManifest,},
+        self.manifest_loader = ManifestLoader(manifests={'djangofixture':DjangoManifest,
+                                                         'dockitfixture':DockitManifest,},
                                               data_sources={'inline':InlineDataSource})
     
     def test_load_dockitfixture_manifest(self):

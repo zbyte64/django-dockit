@@ -4,10 +4,10 @@ from django.utils import simplejson
 from django.core.serializers.json import DjangoJSONEncoder
 
 class JSONAdaptor(DataAdaptor):
-    def deserialize(self, file_obj):
+    def deserialize(self, source, file_obj):
         return simplejson.loads(file_obj)
     
-    def serialize(self, python_objects):
+    def serialize(self, source, python_objects):
         return simplejson.dumps(python_objects, cls=DjangoJSONEncoder)
 
 register_adaptor('json', JSONAdaptor)

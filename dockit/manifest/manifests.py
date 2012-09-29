@@ -3,7 +3,7 @@ from common import Manifest
 from django.core import serializers as django_serializers
 from dockit.core import serializers as dockit_serializers
 
-class DjangoFixtureManifest(Manifest):
+class DjangoManifest(Manifest):
     def load(self):
         results = list()
         for data_source in self.data_sources:
@@ -14,12 +14,13 @@ class DjangoFixtureManifest(Manifest):
         return results
     
     @classmethod
-    def dump(cls, objects, data_source, data_source_key, **options):
+    def dump(cls, objects, data_source_cls, data_source_key, **options):
+        data_source = data_source_cls(**options)
         data = django_serializers.serialize('python', objects)
-        results = data_source.to_payload(data_source_key, data, **options)
+        results = data_source.to_payload(data_source_key, data)
         return {'data': [results]}
 
-class DockitFixtureManifest(Manifest):
+class DockitManifest(Manifest):
     def load(self):
         return self.load_from_data_sources(self.data_sources)
     
@@ -38,8 +39,9 @@ class DockitFixtureManifest(Manifest):
         return obj
     
     @classmethod
-    def dump(cls, objects, data_source, data_source_key, **options):
+    def dump(cls, objects, data_source_cls, data_source_key, **options):
+        data_source = data_source_cls(**options)
         data = dockit_serializers.serialize('python', objects)
-        results = data_source.to_payload(data_source_key, data, **options)
+        results = data_source.to_payload(data_source_key, data)
         return {'data': [results]}
 

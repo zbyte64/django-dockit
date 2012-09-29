@@ -7,21 +7,34 @@ def get_adaptor(format):
     return ADAPTORS[format]()
 
 class DataAdaptor(object):
-    def deserialize(self, file_obj):
+    '''
+    Serializes and deserializes objects
+    '''
+    def deserialize(self, source, file_obj):
         raise NotImplementedError
     
-    def serialize(self, python_objects):
+    def serialize(self, source, python_objects):
         raise NotImplementedError
 
 class DataSource(object):
-    def __init__(self, **options):
+    '''
+    Data store for serialized objects
+    '''
+    def __init__(self, format='json', **options):
+        self.format = format
         self.options = options
+    
+    def store_asset(self, django_file_obj):
+        raise NotImplementedError
+    
+    def retrieve_asset(self, path_name):
+        raise NotImplementedError
     
     def get_data(self):
         raise NotImplementedError
     
     @classmethod
-    def to_payload(cls, source, data, **options):
+    def to_payload(cls, source_key, data, **options):
         '''
         Returns the manifest payload representation
         '''
@@ -93,7 +106,7 @@ class Manifest(object):
         raise NotImplementedError
     
     @classmethod
-    def dump(cls, objects, data_source, data_source_key, **options):
+    def dump(cls, objects, data_source_cls, data_source_key, **options):
         '''
         Returns primitive python objects that is compatible with data sources
         '''

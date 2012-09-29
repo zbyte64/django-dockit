@@ -10,25 +10,24 @@ class URLDataSource(DataSource):
     def get_data(self):
         response = urlopen(self.url)
         adaptor = get_adaptor(self.options['format'])
-        data = adaptor.deserialize(response)
+        data = adaptor.deserialize(self, response)
         return data
     
-    @classmethod
-    def to_payload(cls, source, data, **options):
+    def to_payload(self, source_key, data):
         #TODO write data to url
-        return {'source':source, 'url':options['url'], 'format':options['format']}
+        return {'source':source_key, 'url':self.url, 'format':self.format}
 
 class InlineDataSource(DataSource):
-    def __init__(self, data, **options):
+    def __init__(self, data=None, **options):
         self.data = data
         super(InlineDataSource, self).__init__(**options)
     
     def get_data(self):
         return self.data
     
-    @classmethod
-    def to_payload(cls, source, data, **options):
-        return {'source':source, 'data':data}
+    def to_payload(self, source_key, data):
+        self.data = data
+        return {'source':source_key, 'data':data}
 
 class LocalDataSource(DataSource):
     def __init__(self, filename, **options):
@@ -43,13 +42,12 @@ class LocalDataSource(DataSource):
         path = self.get_file_path()
         source = open(path, 'r')
         adaptor = get_adaptor(self.options['format'])
-        data = adaptor.deserialize(source)
+        data = adaptor.deserialize(self, source)
         return data
     
-    @classmethod
-    def to_payload(cls, source, data, **options):
+    def to_payload(self, source_key, data):
         #TODO write data to filename
-        return {'source':source, 'filename':options['filename'], 'format':options['format']}
+        return {'source':source_key, 'filename':self.filename, 'format':self.format}
 
 class ZipfileDataSource(DataSource):
     def __init__(self, filename, archive, **options):
@@ -64,15 +62,14 @@ class ZipfileDataSource(DataSource):
         path = self.get_file_path()
         source = self.archive.open(path)
         adaptor = get_adaptor(self.options['format'])
-        data = adaptor.deserialize(source)
+        data = adaptor.deserialize(self, source)
         return data
     
-    @classmethod
-    def to_payload(self, source, data, **options):
+    def to_payload(self, source_key, data):
         #write data to options['archive']
-        adaptor = get_adaptor(options['format'])
+        adaptor = get_adaptor(self.format)
         encoded_data = adaptor.serialize(data)
-        options['archive'].writestr(options['filename'], encoded_data)
+        self.archive.writestr(self.filename, encoded_data)
         
-        return {'source':source, 'filename':options['filename'], 'format':options['format']}
+        return {'source':source_key, 'filename':self.filename, 'format':self.format}
 
