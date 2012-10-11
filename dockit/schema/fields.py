@@ -553,7 +553,10 @@ class ListField(BaseField):
             #TODO pass in parent
             for item in val:
                 if not self.subfield.is_instance(item):
-                    item = self.subfield.to_python(item)
+                    try:
+                        item = self.subfield.to_python(item)
+                    except ObjectDoesNotExist:
+                        continue
                 ret.append(item)
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_python(ret)
@@ -632,7 +635,10 @@ class SetField(ListField):
             #TODO pass in parent
             for item in val:
                 if not self.subfield.is_instance(item):
-                    item = self.subfield.to_python(item)
+                    try:
+                        item = self.subfield.to_python(item)
+                    except ObjectDoesNotExist:
+                        continue
                 ret.add(item)
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_python(ret)
