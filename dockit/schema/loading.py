@@ -15,13 +15,18 @@ class DockitAppCache(AppCache):
                 # The same model may be imported via different paths (e.g.
                 # appname.models and project.appname.models). We use the source
                 # filename as a means to detect identity.
-                fname1 = os.path.abspath(sys.modules[document.__module__].__file__)
-                fname2 = os.path.abspath(sys.modules[document_dict[doc_name].__module__].__file__)
-                # Since the filename extension could be .py the first time and
-                # .pyc or .pyo the second time, ignore the extension when
-                # comparing.
-                if fname1.endswith('.'+fname2) or fname2.endswith('.'+fname1):
-                    continue
+                try:
+                    fname1 = os.path.abspath(sys.modules[document.__module__].__file__)
+                    fname2 = os.path.abspath(sys.modules[document_dict[doc_name].__module__].__file__)
+                except KeyError:
+                    #TODO handle virtual registration
+                    pass
+                else:
+                    # Since the filename extension could be .py the first time and
+                    # .pyc or .pyo the second time, ignore the extension when
+                    # comparing.
+                    if fname1.endswith('.'+fname2) or fname2.endswith('.'+fname1):
+                        continue
             document_dict[doc_name] = document
             self.documents[document._meta.collection] = document
         if self.app_cache_ready():
