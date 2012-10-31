@@ -252,7 +252,7 @@ class DateField(BaseField):
                 return datetime.datetime.strptime(value, format).date()
             except ValueError:
                 continue
-        raise ValueError
+        return datetime.datetime.strptime(value).date()
 
 class DateTimeField(BaseField):
     form_field_class = forms.DateTimeField
@@ -278,7 +278,7 @@ class DateTimeField(BaseField):
                 return datetime.datetime.strptime(value, format)
             except ValueError:
                 continue
-        raise ValueError
+        return datetime.datetime.strptime(value)
 
 class DecimalField(BaseField):
     form_field_class = forms.DecimalField
