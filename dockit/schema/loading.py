@@ -113,13 +113,20 @@ class DockitAppCache(AppCache):
     def post_app_ready(self): #TODO this should be called when the connection is ready, not when the app is ready;
         self.write_lock.acquire()
         try:
-            self.register_documents_with_backend(self.pending_documents)
-            self.pending_documents = list()
+            if self.pending_documents:
+                self.register_documents_with_backend(self.pending_documents)
+                self.pending_documents = list()
             
-            self.register_indexes_with_backend(self.pending_indexes)
-            self.pending_indexes = list()
+            if self.pending_indexes:
+                self.register_indexes_with_backend(self.pending_indexes)
+                self.pending_indexes = list()
         finally:
             self.write_lock.release()
+    
+    def make_app_ready(self):
+        if not getattr(self, 'is_ready', False):
+            self.post_app_ready()
+            self.is_ready = True
 
 AppCache._AppCache__shared_state.update({'app_indexes': dict(),
                                          'app_documents': SortedDict(),

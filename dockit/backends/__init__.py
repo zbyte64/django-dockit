@@ -47,9 +47,11 @@ class CompositeIndexRouter(object):
         self.registered_querysets = dict() #TODO this is redundant of the loading.appcache object
     
     def get_effective_queryset(self, queryset):
+        self.make_app_ready()
         collection = queryset.document._meta.collection
         
         if collection not in self.registered_querysets: 
+            assert False
             #the loader hasn't registered the querysets with us yet, force it to do so.
             from dockit.schema.loading import cache
             cache.post_app_ready()
@@ -133,13 +135,19 @@ class CompositeIndexRouter(object):
                 return name
         return get_document_router().get_storage_name_for_write(document)
     
+    def make_app_ready(self):
+        from dockit.schema.loading import cache
+        cache.make_app_ready()
+    
     def on_save(self, document, collection, object_id, data):
+        self.make_app_ready()
         querysets = self.registered_querysets.get(collection, {})
         for query in querysets.itervalues():
             backend = self.get_index_for_write(document, query)
             backend.on_save(document, collection, object_id, data)
     
     def on_delete(self, document, collection, object_id):
+        self.make_app_ready()
         querysets = self.registered_querysets.get(collection, {})
         for query in querysets.itervalues():
             backend = self.get_index_for_write(document, query)
