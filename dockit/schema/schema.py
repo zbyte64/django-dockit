@@ -44,8 +44,12 @@ class SchemaBase(type):
                         setattr(meta, key, getattr(parent_meta, key))
         
         if getattr(meta, 'app_label', None) is None:
-            document_module = sys.modules[new_class.__module__]
-            parts = document_module.__name__.split('.')
+            try:
+                document_module = sys.modules[new_class.__module__]
+            except KeyError:
+                parts = str(new_class.__module__).split('.')
+            else:
+                parts = document_module.__name__.split('.')
             #dockitcms.models.submodule.MyModel => applabel=dockitcms, objectname=MyModel
             if 'models' in parts:
                 index = parts.index('models')
