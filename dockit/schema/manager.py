@@ -30,6 +30,9 @@ class Manager(object):
     def all(self):
         return QueryIndex(self.schema)
     
+    def count(self):
+        return self.all().count()
+    
     def get(self, **kwargs):
         return self.all().get(**kwargs)
     

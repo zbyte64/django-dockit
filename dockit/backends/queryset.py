@@ -51,6 +51,17 @@ class QuerySet(object):
     def __init__(self, query):
         self.query = query
     
+    @property
+    def document(self):
+        return self.query.document
+    
+    @property
+    def model(self):
+        """
+        For basic django compatibility with queryset message generation
+        """
+        return self.document
+    
     def __len__(self):
         #TODO cache
         return self.query.__len__()

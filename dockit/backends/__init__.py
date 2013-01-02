@@ -166,6 +166,15 @@ class CompositeIndexRouter(object):
         backend2 = document._meta.get_index_backend_for_read(queryset)
         if backend != backend2:
             backend2.register_index(queryset)
+    
+    def reregister_querysets(self):
+        for collection, sets in self.registered_querysets.iteritems():
+            for key, queryset in sets.iteritems():
+                backend = document._meta.get_index_backend_for_write(queryset)
+                backend.register_index(queryset)
+                backend2 = document._meta.get_index_backend_for_read(queryset)
+                if backend != backend2:
+                    backend2.register_index(queryset)
 
 DYNAMIC_IMPORT_CACHE = dict()
 
