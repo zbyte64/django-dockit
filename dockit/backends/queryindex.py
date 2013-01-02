@@ -35,6 +35,10 @@ class QueryFilterOperation(object):
         return hash(self) == hash(other)
 
 class QueryIndex(object):
+    """
+    The public API for constructing and calling indexes. 
+    Acts similarly to Django's Queryset.
+    """
     def __init__(self, document):
         self.name = None
         self.document = document
@@ -89,6 +93,13 @@ class QueryIndex(object):
     @property
     def collection(self):
         return self.document._meta.collection
+    
+    @property
+    def model(self):
+        """
+        For basic django compatibility with queryset message generation
+        """
+        return self.document
     
     @property
     def queryset(self):
