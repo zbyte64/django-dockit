@@ -5,6 +5,9 @@ from dockit import backends
 from dockit.models import TemporaryDocument
 from dockit.tests.backends.common import BackendTestCase
 
+from pymongo.errors import ConnectionFailure
+
+
 class TestDocument(TemporaryDocument):
     charfield = schema.CharField()
     listfield = schema.ListField(schema.CharField())
@@ -15,7 +18,10 @@ class MongoBackendTestCase(BackendTestCase):
     def setUp(self):
         super(MongoBackendTestCase, self).setUp()
         
-        TestDocument.objects.all().delete()
+        try:
+            TestDocument.objects.all().delete()
+        except ConnectionFailure:
+            self.skipTest('Mongo connection unavailable')
     
     def test_get_nonexistant_document_raises_error(self):
         try:
