@@ -3,8 +3,8 @@ from django.db.models import Model, Q
 from dockit.backends.indexer import BaseIndexer
 from dockit.schema import fields#, Document
 
-import models as indexes
-from backend import ModelIndexStorage
+import dockit.backends.djangodocument.models as indexes
+from dockit.backends.djangodocument.backend import ModelIndexStorage
 
 #TODO need a mechanism for back populating indexes, must be task based
 

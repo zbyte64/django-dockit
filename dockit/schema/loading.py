@@ -4,7 +4,7 @@ import sys
 from django.db.models.loading import AppCache
 from django.utils.datastructures import SortedDict
 
-from signals import document_registered
+from dockit.schema.signals import document_registered
 
 class DockitAppCache(AppCache):
     def register_documents(self, app_label, *documents):

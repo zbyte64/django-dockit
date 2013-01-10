@@ -9,9 +9,9 @@ from decimal import Decimal
 import datetime
 import copy
 
-from serializer import PRIMITIVE_PROCESSOR
-from exceptions import DotPathNotFound
-from common import DotPathList, DotPathDict, DotPathSet, UnSet
+from dockit.schema.serializer import PRIMITIVE_PROCESSOR
+from dockit.schema.exceptions import DotPathNotFound
+from dockit.schema.common import DotPathList, DotPathDict, DotPathSet, UnSet
 from dockit.forms.fields import HiddenSchemaField, HiddenListField, HiddenDictField, SchemaChoiceField, PrimitiveListField, SchemaMultipleChoiceField
 
 class NOT_PROVIDED:
@@ -454,7 +454,7 @@ class GenericSchemaField(BaseField): #meant to be sublcassed
     def is_instance(self, val):
         if val is None:
             return True
-        from schema import Schema
+        from dockit.schema.schema import Schema
         return isinstance(val, Schema)
     
     def traverse_dot_path(self, traverser):
@@ -745,7 +745,7 @@ class DictField(BaseField):
                 except KeyError:
                     pass
                 if new_value and not hasattr(new_value, 'traverse_dot_path'):
-                    from common import GenericDotPathObject
+                    from dockit.schema.common import GenericDotPathObject
                     new_value = GenericDotPathObject(new_value)
             traverser.next(field=self.value_subfield, value=new_value)
         else:

@@ -91,5 +91,5 @@ class DockitPermission(models.Model):
     pass #a content type is required for creating permissions
 
 if 'django.contrib.auth' in settings.INSTALLED_APPS:
-    import auth
+    import dockit.auth
 

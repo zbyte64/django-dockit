@@ -6,11 +6,11 @@ from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
-from manager import Manager
-from loading import register_documents
-from common import DotPathTraverser, UnSet
-from signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
-import options
+from dockit.schema.manager import Manager
+from dockit.schema.loading import register_documents
+from dockit.schema.common import DotPathTraverser, UnSet
+from dockit.schema.signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
+from dockit.schema import options
 
 def subclass_exception(name, parents, module):
     return type(name, parents, {'__module__': module})
@@ -214,7 +214,7 @@ class Schema(object):
         if key in self._meta.fields:
             return getattr(self, key)
         if key in self._primitive_data and key not in self._python_data:
-            from serializer import PRIMITIVE_PROCESSOR
+            from dockit.schema.serializer import PRIMITIVE_PROCESSOR
             r_val = self._primitive_data[key]
             p_val = PRIMITIVE_PROCESSOR.to_python(r_val)
             self._python_data[key] = p_val
@@ -334,7 +334,7 @@ class DocumentBase(SchemaBase):
         #ensure index on natural key hash
         if not new_class._meta.virtual and not new_class._meta.proxy:
             #TODO these fields should be definable at the document level
-            from fields import CharField, DictField
+            from dockit.schema.fields import CharField, DictField
             new_class.add_to_class('@natural_key_hash', CharField(editable=False, null=False))
             new_class.add_to_class('@natural_key', DictField(editable=False, null=False))
             

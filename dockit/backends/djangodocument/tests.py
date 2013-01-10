@@ -5,7 +5,7 @@ from dockit import backends
 from dockit import schema
 from dockit.tests.backends.common import BackendTestCase
 
-from models import RegisteredIndex, RegisteredIndexDocument, StringIndex
+from dockit.backends.djangodocument.models import RegisteredIndex, RegisteredIndexDocument, StringIndex
 
 class Book(schema.Document):
     title = schema.CharField()

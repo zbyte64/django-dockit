@@ -5,8 +5,8 @@ from dockit.backends.base import BaseDocumentStorage, BaseIndexStorage
 from dockit.backends.queryset import BaseDocumentQuery
 from dockit.backends import get_index_router, dynamic_import
 
-from models import DocumentStore, RegisteredIndex, RegisteredIndexDocument
-from utils import db_table_exists
+from dockit.backends.djangodocument.models import DocumentStore, RegisteredIndex, RegisteredIndexDocument
+from dockit.backends.djangodocument.utils import db_table_exists
 
 class DocumentQuery(BaseDocumentQuery):
     def __init__(self, query_index, queryset):
@@ -95,7 +95,7 @@ class ModelIndexStorage(BaseIndexStorage):
         self.indexes = dict()
         self.pending_indexes = set()
         self.index_tasks = dynamic_import(INDEX_TASKS)()
-        import indexers
+        from dockit.backends.djangodocument import indexers
     
     def _register_pending_indexes(self):
         if not self.pending_indexes:

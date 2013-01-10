@@ -187,11 +187,13 @@ def dynamic_import(name):
     names = name.split('.')
     attr = names.pop()
     try:
-        ret = __import__(name, globals(), locals(), [attr], -1)
+        module = __import__(name, globals(), locals(), [attr], -1)
+        ret = getattr(module, attr)
     except ImportError:
         name = '.'.join(names)
-        ret = __import__(name, globals(), locals(), [attr], -1)
-    ret = getattr(ret, attr, ret)
+        module = __import__(name, globals(), locals(), [attr], -1)
+        ret = getattr(module, attr)
+    
     DYNAMIC_IMPORT_CACHE[original_name] = ret
     return ret
 

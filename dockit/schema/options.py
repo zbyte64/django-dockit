@@ -9,7 +9,7 @@ from django.utils.encoding import smart_str, force_unicode
 from django.utils.datastructures import SortedDict, MergeDict
 from django.db.models import FieldDoesNotExist
 
-from common import DotPathTraverser
+from dockit.schema.common import DotPathTraverser
 
 class FieldsDict(MergeDict):
     def __init__(self, *dicts):
@@ -101,7 +101,7 @@ class SchemaOptions(object):
                 #if not self.virtual:
                 #    raise TypeError("Schemas that specify a typed_field and not a typed_key must be virtual.")
                 if self.typed_field not in self.fields:
-                    from fields import SchemaTypeField
+                    from dockit.schema.fields import SchemaTypeField
                     self.polymorphic_schemas = SortedDict()
                     field = SchemaTypeField(self.polymorphic_schemas, editable=False)
                     field.contribute_to_class(cls, self.typed_field)
@@ -153,7 +153,7 @@ class SchemaOptions(object):
     
     @property
     def pk(self):
-        from fields import CharField
+        from dockit.schema.fields import CharField
         return CharField(name='pk')
     
     def get_backend(self):

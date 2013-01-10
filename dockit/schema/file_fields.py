@@ -1,4 +1,4 @@
-from fields import BaseField as Field
+from dockit.schema.fields import BaseField as Field
 
 from django.db.models.fields.files import FieldFile, FileDescriptor
 from django.utils.encoding import force_unicode, smart_str

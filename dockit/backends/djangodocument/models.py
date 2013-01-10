@@ -5,7 +5,7 @@ from dockit.schema.loading import get_base_document
 import datetime
 from decimal import Decimal
 
-from managers import BaseIndexManager, DocumentManager, RegisteredIndexManager
+from dockit.backends.djangodocument.managers import BaseIndexManager, DocumentManager, RegisteredIndexManager
 
 class DocumentStore(models.Model):
     collection = models.CharField(max_length=128)

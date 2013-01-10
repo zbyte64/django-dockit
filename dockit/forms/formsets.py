@@ -1,7 +1,7 @@
 from django.forms.formsets import BaseFormSet, formset_factory
 from django.utils.translation import ugettext_lazy as _, ugettext
 
-from forms import DocumentForm, documentform_factory
+from dockit.forms.forms import DocumentForm, documentform_factory
 
 class BaseDocumentFormSet(BaseFormSet):
     """

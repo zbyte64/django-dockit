@@ -1,4 +1,4 @@
-from exceptions import DotPathNotFound
+from dockit.schema.exceptions import DotPathNotFound
 
 class UnSet(object):
     def __nonzero__(self):
@@ -13,7 +13,7 @@ class DotPathTraverser(object):
         self._called = False
     
     def resolve_for_schema(self, schema):
-        from fields import SchemaField
+        from dockit.schema.fields import SchemaField
         entry = {'value':None,
                  'field':SchemaField(schema=schema),
                  'part':None,}
@@ -21,7 +21,7 @@ class DotPathTraverser(object):
         self._resolve_loop()
     
     def resolve_for_instance(self, instance):
-        from fields import SchemaField
+        from dockit.schema.fields import SchemaField
         entry = {'value':instance,
                  'field':SchemaField(schema=type(instance)),
                  'part':None,}
@@ -29,7 +29,7 @@ class DotPathTraverser(object):
         self._resolve_loop()
     
     def resolve_for_raw_data(self, data, schema=None):
-        from fields import DictField, SchemaField
+        from dockit.schema.fields import DictField, SchemaField
         field = None
         if schema:
             field = SchemaField(schema=schema)
@@ -94,8 +94,8 @@ class DotPathTraverser(object):
     def next(self, field=None, value=None):
         part = self.remaining_paths.pop(0)
         if value and field is None:
-            from fields import SchemaField
-            from schema import Schema
+            from dockit.schema.fields import SchemaField
+            from dockit.schema.schema import Schema
             if isinstance(value, Schema):
                 field = SchemaField(schema=type(value))
         entry = {'field':field,

@@ -83,11 +83,11 @@ class RegisteredIndexManager(models.Manager):
             self.evaluate_query_index(query, query_index, doc_id, data)
     
     def on_delete(self, collection, doc_id):
-        from models import RegisteredIndexDocument
+        from dockit.backends.djangodocument.models import RegisteredIndexDocument
         RegisteredIndexDocument.objects.filter(index__collection=collection, doc_id=doc_id).delete()
     
     def evaluate_query_index(self, registered_index, query_index, doc_id, data):
-        from models import RegisteredIndexDocument
+        from dockit.backends.djangodocument.models import RegisteredIndexDocument
         
         schema = query_index.document
         

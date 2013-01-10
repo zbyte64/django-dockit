@@ -1,6 +1,6 @@
 import copy
 
-from queryset import QuerySet
+from dockit.backends.queryset import QuerySet
 
 class QueryFilterOperation(object):
     def __init__(self, key, operation, value):

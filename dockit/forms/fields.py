@@ -5,7 +5,7 @@ from django.utils.translation import ugettext as _
 from django.utils.encoding import force_unicode, smart_unicode
 from django.utils import simplejson as json
 
-from widgets import PrimitiveListWidget
+from dockit.forms.widgets import PrimitiveListWidget
 
 import inspect
 

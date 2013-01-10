@@ -10,7 +10,7 @@ from django.utils import simplejson
 
 from decimal import Decimal
 
-from common import DotPathList, DotPathDict
+from dockit.schema.common import DotPathList, DotPathDict
 
 class Handler(object):
     def encode(self, obj):

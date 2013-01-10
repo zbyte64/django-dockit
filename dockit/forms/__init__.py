@@ -1,1 +1,1 @@
-from forms import DocumentForm
+from dockit.forms.forms import DocumentForm

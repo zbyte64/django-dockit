@@ -1,20 +1,26 @@
-from models import RegisteredIndex 
+#import is done inside function to prevent cyclic import with Celery
+
 
 #core index functions; do not call directly
 def register_index(name, collection, query_hash):
+    from dockit.backends.djangodocument.models import RegisteredIndex
     RegisteredIndex.objects.register_index(name, collection, query_hash)
 
 def reindex(name, collection, query_hash):
+    from dockit.backends.djangodocument.models import RegisteredIndex
     RegisteredIndex.objects.reindex(name, collection, query_hash)
 
 def on_save(collection, doc_id, data):
+    from dockit.backends.djangodocument.models import RegisteredIndex
     RegisteredIndex.objects.on_save(collection, doc_id, data)
 
 def on_delete(collection, doc_id):
+    from dockit.backends.djangodocument.models import RegisteredIndex
     RegisteredIndex.objects.on_delete(collection, doc_id)
 
 class IndexTasks(object):
     def __init__(self):
+        from dockit.backends.djangodocument.models import RegisteredIndex
         self.manager = RegisteredIndex.objects
     
     def get_query_index_params(self, query_index):
@@ -89,4 +95,3 @@ class CeleryIndexTasks(IndexTasks):
     
     def schedule_on_delete(self, collection, doc_id):
         self._on_delete.delay(collection, doc_id)
-
