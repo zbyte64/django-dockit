@@ -10,7 +10,8 @@ from dockit.schema.manager import Manager
 from dockit.schema.loading import register_documents
 from dockit.schema.common import DotPathTraverser, UnSet
 from dockit.schema.signals import pre_save, post_save, pre_delete, post_delete, class_prepared, pre_init, post_init
-from dockit.schema import options
+from dockit.schema.options import SchemaOptions, DocumentOptions
+
 
 def subclass_exception(name, parents, module):
     return type(name, parents, {'__module__': module})
@@ -19,7 +20,7 @@ class SchemaBase(type):
     """
     Metaclass for all schemas.
     """
-    options_module = options.SchemaOptions
+    options_module = SchemaOptions
     
     def __new__(cls, name, bases, attrs):
         super_new = super(SchemaBase, cls).__new__
@@ -307,7 +308,7 @@ class Schema(object):
         return hash(self.to_primitive(self))
 
 class DocumentBase(SchemaBase):
-    options_module = options.DocumentOptions
+    options_module = DocumentOptions
     
     def __new__(cls, name, bases, attrs):
         new_class = SchemaBase.__new__(cls, name, bases, attrs)
