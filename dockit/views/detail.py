@@ -1,6 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
 from django.views.generic import detail as detailview
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 from django.http import Http404
 
 class SingleObjectMixin(detailview.SingleObjectMixin):
