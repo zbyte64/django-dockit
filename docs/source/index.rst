@@ -16,7 +16,7 @@ Welcome to Django Dockits's documentation!
    manual/views
    manual/indexers
 
-Download: http://github.com/zbyte64/django-dockit
+Download: http://github.com/webcube/django-dockit
 
 Indices and tables
 ==================
