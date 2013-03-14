@@ -5,7 +5,7 @@
 Introduction
 ============
 
-django-dockitcms provides a Document ORM in django. Dockitcms attempts to provide a batteries included experience while preserving django's various conventions.
+Django-DocKit provides a Document ORM in django. DocKit attempts to provide a batteries included experience while preserving django's various conventions.
 
 --------
 Features

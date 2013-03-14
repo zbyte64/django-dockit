@@ -1,4 +1,4 @@
-Welcome to Django Dockits's documentation!
+Welcome to Django DocKits's documentation!
 ==========================================
 
 
