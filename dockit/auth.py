@@ -5,6 +5,7 @@ from dockit.schema.loading import get_documents
 from django.contrib.auth import models as auth_app
 from django.contrib.contenttypes.models import ContentType
 from django.db.utils import DatabaseError
+from django.db.transaction import commit_on_success
 
 def _get_permission_codename(action, opts):
     return u'%s.%s' % (opts.collection, action)
@@ -58,7 +59,8 @@ def on_document_registered(document, **kwargs):
 document_registered.connect(on_document_registered)
 
 try:
-    create_permissions(get_documents(), 1)
+    #wrap with commit_on_success as to try to not poison a higher transaction
+    commit_on_success(create_permissions)(get_documents(), 1)
 except DatabaseError:
     pass
 
