@@ -25,6 +25,12 @@ Features
 * Document and Index routing to multiple backends
 
 
+Help & Feedback
+===============
+
+We have a mailing list for general discussion and help: http://groups.google.com/group/django-haystack/
+
+
 Installation
 ============
 
