@@ -12,13 +12,15 @@ Features
 --------
 
 * Backendable support for document and index storage
- * Mongodb
- * Django Model with support for celery or ztask indexing
+
+  * Mongodb
+  * Django Model with support for celery or ztask indexing
 * Integrates with the django admin
- * Supports inlines
- * List Field support
- * Supports editing documents with deeply nested schemas
- * Robust design for customizing behavior on a per schema basis
+
+  * Supports inlines
+  * List Field support
+  * Supports editing documents with deeply nested schemas
+  * Robust design for customizing behavior on a per schema basis
 * Class based views
 * Django forms support
 * Dynamically typed documents and schemas
