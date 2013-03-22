@@ -220,3 +220,4 @@ man_pages = [
 ]
 
 autodoc_member_order = 'bysource'
+autoclass_content = 'class'

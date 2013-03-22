@@ -1,22 +1,20 @@
 Welcome to Django DocKits's documentation!
 ==========================================
 
+Django-DocKit provides a Document ORM in django. DocKit attempts to provide a batteries included experience while preserving django's various conventions.
 
 .. toctree::
    :glob:
-   :maxdepth: 1
+   :maxdepth: 2
 
    manual/installation
    manual/admin
-   manual/backends
-   manual/schemas
    manual/indexing
-   manual/fields
-   manual/forms
    manual/views
-   manual/indexers
    manual/validation
    manual/multiplerecordtypes
+   manual/api/index
+   manual/contributing
    release_notes
 
 Download: http://github.com/webcube/django-dockit
