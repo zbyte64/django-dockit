@@ -160,7 +160,7 @@ class SchemaFieldTestCase(BaseFieldTestCase):
     field_class = fields.SchemaField
     EXAMPLE_VALUES = [SimpleSchema(charfield='charmander')]
     EXAMPLE_PRIMITIVE_VALUES = [{'charfield':'charmander'}]
-    NULL_VALUE = SimpleSchema()
+    NULL_VALUE = None
     
     def get_field_kwargs(self):
         return {'schema': SimpleSchema}

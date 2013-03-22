@@ -4,7 +4,8 @@ import uuid
 from django.utils.encoding import force_unicode
 from django.utils.datastructures import SortedDict
 from django.db.models import FieldDoesNotExist
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.core.exceptions import (ObjectDoesNotExist,
+    MultipleObjectsReturned, FieldError, ValidationError, NON_FIELD_ERRORS)
 
 from dockit.schema.manager import Manager
 from dockit.schema.loading import register_documents
@@ -306,6 +307,76 @@ class Schema(object):
     
     def __hash__(self):
         return hash(self.to_primitive(self))
+    
+    def clean(self):
+        """
+        Hook for doing any extra document-wide validation after clean() has been
+        called on every field by self.clean_fields. Any ValidationError raised
+        by this method will not be associated with a particular field; it will
+        have a special-case association with the field defined by NON_FIELD_ERRORS.
+        """
+        pass
+    
+    def validate_unique(self, exclude=None):
+        pass #a place holder for now
+    
+    def full_clean(self, exclude=None):
+        """
+        Calls clean_fields, clean, and validate_unique, on the model,
+        and raises a ``ValidationError`` for any errors that occured.
+        """
+        errors = {}
+        if exclude is None:
+            exclude = []
+
+        try:
+            self.clean_fields(exclude=exclude)
+        except ValidationError, e:
+            errors = e.update_error_dict(errors)
+
+        # Form.clean() is run even if other validation fails, so do the
+        # same with Model.clean() for consistency.
+        try:
+            self.clean()
+        except ValidationError, e:
+            errors = e.update_error_dict(errors)
+
+        # Run unique checks, but only for fields that passed validation.
+        for name in errors.keys():
+            if name != NON_FIELD_ERRORS and name not in exclude:
+                exclude.append(name)
+        try:
+            self.validate_unique(exclude=exclude)
+        except ValidationError, e:
+            errors = e.update_error_dict(errors)
+
+        if errors:
+            raise ValidationError(errors)
+
+    def clean_fields(self, exclude=None):
+        """
+        Cleans all fields and raises a ValidationError containing message_dict
+        of all validation errors if any occur.
+        """
+        if exclude is None:
+            exclude = []
+
+        errors = {}
+        for f in self._meta.fields.itervalues():
+            if f.name in exclude:
+                continue
+            # Skip validation for empty fields with blank=True. The developer
+            # is responsible for making sure they have a valid value.
+            raw_value = getattr(self, f.attname)
+            
+            try:
+                setattr(self, f.attname, f.clean(raw_value, self))
+            except ValidationError, e:
+                errors[f.name] = e.messages
+
+        if errors:
+            raise ValidationError(errors)
+
 
 class DocumentBase(SchemaBase):
     options_module = DocumentOptions

@@ -1,7 +1,9 @@
 from django.utils.encoding import smart_unicode, force_unicode
+from django.utils.translation import ugettext_lazy as _
 from django.utils.text import capfirst
 from django.utils import formats
-from django.core.exceptions import ObjectDoesNotExist
+from django.core import validators
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.fields import BLANK_CHOICE_DASH
 from django import forms
 
@@ -21,6 +23,15 @@ class BaseField(object):
     form_field_class = forms.CharField
     form_field_choices_class = forms.ChoiceField
     form_widget_class = None
+    
+    default_validators = [] # Default set of validators
+    default_error_messages = {
+        'invalid_choice': _(u'Value %r is not a valid choice.'),
+        'null': _(u'This field cannot be null.'),
+        'blank': _(u'This field cannot be blank.'),
+        'unique': _(u'%(model_name)s with this %(field_label)s '
+                    u'already exists.'),
+    }
     
     creation_counter = 0
     auto_creation_counter = -1
@@ -45,6 +56,14 @@ class BaseField(object):
         self.help_text = help_text
         self.validators = validators
         self.db_index = db_index
+        
+        self.validators = self.default_validators + validators
+
+        messages = {}
+        for c in reversed(self.__class__.__mro__):
+            messages.update(getattr(c, 'default_error_messages', {}))
+        messages.update(error_messages or {})
+        self.error_messages = messages
         
         #TODO support the following:
         self.rel = None
@@ -182,6 +201,61 @@ class BaseField(object):
     @property
     def attname(self):
         return self.name
+    
+    def run_validators(self, value):
+        if value in validators.EMPTY_VALUES:
+            return
+
+        errors = []
+        for v in self.validators:
+            try:
+                v(value)
+            except ValidationError, e:
+                if hasattr(e, 'code') and e.code in self.error_messages:
+                    message = self.error_messages[e.code]
+                    if e.params:
+                        message = message % e.params
+                    errors.append(message)
+                else:
+                    errors.extend(e.messages)
+        if errors:
+            raise ValidationError(errors)
+
+    def validate(self, value, obj):
+        """
+        Validates value and throws ValidationError. Subclasses should override
+        this to provide validation logic.
+        """
+        if not self.editable:
+            # Skip validation for non-editable fields.
+            return
+        if self.choices and value:
+            
+            for option_key, option_value in self.choices:
+                if isinstance(option_value, (list, tuple)):
+                    # This is an optgroup, so look inside the group for
+                    # options.
+                    for optgroup_key, optgroup_value in option_value:
+                        if value == optgroup_key:
+                            return
+                elif value == option_key:
+                    return
+            msg = self.error_messages['invalid_choice'] % value
+            raise ValidationError(msg)
+
+        if value is None and not self.null:
+            raise ValidationError(self.error_messages['null'])
+
+        if not self.blank and value in validators.EMPTY_VALUES:
+            raise ValidationError(self.error_messages['blank'])
+
+    def clean(self, value, obj):
+        """
+        The correct value is returned if no error is raised.
+        """
+        self.validate(value, obj)
+        self.run_validators(value)
+        return value
 
 class BaseTypedField(BaseField):
     coerce_function = None
@@ -369,6 +443,10 @@ class SchemaField(BaseField):
         return self.schema.to_primitive(val)
     
     def to_python(self, val, parent=None):
+        if val is None:
+            return None
+        if not isinstance(val, dict):
+            raise ValidationError('Invalid schema instance')
         return self.schema.to_python(val, parent)
     
     def to_portable_primitive(self, val):

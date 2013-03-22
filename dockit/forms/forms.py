@@ -227,7 +227,8 @@ class DocumentFormMetaClass(type):
         new_class.declared_fields = declared_fields
         new_class.base_fields = fields
         return new_class
-    
+
+#TODO call schema.full_clean()
 class BaseDocumentForm(BaseForm):
     """ Base Document Form object """
     
