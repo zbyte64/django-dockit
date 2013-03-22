@@ -30,7 +30,7 @@ Features
 Help & Feedback
 ===============
 
-We have a mailing list for general discussion and help: http://groups.google.com/group/django-haystack/
+We have a mailing list for general discussion and help: http://groups.google.com/group/django-dockit/
 
 
 Installation

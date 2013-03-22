@@ -17,6 +17,7 @@ Welcome to Django DocKits's documentation!
    manual/indexers
    manual/validation
    manual/multiplerecordtypes
+   release_notes
 
 Download: http://github.com/webcube/django-dockit
 
@@ -24,7 +25,7 @@ Download: http://github.com/webcube/django-dockit
 Help & Feedback
 ===============
 
-We have a mailing list for general discussion and help: http://groups.google.com/group/django-haystack/
+We have a mailing list for general discussion and help: http://groups.google.com/group/django-dockit/
 
 
 Indices and tables
