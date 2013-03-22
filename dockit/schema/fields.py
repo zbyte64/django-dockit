@@ -436,6 +436,8 @@ class SchemaField(BaseField):
     form_field_class = HiddenSchemaField
     
     def __init__(self, schema, *args, **kwargs):
+        from dockit.schema import Schema
+        assert issubclass(schema, Schema), '%s does not subclass Schema' % repr(schema)
         self.schema = schema
         super(SchemaField, self).__init__(*args, **kwargs)
     
