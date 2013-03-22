@@ -937,7 +937,8 @@ class DocumentSetField(SetField):
     form_field_choices_class = SchemaMultipleChoiceField
     
     def __init__(self, document, *args, **kwargs):
-        subfield = ReferenceField(document)
+        #a set is never null, if it is passed in it is meant for our subfield
+        subfield = ReferenceField(document, null=kwargs.pop('null', True))
         kwargs['subfield'] = subfield
         super(DocumentSetField, self).__init__(*args, **kwargs)
         #self.choices = True
@@ -1015,7 +1016,8 @@ class ModelSetField(SetField):
     form_field_choices_class = forms.ModelMultipleChoiceField
     
     def __init__(self, model, *args, **kwargs):
-        subfield = ModelReferenceField(model)
+        #a set is never null, if it is passed in it is meant for our subfield
+        subfield = ModelReferenceField(model, null=kwargs.pop('null', True))
         kwargs['subfield'] = subfield
         super(ModelSetField, self).__init__(*args, **kwargs)
         #self.choices = True
