@@ -15,6 +15,8 @@ Welcome to Django DocKits's documentation!
    manual/forms
    manual/views
    manual/indexers
+   manual/validation
+   manual/multiplerecordtypes
 
 Download: http://github.com/webcube/django-dockit
 
