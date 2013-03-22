@@ -294,14 +294,34 @@ class SchemaAdmin(object):
         if view.next_dotpath():
             kwargs['required'] = False
         return field(**kwargs)
-    
+
+    def raw_id_widget_for_property(self,prop,WidgetType):
+        class FauxRel(object):
+            def get_related_field(self):
+                return self   
+        rel = FauxRel()
+        rel.to = prop.model
+        rel.limit_choices_to = {}
+        rel.name = "pk" 
+        thewidget = WidgetType(rel=rel)
+        # Monkey patch the render function to replace
+        # the hardcoded admin relative url
+        thewidget._render = thewidget.render
+        def _tmprender(name,value,attrs=None):
+            from django.utils.safestring import mark_safe
+            from django.core.urlresolvers import reverse  
+            output = thewidget._render(name,value,attrs=attrs) 
+            return mark_safe(output.replace("../../../",reverse("admin:index")))
+        thewidget.render = _tmprender
+        return thewidget
+
     def formfield_for_foreignkey(self, prop, field, view, **kwargs):
         """
         Get a form Field for a ForeignKey.
         """
         request = kwargs.pop('request', None)
-        if prop.name in self.raw_id_fields:
-            kwargs['widget'] = widgets.ForeignKeyRawIdWidget(rel=None)
+        if True: #prop.name in self.raw_id_fields:
+            kwargs["widget"] = self.raw_id_widget_for_property(prop,widgets.ForeignKeyRawIdWidget)
         elif prop.name in self.radio_fields:
             kwargs['widget'] = widgets.AdminRadioSelect(attrs={
                 'class': get_ul_class(self.radio_fields[prop.name]),
@@ -315,8 +335,8 @@ class SchemaAdmin(object):
         Get a form Field for a ManyToManyField.
         """
         request = kwargs.pop('request', None)
-        if prop.name in self.raw_id_fields:
-            kwargs['widget'] = widgets.ManyToManyRawIdWidget(rel=None)
+        if True: #prop.name in self.raw_id_fields:
+            kwargs['widget'] = self.raw_id_widget_for_property(prop,widgets.ManyToManyRawIdWidget)
             kwargs['help_text'] = ''
         elif prop.name in (list(self.filter_vertical) + list(self.filter_horizontal)):
             kwargs['widget'] = widgets.FilteredSelectMultiple(prop.verbose_name, (prop.name in self.filter_vertical))
