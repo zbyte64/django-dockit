@@ -57,7 +57,11 @@ class SchemaBase(type):
                 index = parts.index('models')
                 app_label = parts[index-1]
             else:
-                app_label = parts[-2]
+                try:
+                    app_label = parts[-2]
+                except IndexError: 
+                    #happens when we define a document in the shell
+                    app_label = parts[0]
         else:
             app_label = getattr(meta, 'app_label')
         
