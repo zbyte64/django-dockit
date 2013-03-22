@@ -33,7 +33,7 @@ class Serializer(base.Serializer):
 
     def end_object(self, obj):
         entry = {
-            "model"  : smart_unicode(obj._meta),
+            "collection"  : smart_unicode(obj._meta.collection),
             "pk"     : smart_unicode(obj._get_pk_val(), strings_only=True),
             "natural_key": obj.natural_key,
             "natural_key_hash": obj.natural_key_hash,
@@ -56,7 +56,7 @@ def Deserializer(object_list, **options):
     use_natural_keys = options.get('use_natural_keys', True)
     for d in object_list:
         # Look up the model and starting build a dict of data for it.
-        doc_cls = get_base_document(d["model"])
+        doc_cls = get_base_document(d["collection"])
         data = d['fields']
         if use_natural_keys:
             data['@natural_key'] = d['natural_key']

@@ -14,7 +14,7 @@ class Command(BaseCommand):
     help = ("Output the contents of the database as a fixture of the given "
             "format (using each model's default manager unless --all is "
             "specified).")
-    #args = '[appname appname.ModelName ...]'
+    args = '[appname collectionname ...]'
 
     def handle(self, *app_labels, **options):
         from dockit.schema.loading import get_documents
@@ -40,7 +40,9 @@ class Command(BaseCommand):
         for document in get_documents():
             if document in excluded_documents:
                 continue
-            if app_labels and document._meta.app_label not in app_labels:
+            if (app_labels and 
+                 document._meta.app_label not in app_labels and
+                 document._meta.collection not in app_labels):
                 continue
             objects.extend(document.objects.all())
 
