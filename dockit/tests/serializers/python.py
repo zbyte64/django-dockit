@@ -29,8 +29,8 @@ class PythonSerializerTestCase(unittest.TestCase):
         self.assertEqual(entry['fields'], data)
     
     def test_deserialize(self):
-        payload = [{'natural_key': {'charfield': 'bar'}, 'model': u'serializers.childdocument', 'fields': {'charfield': u'bar'}}, 
-                   {'natural_key': {'uuid': 'DEADBEEF'}, 'model': u'serializers.parentdocument', 'fields': {'subdocument': {'charfield': 'bar'}, 'title': u'foo'}}]
+        payload = [{'natural_key': {'charfield': 'bar'}, 'collection': u'serializers.childdocument', 'fields': {'charfield': u'bar'}}, 
+                   {'natural_key': {'uuid': 'DEADBEEF'}, 'collection': u'serializers.parentdocument', 'fields': {'subdocument': {'charfield': 'bar'}, 'title': u'foo'}}]
         objects = list(Deserializer(payload))
         self.assertEqual(len(objects), 2)
         obj = objects[1]

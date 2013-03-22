@@ -14,7 +14,7 @@ class ManifestTestCase(unittest.TestCase):
         data = {'loader':'dockitfixture',
                 'data':[{'source':'inline',
                          'data':[{
-                             "model":"dockit.temporarydocument",
+                             "collection":"dockit.temporarydocument",
                              "pk": 1,
                              "natural_key": {"pk":1},
                              "fields": {
