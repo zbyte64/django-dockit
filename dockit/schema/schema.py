@@ -98,6 +98,11 @@ class SchemaBase(type):
             setattr(cls, name, value)
 
 class Schema(object):
+    """
+    The :class:`~dockit.schema.schema.Schema` class provides a basic datatype
+    for building up more complex Schemas and Documents. Schemas may embed other schemas.
+    """
+    
     __metaclass__ = SchemaBase
     
     def __init__(self, **kwargs):
@@ -119,6 +124,10 @@ class Schema(object):
     
     @classmethod
     def to_primitive(cls, val):
+        """
+        Returns a primitive representation of the schema that uses only built-in
+        python structures and is json serializable
+        """
         #CONSIDER shouldn't val be a schema?
         if cls._meta.typed_field and cls._meta.typed_key:
             val[cls._meta.typed_field] = cls._meta.typed_key
@@ -166,6 +175,9 @@ class Schema(object):
     
     @classmethod
     def to_python(cls, val, parent=None):
+        """
+        Returns an instantiaded schema with the passed in value as the primitive data
+        """
         if val is None:
             val = dict()
         if cls._meta.typed_field:
@@ -420,9 +432,17 @@ class DocumentBase(SchemaBase):
         return new_class
 
 class Document(Schema):
+    """
+    The :class:`~dockit.schema.schema.Document` class inherits from Schema
+    and provides a persistant form of a schema.
+    """
+    
     __metaclass__ = DocumentBase
     
     def get_id(self):
+        """
+        Returns the document identifier
+        """
         backend = self._meta.get_backend()
         return str(backend.get_id(self._primitive_data))
     
@@ -471,6 +491,9 @@ class Document(Schema):
         return ret
     
     def save(self):
+        """
+        Commit the document to the storage engine
+        """
         from dockit.backends import get_index_router
         created = not self.pk
         pre_save.send(sender=type(self), instance=self)
@@ -481,6 +504,9 @@ class Document(Schema):
         post_save.send(sender=type(self), instance=self, created=created)
     
     def delete(self):
+        """
+        Remove this document from the storage engine
+        """
         from dockit.backends import get_index_router
         pre_delete.send(sender=type(self), instance=self)
         backend = self._meta.get_document_backend_for_write()

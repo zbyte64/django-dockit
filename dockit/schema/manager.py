@@ -5,6 +5,11 @@ from dockit.backends.queryindex import QueryIndex
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 
 class Manager(object):
+    """
+    The :class:`~dockit.schema.manager.Manager` class is assigned to the
+    objects attribute of a document. The manager is used for retrieving
+    documents.
+    """
     def contribute_to_class(self, cls, name):
         new = copy(self)
         new.schema = cls
@@ -19,6 +24,9 @@ class Manager(object):
         return self.schema._meta.collection
     
     def filter(self, **kwargs):
+        """
+        An accessor for the filters.
+        """
         return self.all().filter(**kwargs)
     
     def index(self, *args):
@@ -28,12 +36,18 @@ class Manager(object):
     #    return self.index_manager.values
     
     def all(self):
+        """
+        Return all documents in the collection
+        """
         return QueryIndex(self.schema)
     
     def count(self):
         return self.all().count()
     
     def get(self, **kwargs):
+        """
+        Return the document matching the arguments
+        """
         return self.all().get(**kwargs)
     
     def filter_by_natural_key(self, hashval=None, **kwargs):
