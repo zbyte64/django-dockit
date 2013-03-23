@@ -2,7 +2,8 @@
 Validation
 ==========
 
-Documents and Schemas support validation that mimics Django's models. Given a document instance you may call `full_clean` to validate the document structure and have a `ValidationError` raised if the document does not conform. Documents and schemas may define their own `clean_<fieldname>` method to validate each entry and a `clean` method to validate the entire document.
+Documents and Schemas support validation that mimics Django's models. Given a document instance you may call `full_clean` to validate the document structure and have a `ValidationError` raised if the document does not conform. Documents and schemas may define their own `clean_<fieldname>` method to validate each entry and a `clean` method to validate the entire document. All validation errors are to be sublcassed from `django.core.exceptions.ValidationError`.
+
 
 To run through the document validation run `full_clean`::
 
