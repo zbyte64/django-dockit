@@ -13,6 +13,7 @@ Django-DocKit provides a Document ORM in django. DocKit attempts to provide a ba
    manual/views
    manual/validation
    manual/multiplerecordtypes
+   manual/fixtures
    manual/api/index
    manual/contributing
    release_notes

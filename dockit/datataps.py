@@ -4,7 +4,7 @@ Example usage::
     from datatap.dataps import JSONStreamDataTap, ZipFileDataTap
     from dockit.datataps import DocumentDataTap
     
-    #with django models
+    #serialize documents
     outstream = JSONStreamDataTap(stream=sys.stdout)
     outstream.open('w'. for_datatap=ModelDataTap)
     source = DocumentDataTap(MyDocument, Blog.objects.filter(is_active=True))
@@ -70,7 +70,11 @@ class DocumentDataTap(DataTap):
     '''
     Reads and writes from DocKit's Collections
     '''
+    
     def __init__(self, *collection_sources, **kwargs):
+        '''
+        :param collection_sources: Maybe a Document, a Document instance, a Document queryset or a list of Document instances.
+        '''
         self.collection_sources = collection_sources or []
         super(DocumentDataTap, self).__init__(**kwargs)
     
@@ -116,6 +120,11 @@ class DocumentDataTap(DataTap):
     
     @classmethod
     def load_from_command_line(cls, arglist):
+        '''
+        usage::
+        
+            manage.py datatap Document [<app label>, ...] [<collection name>, ...]
+        '''
         parser = OptionParser(option_list=cls.command_option_list)
         options, args = parser.parse_args(arglist)
         document_sources = list()

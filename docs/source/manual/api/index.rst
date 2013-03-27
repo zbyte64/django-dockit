@@ -12,3 +12,4 @@ Internal API Reference
    fields
    forms
    indexers
+   datataps
