@@ -47,6 +47,7 @@ class BaseDocumentQuery(object):
 class QuerySet(object):
     '''
     Acts as a caching layer around an implemented `BaseDocumentQuery`
+    TODO: implement actual caching
     '''
     def __init__(self, query):
         self.query = query

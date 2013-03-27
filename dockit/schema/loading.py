@@ -72,9 +72,11 @@ class DockitAppCache(AppCache):
             return None
         return self.app_documents.get(app_label, SortedDict()).get(document_name.lower())
     
-    def get_documents(self):
+    def get_documents(self, app_label=None):
         if self.pending_documents and self.app_cache_ready():
             self.post_app_ready()
+        if app_label:
+            return self.app_documents[app_label].values()
         return self.documents.values()
     
     def get_base_document(self, key):

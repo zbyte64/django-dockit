@@ -172,6 +172,12 @@ class QueryIndex(object):
     def exists(self):
         return self.queryset.exists()
     
+    def iterator(self):
+        '''
+        Returns a non-caching iterator
+        '''
+        return iter(self)
+    
     def __getitem__(self, val):
         return self.queryset.__getitem__(val)
     
