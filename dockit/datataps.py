@@ -1,3 +1,32 @@
+'''
+Example usage::
+
+    from datatap.dataps import JSONStreamDataTap, ZipFileDataTap
+    from dockit.datataps import DocumentDataTap
+    
+    #with django models
+    outstream = JSONStreamDataTap(stream=sys.stdout)
+    outstream.open('w'. for_datatap=ModelDataTap)
+    source = DocumentDataTap(MyDocument, Blog.objects.filter(is_active=True))
+    source.dump(outstream)
+    
+    instream = JSONStreamDataTap(stream=open('fixture.json', 'r'))
+    DocumentDataTap.load(instream)
+    
+    #give me all active users to stdout
+    DocumentDataTap.store(JSONStreamDataTap(stream=sys.stdout), User.objects.filter(is_active=True))
+    
+    #write Blog and BlogImages to a zipfile
+    archive = ZipFileDataTap(filename='myblog.zip')
+    archive.open('w', for_datatap=DocumentDataTap)
+    #or do it in one line: archive = ZipFileDataTap(filename='myblog.zip', mode='w', for_datatap=DocumentDataTap)
+    DocumentDataTap.store(archive, Blog, BlogImages)
+    archive.close()
+    
+    archive = ZipFileDataTap(filename='myblog.zip', mode='r')
+    DocumentDataTap.load(archive)
+
+'''
 from optparse import OptionParser
 
 from django.core.files import File
@@ -72,7 +101,7 @@ class DocumentDataTap(DataTap):
     
     def write_item(self, item):
         '''
-        Creates and returns a model instance
+        Creates and returns a document instance
         '''
         result = Deserializer([item]).next()
         result.save()
@@ -85,7 +114,7 @@ class DocumentDataTap(DataTap):
         document_sources = list()
         for arg in args: #list of apps and collection names
             if '.' in arg:
-                document_sources.append(get_document(*arg.split(".", 1)))
+                document_sources.append(get_document(*arg.rsplit(".", 1)))
             else:
                 #get docs from appname
                 document_sources.extend(get_documents(arg))

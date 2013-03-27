@@ -68,7 +68,7 @@ class DockitAppCache(AppCache):
             self._populate()
         if self.pending_documents and self.app_cache_ready():
             self.post_app_ready()
-        if only_installed and app_label not in self.app_labels:
+        if only_installed and app_label not in self.app_documents:
             return None
         return self.app_documents.get(app_label, SortedDict()).get(document_name.lower())
     

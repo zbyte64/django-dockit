@@ -36,3 +36,46 @@ class DocumentDataTapTestCase(unittest.TestCase):
         assert len(items)
         tap.close()
 
+from tempfile import mkstemp
+import zipfile
+import json
+
+from datatap.management.commands import datatap
+
+
+class DocumentToZipCommandIntregrationTestCase(unittest.TestCase):
+    def test_dumpdatatap(self):
+        SimpleDocument(charfield='testchar').save()
+        filename = mkstemp('zip', 'datataptest')[1]
+        cmd = datatap.Command()
+        argv = ['manage.py', 'datatap', 'Document', SimpleDocument._meta.collection, '--', 'ZipFile', '--file', filename]
+        cmd.run_from_argv(argv)
+        
+        archive = zipfile.ZipFile(filename)
+        self.assertTrue('manifest.json' in archive.namelist())
+        manifest = json.load(archive.open('manifest.json', 'r'))
+        self.assertEqual(len(manifest), SimpleDocument.objects.all().count())
+    
+    def test_loaddatatap(self):
+        SimpleDocument.objects.all().delete()
+        item = {
+            'collection': SimpleDocument._meta.collection,
+            'fields': {
+                'charfield': 'testchar',
+                'published': True,
+                'featured': False,
+            }
+        }
+        filename = mkstemp('zip', 'datataptest')[1]
+        archive = zipfile.ZipFile(filename, 'w')
+        archive.writestr('manifest.json', json.dumps([item]))
+        archive.writestr('originator.txt', 'Document')
+        archive.close()
+        
+        cmd = datatap.Command()
+        argv = ['manage.py', 'datatap', 'ZipFile', '--file', filename]
+        cmd.run_from_argv(argv)
+        
+        result = SimpleDocument.objects.all()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].charfield, 'testchar')
