@@ -70,6 +70,8 @@ class DocumentDataTap(DataTap):
     '''
     Reads and writes from DocKit's Collections
     '''
+    write_stream_class = DocumentWriteStream
+    object_iterator_class = DocumentIteratorAdaptor
     
     def __init__(self, *collection_sources, **kwargs):
         '''
@@ -77,9 +79,6 @@ class DocumentDataTap(DataTap):
         '''
         self.collection_sources = collection_sources or []
         super(DocumentDataTap, self).__init__(**kwargs)
-    
-    def get_object_iterator_class(self):
-        return DocumentIteratorAdaptor
     
     def get_raw_item_stream(self, filetap=None):
         '''
@@ -104,11 +103,6 @@ class DocumentDataTap(DataTap):
                     queryset = source
             for item in queryset:
                 yield item
-    
-    def write_stream(self, instream):
-        a_stream = DocumentWriteStream(self, instream)
-        self.open_writes.add(a_stream)
-        return a_stream
     
     def write_item(self, item):
         '''
