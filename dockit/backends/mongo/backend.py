@@ -120,6 +120,9 @@ class MongoIndexStorage(BaseIndexStorage, MongoStorageMixin):
             except TypeError:
                 self.get_collection(collection).ensure_index(params.items(), background=True)
     
+    def destroy_index(self, query_index):
+        pass #TODO
+    
     def get_query(self, query_index):
         return DocumentQuery(query_index)
     

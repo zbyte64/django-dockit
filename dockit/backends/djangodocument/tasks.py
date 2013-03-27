@@ -6,6 +6,10 @@ def register_index(name, collection, query_hash):
     from dockit.backends.djangodocument.models import RegisteredIndex
     RegisteredIndex.objects.register_index(name, collection, query_hash)
 
+def destroy_index(name, collection, query_hash):
+    from dockit.backends.djangodocument.models import RegisteredIndex
+    RegisteredIndex.objects.remove_index(collection, query_hash)
+
 def reindex(name, collection, query_hash):
     from dockit.backends.djangodocument.models import RegisteredIndex
     RegisteredIndex.objects.reindex(name, collection, query_hash)
@@ -32,8 +36,15 @@ class IndexTasks(object):
         params = self.get_query_index_params(query_index)
         self.schedule_register_index(**params)
     
+    def destroy_index(self, query_index):
+        params = self.get_query_index_params(query_index)
+        self.schedule_destroy_index(**params)
+    
     def schedule_register_index(self, **params):
         register_index(**params)
+    
+    def schedule_destroy_index(self, **params):
+        destroy_index(**params)
     
     def reindex(self, query_index):
         params = self.get_query_index_params(query_index)
@@ -59,12 +70,16 @@ class ZTaskIndexTasks(IndexTasks):
         super(ZTaskIndexTasks, self).__init__()
         from django_ztask.decorators import task
         self._register_index = task()(register_index)
+        self._destroy_index = task()(destroy_index)
         self._reindex = task()(reindex)
         self._on_save = task()(on_save)
         self._on_delete = task()(on_delete)
         
     def schedule_register_index(self, **params):
         self._register_index.async(**params)
+    
+    def schedule_destroy_index(self, **params):
+        self._destroy_index.async(**params)
     
     def schedule_reindex(self, **params):
         self._reindex.async(**params)
@@ -80,12 +95,16 @@ class CeleryIndexTasks(IndexTasks):
         super(CeleryIndexTasks, self).__init__()
         from celery.task import task
         self._register_index = task(register_index, ignore_result=True)
+        self._destroy_index = task(destroy_index, ignore_result=True)
         self._reindex = task(reindex, ignore_result=True)
         self._on_save = task(on_save, ignore_result=True)
         self._on_delete = task(on_delete, ignore_result=True)
         
     def schedule_register_index(self, **params):
         self._register_index.delay(**params)
+    
+    def schedule_destroy_index(self, **params):
+        self._destroy_index.delay(**params)
     
     def schedule_reindex(self, **params):
         self._reindex.delay(**params)

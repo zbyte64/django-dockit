@@ -41,13 +41,16 @@ class RegisteredIndexManager(models.Manager):
         return None
     
     def get_query_index_name(self, query_index):
+        if isinstance(query_index, basestring):
+            return query_index
+        if isinstance(query_index, int):
+            return str(query_index)
         if query_index.name:
             return query_index.name
         return str(query_index._index_hash())
     
-    def remove_index(self, query_index):
+    def remove_index(self, collection, query_index):
         name = self.get_query_index_name(query_index)
-        collection = query_index.collection
         return self.filter(name=name, collection=collection).delete()
     
     def register_index(self, name, collection, query_hash):
@@ -65,21 +68,22 @@ class RegisteredIndexManager(models.Manager):
     def reindex(self, name, collection, query_hash):
         obj, created = self.get_or_create(name=name, collection=collection, defaults={'query_hash':query_hash})
         
-        from dockit.backends import INDEX_ROUTER
-        query_index = INDEX_ROUTER.registered_querysets[collection][query_hash]
+        from dockit.backends import get_index_router
+        query_index = get_index_router().registered_querysets[collection][query_hash]
         documents = obj.get_document().objects.all()
         for doc in documents:
             self.evaluate_query_index(obj, query_index, doc.pk, doc.to_primitive(doc))
     
     def on_save(self, collection, doc_id, data):
-        from dockit.backends import INDEX_ROUTER
-        if collection not in INDEX_ROUTER.registered_querysets:
+        from dockit.backends import get_index_router
+        index_router = get_index_router()
+        if collection not in index_router.registered_querysets:
             return #no querysets have been registered
         registered_queries = self.filter(collection=collection)
         for query in registered_queries:
-            if query.query_hash not in INDEX_ROUTER.registered_querysets[collection]:
+            if query.query_hash not in index_router.registered_querysets[collection]:
                 continue #TODO stale index, perhaps we should remove
-            query_index = INDEX_ROUTER.registered_querysets[collection][query.query_hash]
+            query_index = index_router.registered_querysets[collection][query.query_hash]
             self.evaluate_query_index(query, query_index, doc_id, data)
     
     def on_delete(self, collection, doc_id):

@@ -56,6 +56,12 @@ class BaseIndexStorage(BaseStorage):
         """
         raise NotImplementedError
     
+    def destroy_index(self, query_index):
+        """
+        release the query index with this backend
+        """
+        raise NotImplementedError
+    
     def get_query(self, query_index):
         """
         returns an implemented `BaseDocumentQuerySet` representing the query index

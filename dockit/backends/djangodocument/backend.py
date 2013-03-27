@@ -102,9 +102,19 @@ class ModelIndexStorage(BaseIndexStorage):
             return
         if not db_table_exists(RegisteredIndex._meta.db_table):
             return
-        for query_index in self.pending_indexes:
-            self.index_tasks.register_index(query_index)
-        self.pending_indexes = set()
+        
+        router = get_index_router()
+        while self.pending_indexes:
+            queryset = self.pending_indexes.pop()
+            
+            document = queryset.document
+            collection = queryset.document._meta.collection
+            key = queryset._index_hash()
+            
+            #only register if the queryset is still active
+            if (collection in router.registered_querysets and
+                key in router.registered_querysets[collection]):
+                self.index_tasks.register_index(queryset)
     
     def register_index(self, query_index):
         if self._tables_exist or db_table_exists(RegisteredIndex._meta.db_table): #if the table doesn't exists then we are likely syncing the db
@@ -113,6 +123,13 @@ class ModelIndexStorage(BaseIndexStorage):
             self._register_pending_indexes()
         else:
             self.pending_indexes.add(query_index)
+    
+    def destroy_index(self, query_index):
+        if self._tables_exist or db_table_exists(RegisteredIndex._meta.db_table): #if the table doesn't exists then we are likely syncing the db
+            self._tables_exist = True
+            self.index_tasks.destroy_index(query_index)
+        else:
+            self.pending_indexes.remove(query_index)
     
     def reindex(self, query_index):
         self.index_tasks.reindex(query_index)

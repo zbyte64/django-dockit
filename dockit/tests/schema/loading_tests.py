@@ -4,7 +4,8 @@ from dockit import schema
 
 from django.utils import unittest
 
-from common import SimpleDocument
+from dockit.tests.schema.common import SimpleDocument
+
 
 class LoadingTestCase(unittest.TestCase):
     def test_document_was_registered(self):

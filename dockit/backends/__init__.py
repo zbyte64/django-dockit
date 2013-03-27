@@ -154,6 +154,9 @@ class CompositeIndexRouter(object):
             backend.on_delete(document, collection, object_id)
     
     def register_queryset(self, queryset):
+        '''
+        Notifies the appropriate backends to index the given queryset
+        '''
         document = queryset.document
         collection = queryset.document._meta.collection
         key = queryset._index_hash()
@@ -161,20 +164,40 @@ class CompositeIndexRouter(object):
         self.registered_querysets.setdefault(collection, {})
         self.registered_querysets[collection][key] = queryset
         
+        self.notify_backends_of_queryset(document, queryset)
+    
+    def reregister_querysets(self):
+        for collection, sets in self.registered_querysets.iteritems():
+            for key, queryset in sets.iteritems():
+                document = queryset.document
+                self.notify_backends_of_queryset(document, queryset)
+    
+    def notify_backends_of_queryset(self, document, queryset):
         backend = document._meta.get_index_backend_for_write(queryset)
         backend.register_index(queryset)
         backend2 = document._meta.get_index_backend_for_read(queryset)
         if backend != backend2:
             backend2.register_index(queryset)
     
-    def reregister_querysets(self):
-        for collection, sets in self.registered_querysets.iteritems():
-            for key, queryset in sets.iteritems():
-                backend = document._meta.get_index_backend_for_write(queryset)
-                backend.register_index(queryset)
-                backend2 = document._meta.get_index_backend_for_read(queryset)
-                if backend != backend2:
-                    backend2.register_index(queryset)
+    def destroy_queryset(self, queryset):
+        '''
+        Notifies the appropriate backends that the following index is no longer needed
+        '''
+        document = queryset.document
+        collection = queryset.document._meta.collection
+        key = queryset._index_hash()
+        
+        if collection in self.registered_querysets:
+            self.registered_querysets[collection].pop(key, None)
+        
+        self.notify_backends_of_queryset_destruction(document, queryset)
+    
+    def notify_backends_of_queryset_destruction(self, document, queryset):
+        backend = document._meta.get_index_backend_for_write(queryset)
+        backend.destroy_index(queryset)
+        backend2 = document._meta.get_index_backend_for_read(queryset)
+        if backend != backend2:
+            backend2.destroy_index(queryset)
 
 DYNAMIC_IMPORT_CACHE = dict()
 
