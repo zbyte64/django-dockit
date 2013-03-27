@@ -7,6 +7,18 @@ from django.utils.datastructures import SortedDict
 from dockit.schema.signals import document_registered
 
 class DockitAppCache(AppCache):
+    def __init__(self):
+        super(DockitAppCache, self).__init__()
+        if not hasattr(self, 'write_lock'):
+            import imp
+            class WriteLock(object):
+                def acquire(self):
+                    imp.acquire_lock()
+                
+                def release(self):
+                    imp.release_lock()
+            self.write_lock = WriteLock()
+    
     def register_documents(self, app_label, *documents):
         document_dict = self.app_documents.setdefault(app_label, SortedDict())
         for document in documents:
