@@ -132,12 +132,6 @@ DOCKIT_BACKENDS = {
     'djangodocument': {
         'ENGINE': 'dockit.backends.djangodocument.backend.ModelDocumentStorage',
     },
-    'mongo': {
-        'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage',
-        'HOST':'localhost',
-        'DB':'testdb',
-        'PORT': 27017,
-    },
 }
 
 DOCKIT_INDEX_BACKENDS = {
@@ -147,12 +141,6 @@ DOCKIT_INDEX_BACKENDS = {
     'djangodocument': {
         'ENGINE': 'dockit.backends.djangodocument.backend.ModelIndexStorage',
     },
-    'mongo': {
-        'ENGINE':'dockit.backends.mongo.backend.MongoIndexStorage',
-        'HOST':'localhost',
-        'DB':'testdb',
-        'PORT': 27017,
-    },
 }
 
 try:
@@ -160,7 +148,27 @@ try:
 except ImportError:
     pass
 else:
-    INSTALLED_APPS.append('dockit.backends.mongo')
+    from pymongo.errors import ConnectionFailure
+    try:
+        pymongo.MongoClient('localhost', 27017)
+    except ConnectionFailure:
+        pass
+    else:
+        INSTALLED_APPS.append('dockit.backends.mongo')
+        
+        DOCKIT_BACKENDS['mongo'] = {
+            'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage',
+            'HOST':'localhost',
+            'DB':'testdb',
+            'PORT': 27017,
+        }
+        
+        DOCKIT_INDEX_BACKENDS['mongo'] = {
+            'ENGINE':'dockit.backends.mongo.backend.MongoIndexStorage',
+            'HOST':'localhost',
+            'DB':'testdb',
+            'PORT': 27017,
+        }
 
 if 'TRAVIS' in os.environ:
     DOCKIT_BACKENDS['mongo'] = {'ENGINE':'dockit.backends.mongo.backend.MongoDocumentStorage',
