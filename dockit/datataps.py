@@ -84,14 +84,21 @@ class DocumentDataTap(DataTap):
         for source in self.collection_sources:
             try:
                 is_doc = issubclass(source, schema.Document)
+                is_instance = False
             except TypeError:
                 is_doc = False
+                is_instance = isinstance(source, schema.Document)
             
             if is_doc:
-                queryset = source.objects.all()
+                queryset = source.objects.all().iterator()
+            elif is_instance:
+                queryset = [source]
             else:
-                queryset = source
-            for item in queryset.iterator():
+                if hasattr(source, 'iterator'):
+                    queryset = source.iterator()
+                else:
+                    queryset = source
+            for item in queryset:
                 yield item
     
     def write_stream(self, instream):
