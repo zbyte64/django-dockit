@@ -90,6 +90,9 @@ class Deserializer(object):
         """Iteration iterface -- return the next item in the stream"""
         raise NotImplementedError
 
+class UnSet:
+    pass
+
 class DeserializedObject(object):
     """
     A deserialized document.
@@ -99,7 +102,7 @@ class DeserializedObject(object):
     Call ``save()`` to save the object
     """
 
-    def __init__(self, obj, natural_key=None):
+    def __init__(self, obj, natural_key=UnSet):
         self.object = obj
         self.natural_key = natural_key
 
@@ -115,7 +118,7 @@ class DeserializedObject(object):
         # methods.
         
         #if an object with the natural key already exists, replace it while preserving the data store id
-        if enforce_natural_key:
+        if enforce_natural_key and self.natural_key != UnSet:
             manager = type(self.object).objects
             previous_objects = manager.filter_by_natural_key(self.natural_key)
             if previous_objects.count() > 1:

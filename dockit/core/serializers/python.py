@@ -58,10 +58,13 @@ def Deserializer(object_list, **options):
         # Look up the model and starting build a dict of data for it.
         doc_cls = get_base_document(d["collection"])
         data = d['fields']
-        if use_natural_keys:
+        if use_natural_keys and 'natural_key' in d:
             data['@natural_key'] = d['natural_key']
-        else:
+        elif 'pk' in d:
             data[doc_cls._meta.pk.attname] = doc_cls._meta.pk.to_python(d["pk"])
         
-        yield base.DeserializedObject(doc_cls.to_python(data), natural_key=d['natural_key'])
+        if 'natural_key' in d:
+            yield base.DeserializedObject(doc_cls.to_python(data), natural_key=d['natural_key'])
+        else:
+            yield base.DeserializedObject(doc_cls.to_python(data))
 

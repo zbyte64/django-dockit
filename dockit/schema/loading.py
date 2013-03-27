@@ -145,4 +145,5 @@ register_schemas = cache.register_schemas
 register_indexes = cache.register_indexes
 get_base_document = cache.get_base_document
 get_documents = cache.get_documents
+get_document = cache.get_document
 
