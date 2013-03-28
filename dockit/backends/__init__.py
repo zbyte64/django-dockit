@@ -1,4 +1,7 @@
+import logging
+
 from django.conf import settings
+
 
 DOCUMENT_BACKENDS = None
 DOCUMENT_ROUTER = None
@@ -8,6 +11,9 @@ INDEX_ROUTER = None
 class CompositeDocumentRouter(object):
     def __init__(self, routers):
         self.routers = routers
+    
+    def get_logger(self):
+        return logging.getLogger(__name__)
     
     def get_storage_for_read(self, document):
         name = self.get_storage_name_for_read(document)
@@ -33,18 +39,24 @@ class CompositeDocumentRouter(object):
     
     def register_document(self, document):
         collection = document._meta.collection
+        self.get_logger().info('Registering document collection {collection}'.format(collection=collection))
         
         backend = self.get_storage_for_read(document)
         backend.register_document(document)
+        self.get_logger().info('Notified backend {backend} of collection: {collection}'.format(backend=backend, collection=collection))
         
         backend2 = self.get_storage_for_write(document)
         if backend != backend2:
             backend2.register_document(document)
+            self.get_logger().info('Notified backend {backend} of collection: {collection}'.format(backend=backend2, collection=collection))
 
 class CompositeIndexRouter(object):
     def __init__(self, routers):
         self.routers = routers
         self.registered_querysets = dict() #TODO this is redundant of the loading.appcache object
+    
+    def get_logger(self):
+        return logging.getLogger(__name__)
     
     def get_effective_queryset(self, queryset):
         self.make_app_ready()
@@ -144,6 +156,7 @@ class CompositeIndexRouter(object):
         querysets = self.registered_querysets.get(collection, {})
         for query in querysets.itervalues():
             backend = self.get_index_for_write(document, query)
+            self.get_logger().debug('Notified index backend {backend} of {collection} save: {data}'.format(backend=backend, collection=collection, data=data))
             backend.on_save(document, collection, object_id, data)
     
     def on_delete(self, document, collection, object_id):
@@ -151,6 +164,7 @@ class CompositeIndexRouter(object):
         querysets = self.registered_querysets.get(collection, {})
         for query in querysets.itervalues():
             backend = self.get_index_for_write(document, query)
+            self.get_logger().debug('Notified index backend {backend} of {collection} delete: {object_id}'.format(backend=backend, collection=collection, object_id=object_id))
             backend.on_delete(document, collection, object_id)
     
     def register_queryset(self, queryset):
@@ -160,6 +174,7 @@ class CompositeIndexRouter(object):
         document = queryset.document
         collection = queryset.document._meta.collection
         key = queryset._index_hash()
+        self.get_logger().info('Registering queryset {key} of {collection}'.format(key=key, collection=collection))
         
         self.registered_querysets.setdefault(collection, {})
         self.registered_querysets[collection][key] = queryset
@@ -175,9 +190,11 @@ class CompositeIndexRouter(object):
     def notify_backends_of_queryset(self, document, queryset):
         backend = document._meta.get_index_backend_for_write(queryset)
         backend.register_index(queryset)
+        self.get_logger().info('Notified backend {backend} of queryset: {queryset}'.format(backend=backend, queryset=queryset))
         backend2 = document._meta.get_index_backend_for_read(queryset)
         if backend != backend2:
             backend2.register_index(queryset)
+            self.get_logger().info('Notified backend {backend} of queryset: {queryset}'.format(backend=backend2, queryset=queryset))
     
     def destroy_queryset(self, queryset):
         '''

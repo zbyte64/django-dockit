@@ -2,8 +2,9 @@ class BaseDocumentQuery(object):
     """
     Implemented by the backend to execute a certain index
     """
-    def __init__(self, query_index):
+    def __init__(self, query_index, backend=None):
         self.query_index = query_index
+        self._backend = backend
     
     @property
     def document(self):
@@ -11,6 +12,8 @@ class BaseDocumentQuery(object):
     
     @property
     def backend(self):
+        if self._backend:
+            return self._backend
         return self.document._meta.get_index_backend_for_read(self.query_index)
     
     def _get_indexer_for_operation(self, document, op):

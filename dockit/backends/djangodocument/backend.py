@@ -9,9 +9,10 @@ from dockit.backends.djangodocument.models import DocumentStore, RegisteredIndex
 from dockit.backends.djangodocument.utils import db_table_exists
 
 class DocumentQuery(BaseDocumentQuery):
-    def __init__(self, query_index, queryset):
-        super(DocumentQuery, self).__init__(query_index)
+    def __init__(self, query_index, queryset, backend=None):
+        super(DocumentQuery, self).__init__(query_index, backend)
         self.queryset = queryset
+        assert isinstance(self.backend, ModelIndexStorage), str(type(self.backend))
     
     def wrap(self, entry):
         data = simplejson.loads(entry.data)
@@ -147,7 +148,7 @@ class ModelIndexStorage(BaseIndexStorage):
         for op in match['exclusions']:
             indexer = self._get_indexer_for_operation(document, op)
             queryset = queryset.exclude(indexer.filter())
-        return IndexedDocumentQuery(query_index, queryset)
+        return IndexedDocumentQuery(query_index, queryset, backend=self)
     
     def on_save(self, doc_class, collection, doc_id, data):
         self._register_pending_indexes()
