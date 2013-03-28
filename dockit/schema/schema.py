@@ -454,6 +454,7 @@ class Document(Schema):
     def get_or_create_natural_key(self):
         if '@natural_key' not in self._primitive_data:
             self._primitive_data['@natural_key'] = self.create_natural_key()
+            self._primitive_data.pop('@natural_key_hash', None)
         if '@natural_key_hash' not in self._primitive_data:
             self._primitive_data['@natural_key_hash'] = self._get_natural_key_hash(self._primitive_data['@natural_key'])
         return self._primitive_data['@natural_key']
