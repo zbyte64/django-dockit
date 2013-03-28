@@ -7,16 +7,17 @@ python:
   - "2.7"
 #  - "3.2"
 env:
-  - DJANGO_VERSION=1.4
-  - DJANGO_VERSION=1.3.1
-  - DJANGO_VERSION=1.4      TASK_BACKEND=celery
-  - DJANGO_VERSION=1.3.1    TASK_BACKEND=celery
-  - DJANGO_VERSION=1.4      TASK_BACKEND=ztask
-  - DJANGO_VERSION=1.3.1    TASK_BACKEND=ztask
+  - DJANGO_VERSION=1.4.5
+  - DJANGO_VERSION=1.3.7
+  - DJANGO_VERSION=1.5
+  - DJANGO_VERSION=1.4.5    TASK_BACKEND=celery
+  - DJANGO_VERSION=1.3.7    TASK_BACKEND=celery
+  - DJANGO_VERSION=1.4.5    TASK_BACKEND=ztask
+  - DJANGO_VERSION=1.3.7    TASK_BACKEND=ztask
 
 install:
   - pip install -q Django==$DJANGO_VERSION
-  - pip install -q pymongo
+  - pip install -r requirements.txt
   - pip install -q django-celery
   - pip install -q pyzmq -e git+https://github.com/dmgctrl/django-ztask.git#egg=django_ztask
   - python setup.py -q install
