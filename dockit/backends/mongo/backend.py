@@ -17,6 +17,10 @@ class ValuesResultClass(dict):
             raise
 
 class DocumentQuery(BaseDocumentQuery):
+    def __init__(self, query_index, backend=None):
+        super(DocumentQuery, self).__init__(query_index, backend)
+        assert isinstance(self.backend, MongoIndexStorage), str(type(self.backend))
+    
     def _build_params(self, include_indexes=False):
         params =  dict()
         for op in self.query_index.inclusions:
@@ -124,7 +128,7 @@ class MongoIndexStorage(BaseIndexStorage, MongoStorageMixin):
         pass #TODO
     
     def get_query(self, query_index):
-        return DocumentQuery(query_index)
+        return DocumentQuery(query_index, backend=self)
     
     def on_save(self, doc_class, collection, data, doc_id):
         #CONSIDER supporting standalone mongo indexes

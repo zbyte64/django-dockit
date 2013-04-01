@@ -3,7 +3,8 @@ from dockit.core.serializers.python import Serializer, Deserializer
 from django.utils import unittest
 from django.contrib.contenttypes.models import ContentType
 
-from common import ParentDocument, ChildDocument, ChildSchema
+from dockit.tests.serializers.common import ParentDocument, ChildDocument, ChildSchema
+
 
 class PythonSerializerTestCase(unittest.TestCase):
     def setUp(self):
@@ -29,8 +30,8 @@ class PythonSerializerTestCase(unittest.TestCase):
         self.assertEqual(entry['fields'], data)
     
     def test_deserialize(self):
-        payload = [{'natural_key': {'charfield': 'bar'}, 'collection': u'serializers.childdocument', 'fields': {'charfield': u'bar'}}, 
-                   {'natural_key': {'uuid': 'DEADBEEF'}, 'collection': u'serializers.parentdocument', 'fields': {'subdocument': {'charfield': 'bar'}, 'title': u'foo'}}]
+        payload = [{'natural_key': {'charfield': 'bar'}, 'collection': ChildDocument._meta.collection, 'fields': {'charfield': u'bar'}}, 
+                   {'natural_key': {'uuid': 'DEADBEEF'}, 'collection': ParentDocument._meta.collection, 'fields': {'subdocument': {'charfield': 'bar'}, 'title': u'foo'}}]
         objects = list(Deserializer(payload))
         self.assertEqual(len(objects), 2)
         obj = objects[1]

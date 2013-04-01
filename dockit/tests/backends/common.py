@@ -29,7 +29,7 @@ class BackendTestCase(unittest.TestCase):
         self.patchers.append(patch.object(backends.DOCUMENT_ROUTER, 'get_storage_name_for_read', mock))
         self.patchers.append(patch.object(backends.DOCUMENT_ROUTER, 'get_storage_name_for_write', mock))
         
-        self.patchers.append(patch.object(backends.INDEX_ROUTER, 'get_index_name_for_write', mock))
+        self.patchers.append(patch.object(backends.INDEX_ROUTER, 'get_index_name_for_read', mock))
         self.patchers.append(patch.object(backends.INDEX_ROUTER, 'get_index_name_for_write', mock))
         
         self.mock_classes = list()
