@@ -291,7 +291,7 @@ class BaseDocumentForm(BaseForm):
             if obj is None:
                 obj = opts.schema()
         else:
-            data = self.instance.to_primitive(self.instance)
+            data = self.instance.to_primitive(self.instance, generate_natural_key=False)
             obj = opts.schema.to_python(data)
         
         for prop_name in self.serialized_fields:

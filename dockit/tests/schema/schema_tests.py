@@ -1,7 +1,7 @@
 from django.utils import unittest
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 
-from common import SimpleSchema, SimpleDocument, ValidatingDocument, SimpleSchema2
+from dockit.tests.schema.common import SimpleSchema, SimpleDocument, ValidatingDocument, SimpleSchema2
 
 
 class SchemaTestCase(unittest.TestCase):
@@ -36,7 +36,8 @@ class SchemaTestCase(unittest.TestCase):
         obj.save()
         self.assertTrue('@natural_key' in obj._primitive_data)
         self.assertTrue('@natural_key_hash' in obj._primitive_data)
-        
+        self.assertTrue(isinstance(obj._primitive_data['@natural_key'], dict))
+        self.assertTrue(None not in obj._primitive_data['@natural_key'].values())
 
 class DocumentValidationTestChase(unittest.TestCase):
     def test_validation(self):

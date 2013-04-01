@@ -480,8 +480,9 @@ class Document(Schema):
         return str(hash(vals)) #TODO convert to hex value
     
     @classmethod
-    def to_primitive(cls, val):
-        val.get_or_create_natural_key()
+    def to_primitive(cls, val, generate_natural_key=True):
+        if generate_natural_key:
+            val.get_or_create_natural_key()
         ret = Schema.to_primitive(val)
         return ret
     
