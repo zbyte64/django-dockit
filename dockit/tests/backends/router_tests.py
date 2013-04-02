@@ -24,7 +24,7 @@ class RouterTestCase(unittest.TestCase):
         result = self.router.get_effective_queryset(sub_queryset)
         self.assertFalse(result['inclusions']) #no extra inclusions or exclusions should be necessary
         self.assertFalse(result['exclusions'])
-        self.assertEqual(original_queryset._index_hash(), result['queryset']._index_hash())
+        self.assertEqual(original_queryset.global_hash(), result['queryset'].global_hash())
         
         self.router.destroy_queryset(original_queryset)
         self.router.destroy_queryset(sub_queryset)

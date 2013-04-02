@@ -30,7 +30,7 @@ class IndexTasks(object):
     def get_query_index_params(self, query_index):
         return {'name': self.manager.get_query_index_name(query_index),
                 'collection': query_index.collection,
-                'query_hash': query_index._index_hash(),}
+                'query_hash': query_index.global_hash(),}
     
     def register_index(self, query_index):
         params = self.get_query_index_params(query_index)

@@ -71,8 +71,7 @@ class CompositeIndexRouter(object):
         best_match = None
         query_inclusions = set(queryset.inclusions)
         query_exclusions = set(queryset.exclusions)
-        query_indexes = set(queryset.indexes)
-        
+        #query_indexes = set(queryset.indexes)
         for val in self.registered_querysets[collection].itervalues():
             val_indexes = set(val.indexes)
             val_inclusions = set(val.inclusions)
@@ -173,7 +172,7 @@ class CompositeIndexRouter(object):
         '''
         document = queryset.document
         collection = queryset.document._meta.collection
-        key = queryset._index_hash()
+        key = queryset.global_hash()
         self.get_logger().info('Registering queryset {key} of {collection}'.format(key=key, collection=collection))
         
         self.registered_querysets.setdefault(collection, {})
@@ -202,7 +201,7 @@ class CompositeIndexRouter(object):
         '''
         document = queryset.document
         collection = queryset.document._meta.collection
-        key = queryset._index_hash()
+        key = queryset.global_hash()
         
         if collection in self.registered_querysets:
             self.registered_querysets[collection].pop(key, None)

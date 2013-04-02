@@ -39,7 +39,7 @@ class DjangoDocumentTestCase(BackendTestCase):
     def test_document_index(self):
         queryset = Book.objects.index('slug')
         queryset.commit()
-        query_hash = queryset._index_hash()
+        query_hash = queryset.global_hash()
         self.assertTrue(Book._meta.collection in backends.INDEX_ROUTER.registered_querysets)
         self.assertTrue(query_hash in backends.INDEX_ROUTER.registered_querysets[Book._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[Book._meta.collection]))
         self.assertTrue(RegisteredIndex.objects.filter(query_hash=query_hash, collection=Book._meta.collection).exists())
@@ -76,8 +76,9 @@ class DjangoDocumentTestCase(BackendTestCase):
     
     def test_sparse_document_index(self):
         queryset = Book.objects.filter(featured=True).exclude(published=False).index('slug')
+        print 'Registered:', queryset.global_hash()
         queryset.commit()
-        query_hash = queryset._index_hash()
+        query_hash = queryset.global_hash()
         self.assertTrue(Book._meta.collection in backends.INDEX_ROUTER.registered_querysets)
         self.assertTrue(query_hash in backends.INDEX_ROUTER.registered_querysets[Book._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[Book._meta.collection]))
         self.assertTrue(RegisteredIndex.objects.filter(query_hash=query_hash, collection=Book._meta.collection).exists())
@@ -91,6 +92,7 @@ class DjangoDocumentTestCase(BackendTestCase):
         self.assertTrue(StringIndex.objects.filter(value='test', param_name='slug', document__doc_id=book.pk, document__index__query_hash=query_hash).exists())
         
         query = Book.objects.all().filter(featured=True).exclude(published=False)
+        print 'Retrieving:', query.global_hash()
         msg = str(query.queryset.query.queryset.query)
         self.assertEqual(query.count(), 1, msg)
         

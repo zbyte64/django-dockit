@@ -47,7 +47,7 @@ class RegisteredIndexManager(models.Manager):
             return str(query_index)
         if query_index.name:
             return query_index.name
-        return str(query_index._index_hash())
+        return query_index.global_hash()
     
     def remove_index(self, collection, query_index):
         name = self.get_query_index_name(query_index)
@@ -145,6 +145,7 @@ class RegisteredIndexManager(models.Manager):
             #if param.key == '@natural_key_hash':
             #    assert value
             #    assert False, str(value) +':'+ str(index_model)
+            
             index_model.objects.db_index(index_doc, param.key, value)
 
 class BaseIndexManager(models.Manager):

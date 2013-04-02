@@ -17,7 +17,17 @@ class QueryFilterOperation(object):
                 value = value.pk
         self.value = value
     
-    def hash(self):
+    def __hash__(self):
+        assert self.key is not None
+        assert self.operation is not None
+        if self.value is None:
+            return hash((self.key, self.operation))
+        return hash((self.key, self.operation, self.value))
+    
+    def global_hash(self):
+        '''
+        Returns a hash that is valid across all machines.
+        '''
         assert self.key is not None
         assert self.operation is not None
         return hashlib.md5(json.dumps(self.key, self.operation, self.value)).hexdigest()
@@ -32,7 +42,7 @@ class QueryFilterOperation(object):
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
-        return self.hash() == self.hash()
+        return self.global_hash() == self.global_hash()
 
 class QueryIndex(object):
     """
@@ -129,15 +139,14 @@ class QueryIndex(object):
     def setname(self, name):
         self.name = name
     
-    def _index_hash(self):
-        parts = list()
-        parts.append('inclusions:')
-        parts.append(hash(tuple(self.inclusions)))
-        parts.append('exclusions:')
-        parts.append(hash(tuple(self.exclusions)))
-        parts.append('indexes:')
-        parts.append(hash(tuple(self.indexes)))
-        return hash(tuple(parts))
+    def global_hash(self):
+        '''
+        Returns a hash that is valid across all machines.
+        '''
+        parts = [   [op.global_hash() for op in self.inclusions], 
+                    [op.global_hash() for op in self.exclusions], 
+                    [op.global_hash() for op in self.indexes]   ]
+        return hashlib.md5(json.dumps(parts)).hexdigest()
     
     #proxy queryset methods
     def __len__(self):

@@ -73,7 +73,7 @@ class MongoBackendTestCase(BackendTestCase):
         queryset = TestDocument.objects.index('charfield')
         queryset.commit()
         self.assertTrue(TestDocument._meta.collection in backends.INDEX_ROUTER.registered_querysets)
-        self.assertTrue(queryset._index_hash() in backends.INDEX_ROUTER.registered_querysets[TestDocument._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[TestDocument._meta.collection]))
+        self.assertTrue(queryset.global_hash() in backends.INDEX_ROUTER.registered_querysets[TestDocument._meta.collection], str(backends.INDEX_ROUTER.registered_querysets[TestDocument._meta.collection]))
         
         doc = TestDocument(charfield='test')
         doc.save()

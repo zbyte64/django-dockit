@@ -110,7 +110,7 @@ class ModelIndexStorage(BaseIndexStorage):
             
             document = queryset.document
             collection = queryset.document._meta.collection
-            key = queryset._index_hash()
+            key = queryset.global_hash()
             
             #only register if the queryset is still active
             if (collection in router.registered_querysets and
@@ -141,7 +141,7 @@ class ModelIndexStorage(BaseIndexStorage):
         match = get_index_router().get_effective_queryset(query_index)
         query_index = match['queryset']
         document = query_index.document
-        queryset = RegisteredIndexDocument.objects.filter(index__collection=document._meta.collection, index__query_hash=query_index._index_hash())
+        queryset = RegisteredIndexDocument.objects.filter(index__collection=document._meta.collection, index__query_hash=query_index.global_hash())
         for op in match['inclusions']:
             indexer = self._get_indexer_for_operation(document, op)
             queryset = queryset.filter(indexer.filter())
