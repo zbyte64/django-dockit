@@ -455,9 +455,12 @@ class Document(Schema):
         if refresh or not self._primitive_data.get('@natural_key', None):
             self._primitive_data['@natural_key'] = self.create_natural_key()
             self._primitive_data.pop('@natural_key_hash', None)
-        if refresh or '@natural_key_hash' not in self._primitive_data:
-            self._primitive_data['@natural_key_hash'] = self._get_natural_key_hash(self._primitive_data['@natural_key'])
+        if refresh or not self._primitive_data.get('@natural_key_hash', None):
+            self.set_natural_key_hash()
         return self._primitive_data['@natural_key']
+    
+    def set_natural_key_hash(self):
+        self._primitive_data['@natural_key_hash'] = self._get_natural_key_hash(self._primitive_data['@natural_key'])
     
     def create_natural_key(self):
         '''
