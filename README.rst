@@ -15,12 +15,11 @@ Features
 
   * Mongodb
   * Django Model with support for celery or ztask indexing
-* Integrates with the django admin
+* Integrates with hyperadmin (https://github.com/zbyte64/django-hyperadmin)
 
   * Supports inlines
   * List Field support
   * Supports editing documents with deeply nested schemas
-  * Robust design for customizing behavior on a per schema basis
 * Class based views
 * Django forms support
 * Dynamically typed documents and schemas

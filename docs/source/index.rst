@@ -8,7 +8,7 @@ Django-DocKit provides a Document ORM in django. DocKit attempts to provide a ba
    :maxdepth: 2
 
    manual/installation
-   manual/admin
+   manual/hyperadmin
    manual/indexing
    manual/views
    manual/validation
@@ -16,6 +16,7 @@ Django-DocKit provides a Document ORM in django. DocKit attempts to provide a ba
    manual/fixtures
    manual/api/index
    manual/contributing
+   manual/admin
    release_notes
 
 Download: http://github.com/webcube/django-dockit
