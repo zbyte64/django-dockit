@@ -20,7 +20,7 @@ class DocumentStore(models.Model):
 class RegisteredIndex(models.Model):
     name = models.CharField(max_length=128, db_index=True)
     collection = models.CharField(max_length=128, db_index=True)
-    query_hash = models.BigIntegerField()
+    query_hash = models.CharField(max_length=128)
     
     objects = RegisteredIndexManager()
     

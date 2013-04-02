@@ -1,4 +1,6 @@
 import copy
+import hashlib
+import json
 
 from dockit.backends.queryset import QuerySet
 
@@ -15,12 +17,10 @@ class QueryFilterOperation(object):
                 value = value.pk
         self.value = value
     
-    def __hash__(self):
+    def hash(self):
         assert self.key is not None
         assert self.operation is not None
-        if self.value is None:
-            return hash((self.key, self.operation))
-        return hash((self.key, self.operation, self.value))
+        return hashlib.md5(json.dumps(self.key, self.operation, self.value)).hexdigest()
     
     def dotpath(self):
         parts = self.key.split('__')
@@ -32,7 +32,7 @@ class QueryFilterOperation(object):
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
-        return hash(self) == hash(other)
+        return self.hash() == self.hash()
 
 class QueryIndex(object):
     """

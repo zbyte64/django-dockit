@@ -1,5 +1,7 @@
 import sys
 import uuid
+import hashlib
+import json
 
 from django.utils.encoding import force_unicode
 from django.utils.datastructures import SortedDict
@@ -478,9 +480,9 @@ class Document(Schema):
         self.get_or_create_natural_key()
         return self._primitive_data['@natural_key_hash']
     
-    def _get_natural_key_hash(self, nkey):
-        vals = tuple(nkey.items())
-        return str(hash(vals)) #TODO convert to hex value
+    @classmethod
+    def _get_natural_key_hash(cls, nkey):
+        return hashlib.md5(json.dumps(nkey)).hexdigest()
     
     @classmethod
     def to_primitive(cls, val, generate_natural_key=True):

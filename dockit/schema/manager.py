@@ -58,19 +58,21 @@ class Manager(object):
             if len(kwargs) == 1 and '@natural_key_hash' in kwargs:
                 hashval = kwargs['@natural_key_hash']
             else:
-                vals = tuple(kwargs.items())
-                hashval = str(hash(vals))
+                hashval = self.schema._get_natural_key_hash(kwargs)
         assert isinstance(hashval, basestring)
-        return self.filter(**{'@natural_key_hash':hashval})
+        queryset = self.filter(**{'@natural_key_hash':hashval})
+        queryset._hashval = hashval #for debug purposes
+        return queryset
     
     def get_by_natural_key(self, hashval=None, **kwargs):
         qs = self.filter_by_natural_key(hashval, **kwargs)
+        real_hashval = qs._hashval
         try:
             return qs.get()
         except MultipleObjectsReturned, error:
-            raise MultipleObjectsReturned('Duplicate natural keys found! Lookup parameters were %s' % (hashval or kwargs))
+            raise MultipleObjectsReturned('Duplicate natural keys found! Lookup parameters were %s. Natural key hash is: %s' % (hashval or kwargs, real_hashval))
         except ObjectDoesNotExist, error:
-            raise ObjectDoesNotExist('Natural key not found! Lookup paramets were %s' % (hashval or kwargs))
+            raise ObjectDoesNotExist('Natural key not found! Lookup paramets were %s. Natural key hash is: %s' % (hashval or kwargs, real_hashval))
 
 '''
 register_indexer(backend, "equals", index_cls)
