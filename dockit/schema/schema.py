@@ -169,7 +169,7 @@ class Schema(object):
         if isinstance(val, cls):
             val._sync_primitive_data()
             data = dict(val._primitive_data)
-            for name, entry in data.items():
+            for name, entry in val._python_data.items():
                 if name in val._meta.fields:
                     try:
                         data[name] = val._meta.fields[name].to_portable_primitive(entry)
