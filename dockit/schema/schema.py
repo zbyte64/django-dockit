@@ -2,6 +2,7 @@ import sys
 import uuid
 import hashlib
 import json
+import copy
 
 from django.utils.encoding import force_unicode
 from django.utils.datastructures import SortedDict
@@ -24,15 +25,15 @@ class SchemaBase(type):
     Metaclass for all schemas.
     """
     options_module = SchemaOptions
-    
+
     def __new__(cls, name, bases, attrs):
         super_new = super(SchemaBase, cls).__new__
         parents = [b for b in bases if isinstance(b, SchemaBase)]
         options_module = cls.options_module
-        
+
         module = attrs.pop('__module__')
         new_class = super_new(cls, name, bases, {'__module__': module})
-        
+
         attr_meta = attrs.pop('Meta', None)
         if not attr_meta:
             meta = getattr(new_class, 'Meta', None)
@@ -46,7 +47,7 @@ class SchemaBase(type):
                 for key in options_module.DEFAULT_NAMES:
                     if not hasattr(meta, key) and hasattr(parent_meta, key):
                         setattr(meta, key, getattr(parent_meta, key))
-        
+
         if getattr(meta, 'app_label', None) is None:
             try:
                 document_module = sys.modules[new_class.__module__]
@@ -61,35 +62,40 @@ class SchemaBase(type):
             else:
                 try:
                     app_label = parts[-2]
-                except IndexError: 
+                except IndexError:
                     #happens when we define a document in the shell
                     app_label = parts[0]
         else:
             app_label = getattr(meta, 'app_label')
-        
+
         parent_fields = list()
         for base in bases:
             if hasattr(base, '_meta') and hasattr(base._meta, 'fields'):
                 parent_fields.append(base._meta.fields)
-        
+
         fields = [(field_name, attrs.pop(field_name)) for field_name, obj in attrs.items() if hasattr(obj, 'creation_counter')]
         fields.sort(key=lambda x: x[1].creation_counter)
-        
+
         options = options_module(meta, app_label=app_label, parent_fields=parent_fields)
         options.process_values(new_class)
         setattr(new_class, '_meta', options)
-        
+
+        for parent_fields in parent_fields:
+            for field_name, parent_field in parent_fields.items():
+                obj = copy.copy(parent_field)
+                new_class.add_to_class(field_name, obj)
+
         for field_name, obj in fields:
             new_class.add_to_class(field_name, obj)
-        
+
         for obj_name, obj in attrs.items():
             new_class.add_to_class(obj_name, obj)
-        
+
         new_class.add_to_class('_meta', options)
-        
+
         class_prepared.send(**{'sender':cls, 'class':new_class})
         return new_class
-    
+
     def add_to_class(cls, name, value):
         if hasattr(value, 'contribute_to_class'):
             try:
@@ -104,9 +110,9 @@ class Schema(object):
     The :class:`~dockit.schema.schema.Schema` class provides a basic datatype
     for building up more complex Schemas and Documents. Schemas may embed other schemas.
     """
-    
+
     __metaclass__ = SchemaBase
-    
+
     def __init__(self, **kwargs):
         pre_init.send(sender=self.__class__, kwargs=kwargs)
         #super(Schema, self).__init-_()
@@ -123,7 +129,7 @@ class Schema(object):
         if self._meta.typed_field and self._meta.typed_key:
             self[self._meta.typed_field] = self._meta.typed_key
         post_init.send(sender=self.__class__, instance=self)
-    
+
     @classmethod
     def to_primitive(cls, val):
         """
@@ -148,7 +154,7 @@ class Schema(object):
             return val._primitive_data
         assert isinstance(val, (dict, list, type(None))), str(type(val))
         return val
-    
+
     @classmethod
     def to_portable_primitive(cls, val):
         #CONSIDER shouldn't val be a schema?
@@ -174,7 +180,7 @@ class Schema(object):
             return data
         assert isinstance(val, (dict, list, type(None))), str(type(val))
         return val
-    
+
     @classmethod
     def to_python(cls, val, parent=None):
         """
@@ -192,7 +198,7 @@ class Schema(object):
                     #TODO emit a warning
                     pass
         return cls(_primitive_data=val, _parent=parent)
-    
+
     def normalize_portable_primitives(self):
         changed = False
         for key, field in self._meta.fields.iteritems():
@@ -203,7 +209,7 @@ class Schema(object):
                     changed = True
                     self._primitive_data[key] = new_entry
         return changed
-    
+
     def __getattribute__(self, name):
         fields = object.__getattribute__(self, '_meta').fields
         if name in fields:
@@ -216,7 +222,7 @@ class Schema(object):
                 python_data[name] = fields[name].to_python(primitive_data.get(name), parent=self)
             return python_data[name]
         return object.__getattribute__(self, name)
-    
+
     def __setattr__(self, name, val):
         if name in self._meta.fields:
             field = self._meta.fields[name]
@@ -228,7 +234,7 @@ class Schema(object):
             #self._primtive_data[name] = store_val
         else:
             super(Schema, self).__setattr__(name, val)
-    
+
     def __getitem__(self, key):
         assert isinstance(key, basestring)
         if key in self._meta.fields:
@@ -239,29 +245,29 @@ class Schema(object):
             p_val = PRIMITIVE_PROCESSOR.to_python(r_val)
             self._python_data[key] = p_val
         return self._python_data[key]
-    
+
     def __setitem__(self, key, value):
         if key in self._meta.fields:
             setattr(self, key, value)
             return
         self._python_data[key] = value
-    
+
     def __delitem__(self, key):
         if key in self._meta.fields:
             setattr(self, key, None)
             return
         self._python_data.pop(key, None)
         self._primitive_data.pop(key, None)
-    
+
     def __hasitem__(self, key):
         if key in self._meta.fields:
             return True
         return key in self._python_data
-    
+
     def keys(self):
         #TODO more dictionary like functionality
         return set(self._python_data.keys() + self._meta.fields.keys())
-    
+
     def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             value = field = None
@@ -275,57 +281,57 @@ class Schema(object):
             traverser.next(value=value, field=field)
         else:
             traverser.end(value=self)
-    
+
     def dot_notation(self, notation):
         return self.dot_notation_to_value(notation)
-    
+
     def dot_notation_set_value(self, notation, value):
         traverser = DotPathTraverser(notation)
         traverser.resolve_for_instance(self)
-        
+
         try:
             traverser.set_value(value)
         except:
             print traverser.resolved_paths
             raise
-    
+
     def dot_notation_to_value(self, notation):
         traverser = DotPathTraverser(notation)
         traverser.resolve_for_instance(self)
         return traverser.current['value']
-    
+
     def dot_notation_to_field(self, notation):
         traverser = DotPathTraverser(notation)
         traverser.resolve_for_instance(self)
         return traverser.current['field']
-    
+
     def set_value(self, attr, value):
         if value is UnSet:
             del self[attr]
         else:
             self[attr] = value
-    
+
     def serializable_value(self, field_name):
         try:
             field = self._meta.get_field_by_name(field_name)[0]
         except FieldDoesNotExist:
             return getattr(self, field_name)
         return getattr(self, field.attname)
-    
+
     def __str__(self):
         if hasattr(self, '__unicode__'):
             return force_unicode(self).encode('utf-8')
         return '%s object' % self.__class__.__name__
-    
+
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.to_primitive(self) == other.to_primitive(other)
-    
+
     def __ne__(self, other):
         return not self.__eq__(other)
-    
+
     def __hash__(self):
         return hash(self.to_primitive(self))
-    
+
     def clean(self):
         """
         Hook for doing any extra document-wide validation after clean() has been
@@ -334,10 +340,10 @@ class Schema(object):
         have a special-case association with the field defined by NON_FIELD_ERRORS.
         """
         pass
-    
+
     def validate_unique(self, exclude=None):
         pass #a place holder for now
-    
+
     def full_clean(self, exclude=None):
         """
         Calls clean_fields, clean, and validate_unique, on the model,
@@ -386,7 +392,7 @@ class Schema(object):
             # Skip validation for empty fields with blank=True. The developer
             # is responsible for making sure they have a valid value.
             raw_value = getattr(self, f.attname)
-            
+
             try:
                 setattr(self, f.attname, f.clean(raw_value, self))
             except ValidationError, e:
@@ -398,17 +404,17 @@ class Schema(object):
 
 class DocumentBase(SchemaBase):
     options_module = DocumentOptions
-    
+
     def __new__(cls, name, bases, attrs):
         new_class = SchemaBase.__new__(cls, name, bases, attrs)
         if 'objects' not in attrs:
             objects = Manager()
             objects.contribute_to_class(new_class, 'objects')
-        
+
         parents = [b for b in bases if isinstance(b, DocumentBase)]
-        
+
         module = new_class.__module__
-        
+
         if not new_class._meta.virtual:
             new_class.add_to_class('DoesNotExist', subclass_exception('DoesNotExist',
                     tuple(x.DoesNotExist
@@ -420,16 +426,16 @@ class DocumentBase(SchemaBase):
                                     or (MultipleObjectsReturned,), module))
         if parents and new_class._meta.proxy:
             new_class._meta.module_name = parents[0]._meta.module_name
-        
+
         #ensure index on natural key hash
         if not new_class._meta.virtual and not new_class._meta.proxy:
             #TODO these fields should be definable at the document level
             from dockit.schema.fields import CharField, DictField
             new_class.add_to_class('@natural_key_hash', CharField(editable=False, null=False))
             new_class.add_to_class('@natural_key', DictField(editable=False, null=False))
-            
+
             register_documents(new_class._meta.app_label, new_class)
-            
+
             new_class.objects.index('@natural_key_hash__exact').commit()
         return new_class
 
@@ -438,21 +444,21 @@ class Document(Schema):
     The :class:`~dockit.schema.schema.Document` class inherits from Schema
     and provides a persistant form of a schema.
     """
-    
+
     __metaclass__ = DocumentBase
-    
+
     def get_id(self):
         """
         Returns the document identifier
         """
         backend = self._meta.get_backend()
         return str(backend.get_id(self._primitive_data))
-    
+
     def _get_pk_val(self):
         return self.get_id()
-    
+
     pk = property(get_id)
-    
+
     def get_or_create_natural_key(self, refresh=False):
         if refresh or not self._primitive_data.get('@natural_key', None):
             self._primitive_data['@natural_key'] = self.create_natural_key()
@@ -460,43 +466,43 @@ class Document(Schema):
         if refresh or not self._primitive_data.get('@natural_key_hash', None):
             self.set_natural_key_hash()
         return self._primitive_data['@natural_key']
-    
+
     def set_natural_key_hash(self):
         self._primitive_data['@natural_key_hash'] = self._get_natural_key_hash(self._primitive_data['@natural_key'])
-    
+
     def create_natural_key(self):
         '''
         Documents may want to override this to return a dictionary of values representing the natural key of the document.
         Other applications may want the natural key to be based off fields in the document rather then a UUID.
         '''
         return {'uuid': uuid.uuid4().hex}
-    
+
     @property
     def natural_key(self):
         return self.get_or_create_natural_key()
-    
+
     @property
     def natural_key_hash(self):
         self.get_or_create_natural_key()
         return self._primitive_data['@natural_key_hash']
-    
+
     @classmethod
     def _get_natural_key_hash(cls, nkey):
         return hashlib.md5(json.dumps(nkey)).hexdigest()
-    
+
     @classmethod
     def to_primitive(cls, val, generate_natural_key=True):
         if generate_natural_key:
             val.get_or_create_natural_key()
         ret = Schema.to_primitive(val)
         return ret
-    
+
     @classmethod
     def to_portable_primitive(cls, val):
         val.get_or_create_natural_key()
         ret = Schema.to_portable_primitive(val)
         return ret
-    
+
     def save(self):
         """
         Commit the document to the storage engine
@@ -509,7 +515,7 @@ class Document(Schema):
         backend.save(type(self), self._meta.collection, data)
         get_index_router().on_save(type(self), self._meta.collection, self.get_id(), data)
         post_save.send(sender=type(self), instance=self, created=created)
-    
+
     def delete(self):
         """
         Remove this document from the storage engine
@@ -520,17 +526,17 @@ class Document(Schema):
         backend.delete(type(self), self._meta.collection, self.get_id())
         get_index_router().on_delete(type(self), self._meta.collection, self.get_id())
         post_delete.send(sender=type(self), instance=self)
-    
+
     def serializable_value(self, field_name):
         try:
             field = self._meta.get_field_by_name(field_name)[0]
         except FieldDoesNotExist:
             return getattr(self, field_name)
         return getattr(self, field.attname)
-    
+
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.pk == other.pk
-    
+
     def __hash__(self):
         return hash((self._meta.collection, self.pk))
 

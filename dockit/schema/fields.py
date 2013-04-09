@@ -23,7 +23,7 @@ class BaseField(object):
     form_field_class = forms.CharField
     form_field_choices_class = forms.ChoiceField
     form_widget_class = None
-    
+
     default_validators = [] # Default set of validators
     default_error_messages = {
         'invalid_choice': _(u'Value %r is not a valid choice.'),
@@ -32,10 +32,10 @@ class BaseField(object):
         'unique': _(u'%(model_name)s with this %(field_label)s '
                     u'already exists.'),
     }
-    
+
     creation_counter = 0
     auto_creation_counter = -1
-    
+
     def __init__(self, verbose_name=None, name=None, blank=False, null=False,
                  default=NOT_PROVIDED, editable=True,
                  serialize=True, choices=None, help_text='',
@@ -43,7 +43,7 @@ class BaseField(object):
                  db_index=False, unique=False,
                 #db_index=False,  db_column=None, primary_key=False, max_length=None
                 #db_tablespace=None,
-                #unique_for_date=None, unique_for_month=None, unique_for_year=None, 
+                #unique_for_date=None, unique_for_month=None, unique_for_year=None,
                  error_messages=None, auto_created=False):
         self.verbose_name = verbose_name
         self.name = name
@@ -56,7 +56,7 @@ class BaseField(object):
         self.help_text = help_text
         self.validators = validators
         self.db_index = db_index
-        
+
         self.validators = self.default_validators + validators
 
         messages = {}
@@ -64,12 +64,12 @@ class BaseField(object):
             messages.update(getattr(c, 'default_error_messages', {}))
         messages.update(error_messages or {})
         self.error_messages = messages
-        
+
         #TODO support the following:
         self.rel = None
         self.flatchoices = None
         self.unique = unique
-        
+
         # Adjust the appropriate creation counter, and save our local copy.
         if auto_created:
             self.creation_counter = BaseField.auto_creation_counter
@@ -77,14 +77,14 @@ class BaseField(object):
         else:
             self.creation_counter = BaseField.creation_counter
             BaseField.creation_counter += 1
-    
+
     def contribute_to_class(self, cls, name):
         self.name = name
         if not self.verbose_name:
             self.verbose_name = name.replace('_', ' ')
         cls._meta.fields[name] = self
         setattr(cls, name, self)
-    
+
     def has_default(self):
         "Returns a boolean of whether this field has a default value."
         return self.default is not NOT_PROVIDED
@@ -98,7 +98,7 @@ class BaseField(object):
         if not self.blank or self.null:
             return None
         return ""
-    
+
     def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH):
         """Returns choices with a default blank choices included, for use
         as SelectField choices for this field."""
@@ -118,35 +118,35 @@ class BaseField(object):
 
     def get_choices_default(self):
         return self.get_choices()
-    
+
     def to_primitive(self, val):
         """
         Takes a python object and returns an object that is [json] serializable
         """
         return val
-    
+
     def to_portable_primitive(self, val):
         return self.to_primitive(val)
-    
+
     def to_python(self, val, parent=None):
         return val
-    
+
     def normalize_portable_primitives(self, val, parent=None):
         return val
-    
+
     def get_form_field_class(self):
         if self.choices:
             return self.form_field_choices_class
         else:
             return self.form_field_class
-    
+
     def formfield(self, **kwargs):
         "Returns a django.forms.Field instance for this database Field."
         default = self.get_form_field_class()
         form_class = kwargs.pop('form_class', default)
         defaults = self.formfield_kwargs(**kwargs)
         return form_class(**defaults)
-    
+
     def formfield_kwargs(self, **kwargs):
         defaults = {'required': not self.blank,
                     'label': capfirst(self.verbose_name),
@@ -154,11 +154,11 @@ class BaseField(object):
                     'widget':self.form_widget_class,}
         if self.has_default():
             defaults['initial'] = self.get_default()
-        
+
         for key, value in defaults.items():
             if value is None:
                 del defaults[key]
-        
+
         if self.choices:
             # Fields with choices get special treatment.
             include_blank = self.blank or not (self.has_default() or 'initial' in kwargs)
@@ -176,32 +176,32 @@ class BaseField(object):
                     del kwargs[k]
         defaults.update(kwargs)
         return defaults
-    
+
     def traverse_dot_path(self, traverser):
         traverser.end(field=self)
-    
+
     def is_instance(self, value):
         return False
-    
+
     def set_value(self, parent, attr, value):
         raise DotPathNotFound
-    
+
     def __deepcopy__(self, memodict):
         obj = copy.copy(self)
         memodict[id(self)] = obj
         return obj
-    
+
     def _get_val_from_obj(self, obj):
         return obj[self.name]
-    
+
     def value_to_string(self, obj):
         val = self._get_val_from_obj(obj)
         return self.to_primitive(val)
-    
+
     @property
     def attname(self):
         return self.name
-    
+
     def run_validators(self, value):
         if value in validators.EMPTY_VALUES:
             return
@@ -230,7 +230,7 @@ class BaseField(object):
             # Skip validation for non-editable fields.
             return
         if self.choices and value:
-            
+
             for option_key, option_value in self.choices:
                 if isinstance(option_value, (list, tuple)):
                     # This is an optgroup, so look inside the group for
@@ -259,14 +259,14 @@ class BaseField(object):
 
 class BaseTypedField(BaseField):
     coerce_function = None
-    
+
     def to_primitive(self, val):
         if isinstance(self.coerce_function, type) and isinstance(val, self.coerce_function):
             return val
         if val is None:
             return val
         return self.coerce_function(val)
-    
+
     def is_instance(self, val):
         if isinstance(self.coerce_function, type) and isinstance(val, self.coerce_function):
             return True
@@ -297,7 +297,7 @@ class BooleanField(BaseTypedField):
     coerce_function = bool
     form_field_class = forms.BooleanField
     data_type = 'bool'
-    
+
     def __init__(self, *args, **kwargs):
         super(BooleanField, self).__init__(*args, **kwargs)
         self.blank = True
@@ -305,11 +305,11 @@ class BooleanField(BaseTypedField):
 class DateField(BaseField):
     form_field_class = forms.DateField
     data_type = 'date'
-    
+
     def __init__(self, *args, **kwargs):
         self.input_formats = kwargs.pop('input_formats', list())
         super(DateField, self).__init__(*args, **kwargs)
-    
+
     def to_python(self, value, parent=None):
         """
         Validates that the input can be converted to a date. Returns a Python
@@ -331,11 +331,11 @@ class DateField(BaseField):
 class DateTimeField(BaseField):
     form_field_class = forms.DateTimeField
     data_type = 'datetime'
-    
+
     def __init__(self, *args, **kwargs):
         self.input_formats = kwargs.pop('input_formats', list())
         super(DateTimeField, self).__init__(*args, **kwargs)
-    
+
     def to_python(self, value, parent=None):
         """
         Validates that the input can be converted to a date. Returns a Python
@@ -357,15 +357,15 @@ class DateTimeField(BaseField):
 class DecimalField(BaseField):
     form_field_class = forms.DecimalField
     data_type = 'decimal'
-    
+
     def __init__(self, *args, **kwargs):
         self.max_digits = kwargs.pop('max_digits', None)
         self.decimal_places = kwargs.pop('decimal_places', None)
         super(DecimalField, self).__init__(*args, **kwargs)
-    
+
     def to_primitive(self, val):
         return str(val)
-    
+
     def to_python(self, val, parent=None):
         if val is None:
             return None
@@ -415,11 +415,11 @@ class TimeField(BaseTypedField):
 
 class SchemaTypeField(CharField):
     form_widget_class = forms.HiddenInput
-    
+
     def __init__(self, schemas, *args, **kwargs):
         self.schemas = schemas
         super(SchemaTypeField, self).__init__(*args, **kwargs)
-    
+
     def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH):
         """Returns choices with a default blank choices included, for use
         as SelectField choices for this field."""
@@ -428,71 +428,71 @@ class SchemaTypeField(CharField):
             return first_choice + list(zip(self.schemas.keys(), self.schemas.keys()))
             #TODO allow schema to have a display label, perhaps verbose name?
         return first_choice
-    
+
     def get_schema_choices(self):
         return self.get_choices()
 
 class SchemaField(BaseField):
     form_field_class = HiddenSchemaField
-    
+
     def __init__(self, schema, *args, **kwargs):
         from dockit.schema import Schema
         assert issubclass(schema, Schema), '%s does not subclass Schema' % repr(schema)
         self.schema = schema
         super(SchemaField, self).__init__(*args, **kwargs)
-    
+
     def to_primitive(self, val):
         return self.schema.to_primitive(val)
-    
+
     def to_python(self, val, parent=None):
         if val is None:
             return None
         if not isinstance(val, dict):
             raise ValidationError('Invalid schema instance')
         return self.schema.to_python(val, parent)
-    
+
     def to_portable_primitive(self, val):
         if val is None:
             return None
         return val.to_portable_primitive(val)
-    
+
     def normalize_portable_primitives(self, val, parent=None):
         if val is not None and isinstance(val, dict):
             entry = self.to_python(val, parent)
             entry.normalize_portable_primitives()
             return self.to_primitive(entry)
         return val
-    
+
     def is_instance(self, val):
         if val is None:
             return True
         return isinstance(val, self.schema)
-    
+
     def get_schema_choices(self):
         field_name = self.schema._meta.typed_field
         return self.schema._meta.fields[field_name].schemas.items()
-    
+
     def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             name = traverser.next_part
             value = traverser.current_value
             next_value = field = None
             schema = self.schema
-            
+
             if value:
                 try:
                     next_value = value[name]
                 except KeyError:
                     pass
                 schema = type(value)
-            
+
             if name in schema._meta.fields:
                 field = schema._meta.fields[name]
-            
+
             traverser.next(field=field, value=next_value)
         else:
             traverser.end(field=self)
-    
+
     def set_value(self, parent, attr, value):
         if value is UnSet:
             del parent[attr]
@@ -503,25 +503,25 @@ class GenericSchemaField(BaseField): #meant to be sublcassed
     def __init__(self, field_name='_type', **kwargs):
         self.type_field_name = field_name
         super(GenericSchemaField, self).__init__(**kwargs)
-    
+
     def lookup_schema(self, key):
         raise NotImplementedError
-    
+
     def get_schema_type(self, val):
         return val._meta.schema_key
-    
+
     def get_schema_choices(self):
         raise NotImplementedError
-    
+
     def set_schema_type(self, val):
         val[self.type_field_name] = self.get_schema_type(val)
-    
+
     def to_primitive(self, val):
         if hasattr(val, 'to_primitive'):
             self.set_schema_type(val)
             return val.to_primitive(val)
         return val
-    
+
     def to_python(self, val, parent=None):
         if hasattr(val, 'to_python'):
             return val.to_python(val, parent)
@@ -530,36 +530,36 @@ class GenericSchemaField(BaseField): #meant to be sublcassed
             schema_cls = self.lookup_schema(key)
             return schema_cls(_primitive_data=val)
         return val
-    
+
     def is_instance(self, val):
         if val is None:
             return True
         from dockit.schema.schema import Schema
         return isinstance(val, Schema)
-    
+
     def traverse_dot_path(self, traverser):
         #CONSIDER if there is a value then return an exacto schema field
         if traverser.remaining_paths:
             name = traverser.next_part
             value = traverser.current_value
             next_value = field = None
-            
+
             if value:
                 try:
                     next_value = value[name]
                 except KeyError:
                     pass
-                
+
                 if hasattr(value, '_meta') and hasattr(value._meta, 'fields') and name in value._meta.fields:
                     field = value._meta.fields[name]
-            
+
             traverser.next(field=field, value=next_value)
         else:
             if traverser.current_value:
                 traverser.end(field=SchemaField(schema=type(traverser.current_value)))
             else:
                 traverser.end(field=self)
-    
+
     def set_value(self, parent, attr, value):
         if value is UnSet:
             del parent[attr]
@@ -570,39 +570,39 @@ class TypedSchemaField(GenericSchemaField):
     def __init__(self, schemas, field_name='_type', **kwargs):
         self.schemas = schemas
         super(TypedSchemaField, self).__init__(field_name, **kwargs)
-    
+
     def lookup_schema(self, key):
         return self.schemas[key]
-    
+
     def get_schema_type(self, val):
         return val._meta.schema_key
-    
+
     def get_schema_choices(self):
         return self.schemas.items()
-    
+
     #TODO what about a widget?
 
 #TODO need a more comprehensive form field and widget solution for these
 class ListField(BaseField):
     form_field_class = HiddenListField
-    
+
     def __init__(self, subfield=None, *args, **kwargs):
         self.subfield = subfield
         kwargs.setdefault('default', list)
         super(ListField, self).__init__(*args, **kwargs)
-    
+
     def get_form_field_class(self):
         if not hasattr(self.subfield, 'schema'):
             return PrimitiveListField
         else:
             return self.form_field_class
-    
+
     def formfield_kwargs(self, **kwargs):
         kwargs = super(ListField, self).formfield_kwargs(**kwargs)
         if not hasattr(self.subfield, 'schema'):
             kwargs['subfield'] = self.subfield.formfield()
         return kwargs
-    
+
     def to_primitive(self, val):
         if self.subfield:
             ret = list()
@@ -613,7 +613,7 @@ class ListField(BaseField):
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_primitive(ret)
         return PRIMITIVE_PROCESSOR.to_primitive(val)
-    
+
     def to_portable_primitive(self, val):
         if self.subfield:
             ret = list()
@@ -624,7 +624,7 @@ class ListField(BaseField):
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_primitive(ret)
         return PRIMITIVE_PROCESSOR.to_primitive(val)
-    
+
     def to_python(self, val, parent=None):
         if self.subfield:
             ret = DotPathList()
@@ -641,7 +641,7 @@ class ListField(BaseField):
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_python(ret)
         return PRIMITIVE_PROCESSOR.to_python(val)
-    
+
     def normalize_portable_primitives(self, val, parent=None):
         ret = list()
         for entry in val:
@@ -650,7 +650,7 @@ class ListField(BaseField):
             else:
                 ret.append(entry)
         return ret
-    
+
     def is_instance(self, val):
         if val is None:
             return True
@@ -661,7 +661,7 @@ class ListField(BaseField):
                 if not self.subfield.is_instance(item):
                     return False
         return True
-    
+
     def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             new_value = None
@@ -679,7 +679,7 @@ class ListField(BaseField):
             traverser.next(field=self.subfield, value=new_value)
         else:
             traverser.end(field=self)
-    
+
     def set_value(self, parent, attr, value):
         index = int(attr)
         if value is UnSet:
@@ -694,19 +694,19 @@ class ListField(BaseField):
 
 class SetField(ListField):
     form_field_choices_class = forms.MultipleChoiceField
-    
+
     #returns a MultipleChoiceField if there is a set of choices
     def get_form_field_class(self):
         if self.choices:
             return self.form_field_choices_class
         return ListField.get_form_field_class(self)
-    
+
     def formfield_kwargs(self, **kwargs):
         if self.choices:
             return BaseField.formfield_kwargs(self, **kwargs)
         else:
             return ListField.formfield_kwargs(self, **kwargs)
-    
+
     def to_python(self, val, parent=None):
         if self.subfield:
             ret = DotPathSet()
@@ -723,7 +723,7 @@ class SetField(ListField):
             #run data through the primitive processor
             return PRIMITIVE_PROCESSOR.to_python(ret)
         return PRIMITIVE_PROCESSOR.to_python(val)
-    
+
     def is_instance(self, val):
         if val is None:
             return True
@@ -737,12 +737,12 @@ class SetField(ListField):
 
 class DictField(BaseField):
     form_field_class = HiddenDictField
-    
+
     def __init__(self, key_subfield=None, value_subfield=None, **kwargs):
         self.key_subfield = key_subfield
         self.value_subfield = value_subfield
         super(DictField, self).__init__(**kwargs)
-    
+
     def to_primitive(self, val):
         ret = dict()
         if val is None:
@@ -756,7 +756,7 @@ class DictField(BaseField):
         #TODO run data through the primitive processor
         ret = PRIMITIVE_PROCESSOR.to_primitive(ret)
         return ret
-    
+
     def to_portable_primitive(self, val):
         ret = dict()
         if val is None:
@@ -770,7 +770,7 @@ class DictField(BaseField):
         #TODO run data through the primitive processor
         ret = PRIMITIVE_PROCESSOR.to_primitive(ret)
         return ret
-    
+
     def to_python(self, val, parent=None):
         ret = DotPathDict()
         if val is None:
@@ -786,7 +786,7 @@ class DictField(BaseField):
         #TODO run data through the primitive processor
         ret = PRIMITIVE_PROCESSOR.to_python(ret)
         return ret
-    
+
     def normalize_portable_primitives(self, val, parent=None):
         ret = dict()
         if val is None:
@@ -798,7 +798,7 @@ class DictField(BaseField):
                 key = self.key_subfield.normalize_portable_primitives(key)
             ret[key] = value
         return ret
-    
+
     def is_instance(self, val):
         if val is None:
             return True
@@ -813,7 +813,7 @@ class DictField(BaseField):
                 if not self.key_subfield.is_instance(item):
                     return False
         return True
-    
+
     def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             value = traverser.current_value
@@ -830,7 +830,7 @@ class DictField(BaseField):
             traverser.next(field=self.value_subfield, value=new_value)
         else:
             traverser.end(field=self)
-    
+
     def set_value(self, parent, attr, value):
         if value is UnSet:
             del parent[attr]
@@ -842,7 +842,7 @@ class DictField(BaseField):
 class ReferenceField(BaseField):
     form_field_class = SchemaChoiceField
     data_type = 'char'
-    
+
     def __init__(self, document, *args, **kwargs):
         if document == 'self':
             self.self_reference = True
@@ -853,30 +853,35 @@ class ReferenceField(BaseField):
             assert hasattr(document, 'get_id')
         self.document = document
         super(ReferenceField, self).__init__(*args, **kwargs)
-    
+
     @property
     def _meta(self):
         return self.document._meta
-    
+
+    def contribute_to_class(self, cls, name):
+        super(ReferenceField, self).contribute_to_class(cls, name)
+        if self.self_reference:
+            self.document = cls
+
     def is_instance(self, val):
         if val is None:
             return True
         return isinstance(val, self.document)
-    
+
     def to_primitive(self, val):
         if isinstance(val, basestring): #CONSIDER, should this happen?
             return val
         if val is None:
             return val
         return val.get_id()
-    
+
     def to_portable_primitive(self, val):
         if isinstance(val, basestring): #CONSIDER, should this happen?
             return val
         if val is None:
             return val
         return val.natural_key
-    
+
     def to_python(self, val, parent=None):
         if self.self_reference:
             if val is None:
@@ -896,7 +901,7 @@ class ReferenceField(BaseField):
             if self.null:
                 return None
             raise
-    
+
     def normalize_portable_primitives(self, val, parent=None):
         if isinstance(val, dict):
             try:
@@ -906,18 +911,18 @@ class ReferenceField(BaseField):
             else:
                 return obj.pk
         return val
-    
+
     def formfield_kwargs(self, **kwargs):
         kwargs = BaseField.formfield_kwargs(self, **kwargs)
         kwargs.setdefault('queryset', self.document.objects.all())
         return kwargs
-    
+
     def traverse_dot_path(self, traverser):
         if traverser.remaining_paths:
             name = traverser.next_part
             value = traverser.current_value
             next_value = field = None
-            
+
             if value:
                 try:
                     next_value = value[name]
@@ -925,17 +930,17 @@ class ReferenceField(BaseField):
                     pass
             if name in self.document._meta.fields:
                 field = self.document._meta.fields[name]
-            
+
             traverser.next(field=field, value=next_value)
         else:
             traverser.end(field=self)
-    
+
     def set_value(self, parent, attr, value):
         parent[attr] = value
 
 class DocumentSetField(SetField):
     form_field_choices_class = SchemaMultipleChoiceField
-    
+
     def __init__(self, document, *args, **kwargs):
         #a set is never null, if it is passed in it is meant for our subfield
         subfield = ReferenceField(document, null=kwargs.pop('null', True))
@@ -944,17 +949,17 @@ class DocumentSetField(SetField):
         #self.choices = True
         self.document = document
         self.queryset = document.objects.all()
-    
+
     def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH):
         choices = list(include_blank and blank_choice or [])
         lst = [(x.pk, smart_unicode(x)) for x in self.queryset]
         return choices + lst
-    
+
     def formfield_kwargs(self, **kwargs):
         kwargs = BaseField.formfield_kwargs(self, **kwargs)
         kwargs.setdefault('queryset', self.queryset)
         return kwargs
-    
+
     def get_form_field_class(self):
         return self.form_field_choices_class
 
@@ -962,28 +967,28 @@ class ModelReferenceField(BaseField):
     form_field_class = forms.ModelChoiceField
     form_field_choices_class = forms.ModelChoiceField
     data_type = 'char'
-    
+
     def __init__(self, model, *args, **kwargs):
         self.model = model
         super(ModelReferenceField, self).__init__(*args, **kwargs)
-    
+
     def is_instance(self, val):
         if val is None:
             return True
         return isinstance(val, self.model)
-    
+
     def to_primitive(self, val):
         if val is None:
             return None
         return val.pk
-    
+
     def to_portable_primitive(self, val):
         if val is None:
             return None
         if hasattr(val, 'natural_key'):
             return val.natural_key()
         return val.pk
-    
+
     def to_python(self, val, parent=None):
         if val is None:
             return None
@@ -996,7 +1001,7 @@ class ModelReferenceField(BaseField):
             if self.null:
                 return None
             raise
-    
+
     def normalize_portable_primitives(self, val, parent=None):
         if isinstance(val, (tuple, list)):
             try:
@@ -1006,7 +1011,7 @@ class ModelReferenceField(BaseField):
             else:
                 return obj.pk
         return val
-    
+
     def formfield_kwargs(self, **kwargs):
         kwargs = BaseField.formfield_kwargs(self, **kwargs)
         kwargs.setdefault('queryset', self.model.objects)
@@ -1014,7 +1019,7 @@ class ModelReferenceField(BaseField):
 
 class ModelSetField(SetField):
     form_field_choices_class = forms.ModelMultipleChoiceField
-    
+
     def __init__(self, model, *args, **kwargs):
         #a set is never null, if it is passed in it is meant for our subfield
         subfield = ModelReferenceField(model, null=kwargs.pop('null', True))
@@ -1023,15 +1028,15 @@ class ModelSetField(SetField):
         #self.choices = True
         self.model = model
         self.queryset = model.objects.all()
-    
+
     def get_form_field_class(self):
         return self.form_field_choices_class
-    
+
     def formfield_kwargs(self, **kwargs):
         kwargs = BaseField.formfield_kwargs(self, **kwargs)
         kwargs.setdefault('queryset', self.model.objects)
         return kwargs
-    
+
     def get_choices(self, include_blank=True, blank_choice=BLANK_CHOICE_DASH):
         choices = list(include_blank and blank_choice or [])
         lst = [(x._get_pk_val(), smart_unicode(x)) for x in self.queryset]
