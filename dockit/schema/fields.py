@@ -192,7 +192,17 @@ class BaseField(object):
         return obj
 
     def _get_val_from_obj(self, obj):
-        return obj[self.name]
+        if self.name in obj._python_data:
+            return obj._python_data[self.name]
+        if self.name in obj._primitive_data:
+            raw_val = obj._primitive_data[self.name]
+            val = self.to_python(raw_val, parent=obj)
+            obj._python_data[self.name] = val
+            return val
+        val = self.get_default()
+        if self.has_default():
+            obj._python_data[self.name] = val
+        return val
 
     def value_to_string(self, obj):
         val = self._get_val_from_obj(obj)
@@ -454,7 +464,10 @@ class SchemaField(BaseField):
     def to_portable_primitive(self, val):
         if val is None:
             return None
-        return val.to_portable_primitive(val)
+        if self.is_instance(val):
+            return val.to_portable_primitive(val)
+        assert isinstance(val, dict)
+        return val
 
     def normalize_portable_primitives(self, val, parent=None):
         if val is not None and isinstance(val, dict):

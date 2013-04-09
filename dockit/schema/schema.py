@@ -130,43 +130,46 @@ class Schema(object):
             self[self._meta.typed_field] = self._meta.typed_key
         post_init.send(sender=self.__class__, instance=self)
 
+    def _sync_primitive_data(self):
+        #CONSIDER shouldn't val be a schema?
+        if self._meta.typed_field and self._meta.typed_key:
+            self[self._meta.typed_field] = self._meta.typed_key
+
+        #for all the fields we didn't see, ensure default values are populated
+        for name, field in self._meta.fields.items():
+            if name not in self._python_data and name not in self._primitive_data:
+                field._get_val_from_obj(self)
+
+        #we've cached python values on access, we need to pump these back to the primitive dictionary
+        for name, entry in self._python_data.iteritems():
+            if name in self._meta.fields:
+                try:
+                    self._primitive_data[name] = self._meta.fields[name].to_primitive(entry)
+                except:
+                    print name, self._meta.fields[name], entry
+                    raise
+            else:
+                #TODO run entry through generic primitive processor
+                self._primitive_data[name] = entry
+
     @classmethod
     def to_primitive(cls, val):
         """
         Returns a primitive representation of the schema that uses only built-in
         python structures and is json serializable
         """
-        #CONSIDER shouldn't val be a schema?
-        if cls._meta.typed_field and cls._meta.typed_key:
-            val[cls._meta.typed_field] = cls._meta.typed_key
-        if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
-            #we've cached python values on access, we need to pump these back to the primitive dictionary
-            for name, entry in val._python_data.iteritems():
-                if name in val._meta.fields:
-                    try:
-                        val._primitive_data[name] = val._meta.fields[name].to_primitive(entry)
-                    except:
-                        print name, val._meta.fields[name], entry
-                        raise
-                else:
-                    #TODO run entry through generic primitive processor
-                    val._primitive_data[name] = entry
+        if isinstance(val, cls):
+            val._sync_primitive_data()
             return val._primitive_data
         assert isinstance(val, (dict, list, type(None))), str(type(val))
         return val
 
     @classmethod
     def to_portable_primitive(cls, val):
-        #CONSIDER shouldn't val be a schema?
-        if cls._meta.typed_field and cls._meta.typed_key:
-            val[cls._meta.typed_field] = cls._meta.typed_key
-        if hasattr(val, '_primitive_data') and hasattr(val, '_python_data') and hasattr(val, '_meta'):
+        if isinstance(val, cls):
+            val._sync_primitive_data()
             data = dict(val._primitive_data)
-            for name in val.keys():
-                try:
-                    entry = val[name]
-                except KeyError: #TODO this should not happen
-                    continue
+            for name, entry in data.items():
                 if name in val._meta.fields:
                     try:
                         data[name] = val._meta.fields[name].to_portable_primitive(entry)
@@ -217,10 +220,11 @@ class Schema(object):
                 python_data = object.__getattribute__(self, '_python_data')
             except AttributeError:
                 return object.__getattribute__(self, name)
-            if name not in python_data:
-                primitive_data = object.__getattribute__(self, '_primitive_data')
-                python_data[name] = fields[name].to_python(primitive_data.get(name), parent=self)
-            return python_data[name]
+            return fields[name]._get_val_from_obj(self)
+            #if name not in python_data:
+                #primitive_data = object.__getattribute__(self, '_primitive_data')
+                #python_data[name] = fields[name].to_python(primitive_data.get(name), parent=self)
+            #return python_data[name]
         return object.__getattribute__(self, name)
 
     def __setattr__(self, name, val):
