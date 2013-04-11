@@ -1,2 +1,2 @@
 pymongo
--e git+https://github.com/zbyte64/django-datatap.git#egg=django-datatap
+django-datatap
